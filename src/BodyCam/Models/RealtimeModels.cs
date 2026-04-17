@@ -35,3 +35,8 @@ public class AudioPlaybackTracker
         BytesPlayed = 0;
     }
 }
+
+/// <summary>
+/// Information about a function call requested by the Realtime API.
+/// </summary>
+public record FunctionCallInfo(string CallId, string Name, string Arguments);

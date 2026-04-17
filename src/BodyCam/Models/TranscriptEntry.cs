@@ -15,6 +15,12 @@ public class TranscriptEntry : ObservableObject
     public string Text
     {
         get => _text;
-        set => SetProperty(ref _text, value);
+        set
+        {
+            if (SetProperty(ref _text, value))
+                OnPropertyChanged(nameof(DisplayText));
+        }
     }
+
+    public string DisplayText => $"{Role}: {Text}";
 }

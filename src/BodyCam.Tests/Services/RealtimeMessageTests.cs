@@ -218,4 +218,137 @@ public class RealtimeMessageTests
 
         act.Should().NotThrow();
     }
+
+    [Fact]
+    public void SessionUpdateMessage_WithTools_SerializesCorrectly()
+    {
+        var msg = new SessionUpdateMessage
+        {
+            Type = "session.update",
+            Session = new SessionUpdatePayload
+            {
+                Modalities = ["text", "audio"],
+                Tools = [
+                    new ToolDefinition
+                    {
+                        Name = "describe_scene",
+                        Description = "Look at the camera",
+                        Parameters = System.Text.Json.JsonDocument.Parse("""{"type":"object","properties":{},"required":[]}""").RootElement
+                    }
+                ],
+                ToolChoice = "auto"
+            }
+        };
+
+        var json = JsonSerializer.Serialize(msg, RealtimeJsonContext.Default.SessionUpdateMessage);
+
+        json.Should().Contain("\"tools\":");
+        json.Should().Contain("\"name\":\"describe_scene\"");
+        json.Should().Contain("\"tool_choice\":\"auto\"");
+    }
+
+    [Fact]
+    public void FunctionCallOutputMessage_SerializesCorrectly()
+    {
+        var msg = new FunctionCallOutputMessage
+        {
+            Type = "conversation.item.create",
+            Item = new FunctionCallOutputItem
+            {
+                CallId = "call_abc123",
+                Output = "{\"description\":\"A desk with a laptop\"}"
+            }
+        };
+
+        var json = JsonSerializer.Serialize(msg, RealtimeJsonContext.Default.FunctionCallOutputMessage);
+
+        json.Should().Contain("\"type\":\"conversation.item.create\"");
+        json.Should().Contain("\"call_id\":\"call_abc123\"");
+        json.Should().Contain("\"output\":");
+    }
+
+    [Fact]
+    public void ServerEventParser_ParseFunctionCalls_ExtractsFromResponseDone()
+    {
+        var json = """
+        {
+            "type": "response.done",
+            "response": {
+                "id": "resp_123",
+                "output": [
+                    {
+                        "type": "function_call",
+                        "call_id": "call_abc",
+                        "name": "describe_scene",
+                        "arguments": "{}"
+                    }
+                ]
+            }
+        }
+        """;
+
+        var calls = ServerEventParser.ParseFunctionCalls(json);
+
+        calls.Should().HaveCount(1);
+        calls[0].callId.Should().Be("call_abc");
+        calls[0].name.Should().Be("describe_scene");
+        calls[0].arguments.Should().Be("{}");
+    }
+
+    [Fact]
+    public void ServerEventParser_ParseFunctionCalls_ReturnsEmpty_WhenNoFunctionCalls()
+    {
+        var json = """
+        {
+            "type": "response.done",
+            "response": {
+                "id": "resp_123",
+                "output": [
+                    {
+                        "type": "message",
+                        "role": "assistant"
+                    }
+                ]
+            }
+        }
+        """;
+
+        var calls = ServerEventParser.ParseFunctionCalls(json);
+
+        calls.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void DispatchMessage_ResponseDone_WithFunctionCall_FiresFunctionCallReceived()
+    {
+        var apiKey = Substitute.For<IApiKeyService>();
+        var settings = new AppSettings();
+        var client = new RealtimeClient(apiKey, settings);
+
+        FunctionCallInfo? received = null;
+        client.FunctionCallReceived += (_, info) => received = info;
+
+        var json = """
+        {
+            "type": "response.done",
+            "response": {
+                "id": "resp_123",
+                "output": [
+                    {
+                        "type": "function_call",
+                        "call_id": "call_xyz",
+                        "name": "deep_analysis",
+                        "arguments": "{\"query\":\"explain quantum computing\"}"
+                    }
+                ]
+            }
+        }
+        """;
+        client.DispatchMessage(json);
+
+        received.Should().NotBeNull();
+        received!.CallId.Should().Be("call_xyz");
+        received.Name.Should().Be("deep_analysis");
+        received.Arguments.Should().Contain("quantum computing");
+    }
 }

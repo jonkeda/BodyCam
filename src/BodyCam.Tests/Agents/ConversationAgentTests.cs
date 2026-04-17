@@ -1,14 +1,13 @@
 using BodyCam.Agents;
-using BodyCam.Models;
-using BodyCam.Services;
 using FluentAssertions;
+using Microsoft.Extensions.AI;
 using NSubstitute;
 
 namespace BodyCam.Tests.Agents;
 
 public class ConversationAgentTests
 {
-    private readonly IChatCompletionsClient _chatClient = Substitute.For<IChatCompletionsClient>();
+    private readonly IChatClient _chatClient = Substitute.For<IChatClient>();
     private readonly AppSettings _settings = new();
     private readonly ConversationAgent _agent;
 
@@ -18,91 +17,67 @@ public class ConversationAgentTests
     }
 
     [Fact]
-    public void AddUserMessage_AppendsToSession()
+    public async Task AnalyzeAsync_ReturnsResponseText()
     {
-        var session = new SessionContext();
+        var response = new ChatResponse(new ChatMessage(ChatRole.Assistant, "Deep analysis result"));
+        _chatClient.GetResponseAsync(
+            Arg.Any<IList<ChatMessage>>(),
+            Arg.Any<ChatOptions?>(),
+            Arg.Any<CancellationToken>())
+            .Returns(response);
 
-        _agent.AddUserMessage("Hello", session);
+        var result = await _agent.AnalyzeAsync("What is this?");
 
-        session.Messages.Should().ContainSingle(m => m.Role == "user" && m.Content == "Hello");
+        result.Should().Be("Deep analysis result");
     }
 
     [Fact]
-    public void AddAssistantMessage_AppendsToSession()
+    public async Task AnalyzeAsync_IncludesContextWhenProvided()
     {
-        var session = new SessionContext();
+        var response = new ChatResponse(new ChatMessage(ChatRole.Assistant, "ok"));
+        IList<ChatMessage>? capturedMessages = null;
+        _chatClient.GetResponseAsync(
+            Arg.Do<IList<ChatMessage>>(m => capturedMessages = m),
+            Arg.Any<ChatOptions?>(),
+            Arg.Any<CancellationToken>())
+            .Returns(response);
 
-        _agent.AddAssistantMessage("Hi there", session);
+        await _agent.AnalyzeAsync("query", context: "some context");
 
-        session.Messages.Should().ContainSingle(m => m.Role == "assistant" && m.Content == "Hi there");
+        capturedMessages.Should().NotBeNull();
+        capturedMessages!.Should().HaveCount(3);
+        capturedMessages[1].Text.Should().Contain("some context");
     }
 
     [Fact]
-    public async Task ProcessTranscriptAsync_StreamsTokens()
+    public async Task AnalyzeAsync_OmitsContextWhenNull()
     {
-        var session = new SessionContext();
-        _chatClient.CompleteStreamingAsync(Arg.Any<IList<ChatMessage>>(), Arg.Any<CancellationToken>())
-            .Returns(AsyncYield("Hello", " world"));
+        var response = new ChatResponse(new ChatMessage(ChatRole.Assistant, "ok"));
+        IList<ChatMessage>? capturedMessages = null;
+        _chatClient.GetResponseAsync(
+            Arg.Do<IList<ChatMessage>>(m => capturedMessages = m),
+            Arg.Any<ChatOptions?>(),
+            Arg.Any<CancellationToken>())
+            .Returns(response);
 
-        var tokens = new List<string>();
-        await foreach (var token in _agent.ProcessTranscriptAsync("Hi", session))
-        {
-            tokens.Add(token);
-        }
+        await _agent.AnalyzeAsync("query");
 
-        tokens.Should().Equal("Hello", " world");
+        capturedMessages.Should().NotBeNull();
+        capturedMessages!.Should().HaveCount(2); // system + user only
     }
 
     [Fact]
-    public async Task ProcessTranscriptAsync_AddsUserAndAssistantMessages()
+    public async Task AnalyzeAsync_ReturnsEmptyStringWhenTextIsNull()
     {
-        var session = new SessionContext();
-        _chatClient.CompleteStreamingAsync(Arg.Any<IList<ChatMessage>>(), Arg.Any<CancellationToken>())
-            .Returns(AsyncYield("Hello", " world"));
+        var response = new ChatResponse(new ChatMessage(ChatRole.Assistant, (string?)null));
+        _chatClient.GetResponseAsync(
+            Arg.Any<IList<ChatMessage>>(),
+            Arg.Any<ChatOptions?>(),
+            Arg.Any<CancellationToken>())
+            .Returns(response);
 
-        await foreach (var _ in _agent.ProcessTranscriptAsync("Hi", session)) { }
+        var result = await _agent.AnalyzeAsync("test");
 
-        session.Messages.Should().HaveCount(2);
-        session.Messages[0].Role.Should().Be("user");
-        session.Messages[0].Content.Should().Be("Hi");
-        session.Messages[1].Role.Should().Be("assistant");
-        session.Messages[1].Content.Should().Be("Hello world");
-    }
-
-    [Fact]
-    public async Task ProcessTranscriptAsync_SetsSystemPromptIfEmpty()
-    {
-        var session = new SessionContext();
-        session.SystemPrompt = "";
-        _chatClient.CompleteStreamingAsync(Arg.Any<IList<ChatMessage>>(), Arg.Any<CancellationToken>())
-            .Returns(AsyncYield("ok"));
-
-        await foreach (var _ in _agent.ProcessTranscriptAsync("test", session)) { }
-
-        session.SystemPrompt.Should().Be(_settings.SystemInstructions);
-    }
-
-    [Fact]
-    public async Task ProcessTranscriptFullAsync_ReturnsCompleteReply()
-    {
-        var session = new SessionContext();
-        _chatClient.CompleteAsync(Arg.Any<IList<ChatMessage>>(), Arg.Any<CancellationToken>())
-            .Returns("Full reply");
-
-        var result = await _agent.ProcessTranscriptFullAsync("Hi", session);
-
-        result.Should().Be("Full reply");
-        session.Messages.Should().HaveCount(2);
-        session.Messages[1].Role.Should().Be("assistant");
-        session.Messages[1].Content.Should().Be("Full reply");
-    }
-
-    private static async IAsyncEnumerable<string> AsyncYield(params string[] tokens)
-    {
-        foreach (var t in tokens)
-        {
-            await Task.Yield();
-            yield return t;
-        }
+        result.Should().BeEmpty();
     }
 }

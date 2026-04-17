@@ -2,20 +2,10 @@ namespace BodyCam;
 
 public enum OpenAiProvider { OpenAi, Azure }
 
-public enum ConversationMode
-{
-    /// <summary>Realtime API handles reasoning + TTS (M1 behavior).</summary>
-    Realtime,
-
-    /// <summary>Separated pipeline: Realtime STT → ConversationAgent → TTS.</summary>
-    Separated
-}
-
 public class AppSettings
 {
     // Provider
     public OpenAiProvider Provider { get; set; } = OpenAiProvider.OpenAi;
-    public ConversationMode Mode { get; set; } = ConversationMode.Realtime;
 
     // Models
     public string RealtimeModel { get; set; } = "gpt-realtime-1.5";

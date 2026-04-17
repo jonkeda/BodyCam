@@ -15,15 +15,12 @@ public class AgentOrchestrator
     private readonly AppSettings _settings;
 
     private CancellationTokenSource? _cts;
-    private CancellationTokenSource? _turnCts;
     public SessionContext Session { get; } = new();
 
     public event EventHandler<string>? TranscriptUpdated;
     public event EventHandler<string>? TranscriptDelta;
     public event EventHandler<string>? TranscriptCompleted;
     public event EventHandler<string>? DebugLog;
-    public event EventHandler<string>? ConversationReplyDelta;
-    public event EventHandler<string>? ConversationReplyCompleted;
 
     public bool IsRunning => _cts is not null && !_cts.IsCancellationRequested;
 
@@ -68,7 +65,6 @@ public class AgentOrchestrator
         _settings.AzureChatDeploymentName = _settingsService.AzureChatDeploymentName;
         _settings.AzureVisionDeploymentName = _settingsService.AzureVisionDeploymentName;
         _settings.AzureApiVersion = _settingsService.AzureApiVersion;
-        _settings.Mode = _settingsService.Mode;
 
         DebugLog?.Invoke(this, $"Model: {_settings.RealtimeModel}");
 
@@ -80,6 +76,8 @@ public class AgentOrchestrator
         _realtime.SpeechStarted += OnSpeechStarted;
         _realtime.ResponseDone += OnResponseDone;
         _realtime.ErrorOccurred += OnError;
+        _realtime.OutputItemAdded += OnOutputItemAdded;
+        _realtime.FunctionCallReceived += OnFunctionCallReceived;
 
         // Connect to OpenAI
         await _realtime.ConnectAsync(_cts.Token);
@@ -103,10 +101,8 @@ public class AgentOrchestrator
         _realtime.SpeechStarted -= OnSpeechStarted;
         _realtime.ResponseDone -= OnResponseDone;
         _realtime.ErrorOccurred -= OnError;
-
-        _turnCts?.Cancel();
-        _turnCts?.Dispose();
-        _turnCts = null;
+        _realtime.OutputItemAdded -= OnOutputItemAdded;
+        _realtime.FunctionCallReceived -= OnFunctionCallReceived;
 
         _cts?.Cancel();
 
@@ -130,105 +126,26 @@ public class AgentOrchestrator
 
     private void OnOutputTranscriptDelta(object? sender, string delta)
     {
-        if (_settings.Mode == ConversationMode.Separated)
-            return; // Already handled by ConversationAgent streaming
-
         TranscriptUpdated?.Invoke(this, $"AI: {delta}");
         TranscriptDelta?.Invoke(this, delta);
     }
 
     private void OnOutputTranscriptCompleted(object? sender, string transcript)
     {
-        if (_settings.Mode == ConversationMode.Separated)
-            return; // Already handled by ConversationAgent
-
-        _conversation.AddAssistantMessage(transcript, Session);
         TranscriptCompleted?.Invoke(this, $"AI:{transcript}");
         DebugLog?.Invoke(this, $"AI said: {transcript}");
     }
 
-    private async void OnInputTranscriptCompleted(object? sender, string transcript)
+    private void OnInputTranscriptCompleted(object? sender, string transcript)
     {
         TranscriptUpdated?.Invoke(this, $"You: {transcript}");
         TranscriptCompleted?.Invoke(this, $"You:{transcript}");
         DebugLog?.Invoke(this, $"User said: {transcript}");
-
-        if (_settings.Mode == ConversationMode.Separated)
-        {
-            // Mode B: ProcessTranscriptAsync adds user message internally
-            await ProcessModeBAsync(transcript);
-        }
-        else
-        {
-            // Mode A: just record the transcript
-            _conversation.AddUserMessage(transcript, Session);
-        }
-    }
-
-    private async Task ProcessModeBAsync(string transcript)
-    {
-        // Cancel any in-flight previous turn
-        _turnCts?.Cancel();
-        _turnCts?.Dispose();
-        _turnCts = new CancellationTokenSource();
-        var ct = _turnCts.Token;
-
-        try
-        {
-            DebugLog?.Invoke(this, "Mode B: Processing via ConversationAgent...");
-
-            var replyBuilder = new System.Text.StringBuilder();
-
-            await foreach (var token in _conversation.ProcessTranscriptAsync(
-                transcript, Session, ct))
-            {
-                replyBuilder.Append(token);
-                ConversationReplyDelta?.Invoke(this, token);
-                TranscriptDelta?.Invoke(this, token);
-            }
-
-            var fullReply = replyBuilder.ToString();
-            if (fullReply.Length > 0)
-            {
-                ConversationReplyCompleted?.Invoke(this, fullReply);
-                TranscriptCompleted?.Invoke(this, $"AI:{fullReply}");
-                DebugLog?.Invoke(this, $"AI replied: {fullReply}");
-
-                // Send reply to Realtime API for TTS
-                if (_realtime.IsConnected && !ct.IsCancellationRequested)
-                {
-                    await _realtime.SendTextForTtsAsync(fullReply, ct);
-                }
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            DebugLog?.Invoke(this, "Mode B: Turn cancelled (interruption).");
-        }
-        catch (Exception ex)
-        {
-            DebugLog?.Invoke(this, $"Mode B error: {ex.Message}");
-        }
     }
 
     private async void OnSpeechStarted(object? sender, EventArgs e)
     {
-        // Mode B: cancel in-flight Chat API call + stop TTS
-        if (_settings.Mode == ConversationMode.Separated)
-        {
-            _turnCts?.Cancel();
-            _voiceOut.HandleInterruption();
-            _voiceOut.ResetTracker();
-
-            // Also cancel any in-flight Realtime TTS response
-            try { await _realtime.CancelResponseAsync(); }
-            catch (Exception ex) { DebugLog?.Invoke(this, $"TTS cancel error: {ex.Message}"); }
-
-            DebugLog?.Invoke(this, "Mode B: Interrupted — cancelled Chat API + cleared audio.");
-            return;
-        }
-
-        // Mode A: existing truncation logic
+        // Truncation logic
         if (_voiceOut.Tracker.CurrentItemId is not null)
         {
             _voiceOut.HandleInterruption();
@@ -248,6 +165,11 @@ public class AgentOrchestrator
         }
     }
 
+    private void OnOutputItemAdded(object? sender, string itemId)
+    {
+        _voiceOut.SetCurrentItem(itemId);
+    }
+
     private void OnResponseDone(object? sender, RealtimeResponseInfo info)
     {
         _voiceOut.ResetTracker();
@@ -257,5 +179,59 @@ public class AgentOrchestrator
     private void OnError(object? sender, string error)
     {
         DebugLog?.Invoke(this, $"Realtime error: {error}");
+    }
+
+    private async void OnFunctionCallReceived(object? sender, FunctionCallInfo info)
+    {
+        DebugLog?.Invoke(this, $"Function call: {info.Name}");
+
+        try
+        {
+            var result = info.Name switch
+            {
+                "describe_scene" => await ExecuteDescribeSceneAsync(),
+                "deep_analysis" => await ExecuteDeepAnalysisAsync(info.Arguments),
+                _ => System.Text.Json.JsonSerializer.Serialize(new { error = $"Unknown function: {info.Name}" })
+            };
+
+            await _realtime.SendFunctionCallOutputAsync(info.CallId, result);
+            DebugLog?.Invoke(this, $"Function result sent for {info.Name}");
+        }
+        catch (Exception ex)
+        {
+            DebugLog?.Invoke(this, $"Function call error ({info.Name}): {ex.Message}");
+
+            try
+            {
+                await _realtime.SendFunctionCallOutputAsync(
+                    info.CallId,
+                    System.Text.Json.JsonSerializer.Serialize(new { error = ex.Message }));
+            }
+            catch (Exception sendEx)
+            {
+                DebugLog?.Invoke(this, $"Failed to send error result: {sendEx.Message}");
+            }
+        }
+    }
+
+    private async Task<string> ExecuteDescribeSceneAsync()
+    {
+        var description = await _vision.CaptureAndDescribeAsync();
+        return System.Text.Json.JsonSerializer.Serialize(new
+        {
+            description = description ?? "Camera not available or no frame captured."
+        });
+    }
+
+    private async Task<string> ExecuteDeepAnalysisAsync(string argumentsJson)
+    {
+        using var doc = System.Text.Json.JsonDocument.Parse(argumentsJson);
+        var root = doc.RootElement;
+
+        var query = root.TryGetProperty("query", out var q) ? q.GetString() ?? "" : "";
+        var context = root.TryGetProperty("context", out var c) ? c.GetString() : null;
+
+        var result = await _conversation.AnalyzeAsync(query, context);
+        return System.Text.Json.JsonSerializer.Serialize(new { analysis = result });
     }
 }

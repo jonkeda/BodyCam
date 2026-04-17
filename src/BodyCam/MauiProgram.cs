@@ -89,7 +89,7 @@ public static class MauiProgram
 		builder.Services.AddSingleton<IRealtimeClient, RealtimeClient>();
 		builder.Services.AddSingleton<IApiKeyService, ApiKeyService>();
 
-		// Chat Completions client (Mode B)
+		// Chat Completions client (deep_analysis tool)
 		builder.Services.AddSingleton<IChatClient>(sp =>
 		{
 			var appSettings = sp.GetRequiredService<AppSettings>();
@@ -112,7 +112,6 @@ public static class MauiProgram
 				return openAiClient.GetChatClient(appSettings.ChatModel).AsIChatClient();
 			}
 		});
-		builder.Services.AddSingleton<IChatCompletionsClient, ChatCompletionsClient>();
 
 		// Agents
 		builder.Services.AddSingleton<VoiceInputAgent>();

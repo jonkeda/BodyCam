@@ -109,44 +109,106 @@ public class RealtimeClient : IRealtimeClient
 
     public async Task UpdateSessionAsync(CancellationToken ct = default)
     {
-        var modalities = _settings.Mode == ConversationMode.Separated
-            ? new[] { "text" }           // STT only — no audio output from Realtime
-            : new[] { "text", "audio" }; // Full audio in+out (Mode A)
+        var tools = GetToolDefinitions();
 
         var msg = new SessionUpdateMessage
         {
             Type = "session.update",
             Session = new SessionUpdatePayload
             {
-                Modalities = modalities,
+                Modalities = new[] { "text", "audio" },
                 Voice = _settings.Voice,
                 Instructions = _settings.SystemInstructions,
                 InputAudioFormat = "pcm16",
                 OutputAudioFormat = "pcm16",
                 InputAudioTranscription = new InputAudioTranscription { Model = _settings.TranscriptionModel },
-                TurnDetection = new TurnDetectionConfig { Type = _settings.TurnDetection }
+                TurnDetection = new TurnDetectionConfig { Type = _settings.TurnDetection },
+                Tools = tools.Length > 0 ? tools : null,
+                ToolChoice = tools.Length > 0 ? "auto" : null
             }
         };
         await SendJsonAsync(msg, RealtimeJsonContext.Default.SessionUpdateMessage, ct);
     }
 
-    public async Task SendTextForTtsAsync(string text, CancellationToken ct = default)
+    public async Task SendFunctionCallOutputAsync(string callId, string output, CancellationToken ct = default)
     {
-        // Create a conversation item with the assistant's reply text
-        var itemMsg = new ConversationItemCreateMessage
+        var msg = new FunctionCallOutputMessage
+        {
+            Type = "conversation.item.create",
+            Item = new FunctionCallOutputItem
+            {
+                CallId = callId,
+                Output = output
+            }
+        };
+        await SendJsonAsync(msg, RealtimeJsonContext.Default.FunctionCallOutputMessage, ct);
+
+        // Trigger the model to continue with the function result
+        await CreateResponseAsync(ct);
+    }
+
+    public async Task SendTextInputAsync(string text, CancellationToken ct = default)
+    {
+        var msg = new ConversationItemCreateMessage
         {
             Type = "conversation.item.create",
             Item = new ConversationItem
             {
                 Type = "message",
-                Role = "assistant",
+                Role = "user",
                 Content = [new ContentPart { Type = "input_text", Text = text }]
             }
         };
-        await SendJsonAsync(itemMsg, RealtimeJsonContext.Default.ConversationItemCreateMessage, ct);
-
-        // Request a response — the Realtime API will generate audio from the text
+        await SendJsonAsync(msg, RealtimeJsonContext.Default.ConversationItemCreateMessage, ct);
         await CreateResponseAsync(ct);
+    }
+
+    private static readonly ToolDefinition[] s_toolDefinitions = CreateToolDefinitions();
+
+    private static ToolDefinition[] GetToolDefinitions() => s_toolDefinitions;
+
+    private static ToolDefinition[] CreateToolDefinitions()
+    {
+        var describeSceneParams = JsonDocument.Parse("""
+            {
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+            """);
+
+        var deepAnalysisParams = JsonDocument.Parse("""
+            {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "The question or task to analyze in depth"
+                    },
+                    "context": {
+                        "type": "string",
+                        "description": "Relevant context from the conversation"
+                    }
+                },
+                "required": ["query"]
+            }
+            """);
+
+        return
+        [
+            new ToolDefinition
+            {
+                Name = "describe_scene",
+                Description = "Capture what the camera currently sees. Use when the user asks about their surroundings, asks you to look at something, or when visual context would help.",
+                Parameters = describeSceneParams.RootElement
+            },
+            new ToolDefinition
+            {
+                Name = "deep_analysis",
+                Description = "Perform deep analysis using a more capable reasoning model. Use for complex questions, code generation, detailed explanations, or tasks needing extended reasoning.",
+                Parameters = deepAnalysisParams.RootElement
+            }
+        ];
     }
 
     public async ValueTask DisposeAsync()
@@ -163,6 +225,13 @@ public class RealtimeClient : IRealtimeClient
     public event EventHandler? SpeechStopped;
     public event EventHandler<RealtimeResponseInfo>? ResponseDone;
     public event EventHandler<string>? ErrorOccurred;
+    public event EventHandler<string>? OutputItemAdded;
+    public event EventHandler<FunctionCallInfo>? FunctionCallReceived;
+
+    /// <summary>
+    /// Fires for every raw JSON message received from the server. Internal — exposed for integration tests.
+    /// </summary>
+    internal event EventHandler<string>? RawMessageReceived;
 
     // --- Private implementation ---
 
@@ -209,6 +278,8 @@ public class RealtimeClient : IRealtimeClient
 
     internal void DispatchMessage(string json)
     {
+        RawMessageReceived?.Invoke(this, json);
+
         var type = ServerEventParser.GetType(json);
         if (type is null) return;
 
@@ -261,6 +332,14 @@ public class RealtimeClient : IRealtimeClient
                 SpeechStopped?.Invoke(this, EventArgs.Empty);
                 break;
 
+            case "response.output_item.added":
+            {
+                var itemId = ServerEventParser.GetNestedStringProperty(json, "item", "id");
+                if (itemId is not null)
+                    OutputItemAdded?.Invoke(this, itemId);
+                break;
+            }
+
             case "response.done":
             {
                 var (responseId, itemId, outputTranscript, inputTranscript) =
@@ -275,6 +354,13 @@ public class RealtimeClient : IRealtimeClient
                         InputTranscript = inputTranscript
                     });
                 }
+
+                    // Check for function calls in the response output
+                    var functionCalls = ServerEventParser.ParseFunctionCalls(json);
+                    foreach (var (callId, name, arguments) in functionCalls)
+                    {
+                        FunctionCallReceived?.Invoke(this, new FunctionCallInfo(callId, name, arguments));
+                    }
                 break;
             }
 

@@ -111,10 +111,6 @@
             <!-- SECTION: Voice -->
             <Label Text="Voice Settings" FontSize="18" FontAttributes="Bold" Margin="0,8,0,0" />
 
-            <Label Text="Conversation Mode" FontSize="13" TextColor="Gray" />
-            <Picker ItemsSource="{Binding ConversationModeOptions}"
-                    SelectedItem="{Binding SelectedMode}" />
-
             <Label Text="Voice" FontSize="13" TextColor="Gray" />
             <Picker ItemsSource="{Binding VoiceOptions}"
                     SelectedItem="{Binding SelectedVoice}" />

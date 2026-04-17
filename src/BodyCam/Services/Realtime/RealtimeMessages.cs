@@ -42,6 +42,12 @@ internal record SessionUpdatePayload
 
     [JsonPropertyName("turn_detection")]
     public TurnDetectionConfig? TurnDetection { get; init; }
+
+    [JsonPropertyName("tools")]
+    public ToolDefinition[]? Tools { get; init; }
+
+    [JsonPropertyName("tool_choice")]
+    public string? ToolChoice { get; init; }
 }
 
 internal record InputAudioTranscription
@@ -102,6 +108,43 @@ internal record ContentPart
 
     [JsonPropertyName("text")]
     public string? Text { get; init; }
+}
+
+// --- Tool definitions for session.update ---
+
+internal record ToolDefinition
+{
+    [JsonPropertyName("type")]
+    public string Type { get; init; } = "function";
+
+    [JsonPropertyName("name")]
+    public string Name { get; init; } = "";
+
+    [JsonPropertyName("description")]
+    public string Description { get; init; } = "";
+
+    [JsonPropertyName("parameters")]
+    public JsonElement Parameters { get; init; }
+}
+
+// --- Function call output (client → server) ---
+
+internal record FunctionCallOutputMessage : RealtimeMessage
+{
+    [JsonPropertyName("item")]
+    public FunctionCallOutputItem Item { get; init; } = new();
+}
+
+internal record FunctionCallOutputItem
+{
+    [JsonPropertyName("type")]
+    public string Type { get; init; } = "function_call_output";
+
+    [JsonPropertyName("call_id")]
+    public string CallId { get; init; } = "";
+
+    [JsonPropertyName("output")]
+    public string Output { get; init; } = "";
 }
 
 // --- Server → Client event parsing ---
@@ -172,5 +215,35 @@ internal static class ServerEventParser
             return (responseId, itemId, outputTranscript, null);
         }
         catch { return (null, null, null, null); }
+    }
+
+    public static List<(string callId, string name, string arguments)> ParseFunctionCalls(string json)
+    {
+        var results = new List<(string, string, string)>();
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.TryGetProperty("response", out var resp) &&
+                resp.TryGetProperty("output", out var output))
+            {
+                foreach (var item in output.EnumerateArray())
+                {
+                    if (item.TryGetProperty("type", out var typeProp) &&
+                        typeProp.GetString() == "function_call" &&
+                        item.TryGetProperty("call_id", out var callIdProp) &&
+                        item.TryGetProperty("name", out var nameProp) &&
+                        item.TryGetProperty("arguments", out var argsProp))
+                    {
+                        results.Add((
+                            callIdProp.GetString() ?? "",
+                            nameProp.GetString() ?? "",
+                            argsProp.GetString() ?? ""
+                        ));
+                    }
+                }
+            }
+        }
+        catch { }
+        return results;
     }
 }

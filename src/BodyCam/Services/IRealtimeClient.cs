@@ -16,10 +16,9 @@ public interface IRealtimeClient : IAsyncDisposable
     Task UpdateSessionAsync(CancellationToken ct = default);
 
     /// <summary>
-    /// Mode B: Send reply text to Realtime API to generate TTS audio.
-    /// Creates a conversation item with the text, then triggers response with audio.
+    /// Sends a text message as user input and triggers a response.
     /// </summary>
-    Task SendTextForTtsAsync(string text, CancellationToken ct = default);
+    Task SendTextInputAsync(string text, CancellationToken ct = default);
 
     event EventHandler<byte[]>? AudioDelta;
     event EventHandler<string>? OutputTranscriptDelta;
@@ -29,4 +28,19 @@ public interface IRealtimeClient : IAsyncDisposable
     event EventHandler? SpeechStopped;
     event EventHandler<RealtimeResponseInfo>? ResponseDone;
     event EventHandler<string>? ErrorOccurred;
+
+    /// <summary>
+    /// Fired when a new output item is added to the response, providing the item ID for truncation tracking.
+    /// </summary>
+    event EventHandler<string>? OutputItemAdded;
+
+    /// <summary>
+    /// Fired when the Realtime API requests a function call.
+    /// </summary>
+    event EventHandler<FunctionCallInfo>? FunctionCallReceived;
+
+    /// <summary>
+    /// Sends the result of a function call back to the Realtime API.
+    /// </summary>
+    Task SendFunctionCallOutputAsync(string callId, string output, CancellationToken ct = default);
 }

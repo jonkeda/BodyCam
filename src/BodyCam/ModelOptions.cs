@@ -51,9 +51,6 @@ public static class ModelOptions
         "server_vad",
     ];
 
-    // --- Conversation mode ---
-    public static readonly string[] ConversationModes = ["Realtime", "Separated"];
-
     // --- Noise reduction ---
     public const string DefaultNoiseReduction = "near_field";
     public static readonly string[] NoiseReductionModes =

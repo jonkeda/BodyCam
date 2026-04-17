@@ -28,11 +28,6 @@
                 FontSize="16"
                 VerticalOptions="Center"
                 TextColor="{AppThemeBinding Light=#666, Dark=#AAA}" />
-            <Label
-                Text="{Binding ModeLabel}"
-                FontSize="12"
-                VerticalOptions="Center"
-                TextColor="{AppThemeBinding Light=#999, Dark=#666}" />
         </HorizontalStackLayout>
 
         <!-- Transcript -->
@@ -43,16 +38,9 @@
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="models:TranscriptEntry">
                         <VerticalStackLayout Padding="4,2">
-                            <Label FontSize="14" FontFamily="OpenSansRegular">
-                                <Label.FormattedText>
-                                    <FormattedString>
-                                        <Span Text="{Binding Role}"
-                                              FontAttributes="Bold" />
-                                        <Span Text=": " FontAttributes="Bold" />
-                                        <Span Text="{Binding Text}" />
-                                    </FormattedString>
-                                </Label.FormattedText>
-                            </Label>
+                            <Label Text="{Binding DisplayText}"
+                                   FontSize="14"
+                                   FontFamily="OpenSansRegular" />
                         </VerticalStackLayout>
                     </DataTemplate>
                 </CollectionView.ItemTemplate>

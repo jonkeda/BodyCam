@@ -3,6 +3,7 @@ using BodyCam.Models;
 using BodyCam.Orchestration;
 using BodyCam.Services;
 using FluentAssertions;
+using Microsoft.Extensions.AI;
 using NSubstitute;
 
 namespace BodyCam.Tests.Orchestration;
@@ -21,10 +22,11 @@ public class AgentOrchestratorTests
         camera = Substitute.For<ICameraService>();
 
         var voiceIn = new VoiceInputAgent(audioIn, realtime);
-        var chatClient = Substitute.For<IChatCompletionsClient>();
+        var chatClient = Substitute.For<IChatClient>();
         var conversation = new ConversationAgent(chatClient, new AppSettings());
         var voiceOut = new VoiceOutputAgent(audioOut);
-        var vision = new VisionAgent(camera, new AppSettings());
+        var visionChatClient = Substitute.For<IChatClient>();
+        var vision = new VisionAgent(camera, visionChatClient, new AppSettings());
         var settingsService = Substitute.For<ISettingsService>();
         settingsService.RealtimeModel.Returns(ModelOptions.DefaultRealtime);
         settingsService.ChatModel.Returns(ModelOptions.DefaultChat);
@@ -191,7 +193,6 @@ public class AgentOrchestratorTests
 
         transcripts.Should().Contain(t => t.Contains("You:") && t.Contains("Hello world"));
         completed.Should().ContainSingle().Which.Should().Be("You:Hello world");
-        orchestrator.Session.Messages.Should().Contain(m => m.Role == "user" && m.Content == "Hello world");
 
         await orchestrator.StopAsync();
     }
@@ -209,8 +210,6 @@ public class AgentOrchestratorTests
 
         realtime.OutputTranscriptCompleted += Raise.Event<EventHandler<string>>(realtime, "I'm fine, thanks");
 
-        orchestrator.Session.Messages.Should().Contain(m =>
-            m.Role == "assistant" && m.Content == "I'm fine, thanks");
         logs.Should().Contain(m => m.Contains("AI said"));
         completed.Should().ContainSingle().Which.Should().Be("AI:I'm fine, thanks");
 

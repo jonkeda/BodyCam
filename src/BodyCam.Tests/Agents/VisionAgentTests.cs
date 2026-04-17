@@ -1,6 +1,7 @@
 using BodyCam.Agents;
 using BodyCam.Services;
 using FluentAssertions;
+using Microsoft.Extensions.AI;
 using NSubstitute;
 
 namespace BodyCam.Tests.Agents;
@@ -8,15 +9,21 @@ namespace BodyCam.Tests.Agents;
 public class VisionAgentTests
 {
     [Fact]
-    public async Task DescribeFrameAsync_ReturnsStubDescription()
+    public async Task DescribeFrameAsync_ReturnsModelDescription()
     {
         var camera = Substitute.For<ICameraService>();
+        var chatClient = Substitute.For<IChatClient>();
+        chatClient.GetResponseAsync(
+            Arg.Any<IList<ChatMessage>>(),
+            Arg.Any<ChatOptions?>(),
+            Arg.Any<CancellationToken>())
+            .Returns(new ChatResponse(new ChatMessage(ChatRole.Assistant, "A desk with a laptop")));
         var settings = new AppSettings();
-        var agent = new VisionAgent(camera, settings);
+        var agent = new VisionAgent(camera, chatClient, settings);
 
-        var result = await agent.DescribeFrameAsync([1, 2, 3]);
+        var result = await agent.DescribeFrameAsync([0xFF, 0xD8]);
 
-        result.Should().Contain("stub");
+        result.Should().Be("A desk with a laptop");
     }
 
     [Fact]
@@ -25,8 +32,9 @@ public class VisionAgentTests
         var camera = Substitute.For<ICameraService>();
         camera.CaptureFrameAsync(Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<byte[]?>(null));
+        var chatClient = Substitute.For<IChatClient>();
         var settings = new AppSettings();
-        var agent = new VisionAgent(camera, settings);
+        var agent = new VisionAgent(camera, chatClient, settings);
 
         var result = await agent.CaptureAndDescribeAsync();
 
@@ -39,12 +47,18 @@ public class VisionAgentTests
         var camera = Substitute.For<ICameraService>();
         camera.CaptureFrameAsync(Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<byte[]?>(new byte[] { 0xFF, 0xD8 }));
+        var chatClient = Substitute.For<IChatClient>();
+        chatClient.GetResponseAsync(
+            Arg.Any<IList<ChatMessage>>(),
+            Arg.Any<ChatOptions?>(),
+            Arg.Any<CancellationToken>())
+            .Returns(new ChatResponse(new ChatMessage(ChatRole.Assistant, "A park scene")));
         var settings = new AppSettings();
-        var agent = new VisionAgent(camera, settings);
+        var agent = new VisionAgent(camera, chatClient, settings);
 
         var result = await agent.CaptureAndDescribeAsync();
 
         result.Should().NotBeNull();
-        result.Should().Contain("stub");
+        result.Should().Be("A park scene");
     }
 }

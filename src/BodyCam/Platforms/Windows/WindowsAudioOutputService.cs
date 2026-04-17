@@ -23,8 +23,8 @@ public class WindowsAudioOutputService : IAudioOutputService, IDisposable
         var waveFormat = new WaveFormat(_settings.SampleRate, 16, 1);
         _buffer = new BufferedWaveProvider(waveFormat)
         {
-            BufferDuration = TimeSpan.FromSeconds(5),
-            DiscardOnBufferOverflow = true
+            BufferDuration = TimeSpan.FromSeconds(30),
+            DiscardOnBufferOverflow = false
         };
 
         _waveOut = new WaveOutEvent
@@ -48,11 +48,20 @@ public class WindowsAudioOutputService : IAudioOutputService, IDisposable
         return Task.CompletedTask;
     }
 
-    public Task PlayChunkAsync(byte[] pcmData, CancellationToken ct = default)
+    public async Task PlayChunkAsync(byte[] pcmData, CancellationToken ct = default)
     {
-        if (_buffer is null || !IsPlaying) return Task.CompletedTask;
+        if (_buffer is null || !IsPlaying) return;
+
+        // Back-pressure: wait for the buffer to drain if it's nearly full.
+        // This prevents overflow exceptions and keeps audio continuous.
+        var maxFill = _buffer.BufferLength - pcmData.Length;
+        while (_buffer.BufferedBytes > maxFill)
+        {
+            await Task.Delay(20, ct);
+            if (_buffer is null || !IsPlaying) return;
+        }
+
         _buffer.AddSamples(pcmData, 0, pcmData.Length);
-        return Task.CompletedTask;
     }
 
     public void ClearBuffer()
