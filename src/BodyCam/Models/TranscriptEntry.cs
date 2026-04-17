@@ -23,4 +23,15 @@ public class TranscriptEntry : ObservableObject
     }
 
     public string DisplayText => $"{Role}: {Text}";
+
+    public ImageSource? Image { get; set; }
+    public string? ImageCaption { get; set; }
+    public bool HasImage => Image is not null;
+
+    public Color RoleColor => Role switch
+    {
+        "You" => Color.FromArgb("#4CAF50"),
+        "AI" => Color.FromArgb("#2196F3"),
+        _ => Color.FromArgb("#999999")
+    };
 }

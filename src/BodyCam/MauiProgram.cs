@@ -1,6 +1,7 @@
 ﻿using BodyCam.Agents;
 using BodyCam.Orchestration;
 using BodyCam.Services;
+using BodyCam.Tools;
 using BodyCam.ViewModels;
 using CommunityToolkit.Maui;
 using Microsoft.Extensions.AI;
@@ -95,6 +96,10 @@ public static class MauiProgram
 		builder.Services.AddSingleton<ICameraService, CameraService>();
 #endif
 		builder.Services.AddSingleton<IRealtimeClient, RealtimeClient>();
+
+		// Wake word service (NullWakeWordService until Porcupine is configured)
+		builder.Services.AddSingleton<IWakeWordService, NullWakeWordService>();
+		builder.Services.AddSingleton<IMicrophoneCoordinator, MicrophoneCoordinator>();
 		builder.Services.AddSingleton<IApiKeyService, ApiKeyService>();
 
 		// Chat Completions client (deep_analysis tool)
@@ -126,6 +131,31 @@ public static class MauiProgram
 		builder.Services.AddSingleton<ConversationAgent>();
 		builder.Services.AddSingleton<VoiceOutputAgent>();
 		builder.Services.AddSingleton<VisionAgent>();
+
+		// Tools
+		builder.Services.AddSingleton<ITool, DescribeSceneTool>();
+		builder.Services.AddSingleton<ITool, DeepAnalysisTool>();
+
+		// Memory store
+		builder.Services.AddSingleton<MemoryStore>(sp =>
+			new MemoryStore(Path.Combine(FileSystem.AppDataDirectory, "memories.json")));
+
+		// Phase A tools
+		builder.Services.AddSingleton<ITool, ReadTextTool>();
+		builder.Services.AddSingleton<ITool, TakePhotoTool>();
+		builder.Services.AddSingleton<ITool, SaveMemoryTool>();
+		builder.Services.AddSingleton<ITool, RecallMemoryTool>();
+		builder.Services.AddSingleton<ITool, SetTranslationModeTool>();
+		builder.Services.AddSingleton<ITool, MakePhoneCallTool>();
+		builder.Services.AddSingleton<ITool, SendMessageTool>();
+		builder.Services.AddSingleton<ITool, LookupAddressTool>();
+
+		// Phase B tools
+		builder.Services.AddSingleton<ITool, FindObjectTool>();
+		builder.Services.AddSingleton<ITool, NavigateToTool>();
+		builder.Services.AddSingleton<ITool, StartSceneWatchTool>();
+
+		builder.Services.AddSingleton<ToolDispatcher>();
 
 		// Orchestration
 		builder.Services.AddSingleton<AgentOrchestrator>();

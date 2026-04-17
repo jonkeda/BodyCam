@@ -2,6 +2,7 @@ using System.Text.Json;
 using BodyCam.Models;
 using BodyCam.Services;
 using BodyCam.Services.Realtime;
+using BodyCam.Tools;
 using FluentAssertions;
 using NSubstitute;
 
@@ -9,6 +10,13 @@ namespace BodyCam.Tests.Services;
 
 public class RealtimeMessageTests
 {
+    private static RealtimeClient CreateClient()
+    {
+        var apiKey = Substitute.For<IApiKeyService>();
+        var settings = new AppSettings();
+        var dispatcher = new ToolDispatcher([]);
+        return new RealtimeClient(apiKey, settings, dispatcher);
+    }
     [Fact]
     public void SessionUpdateMessage_SerializesCorrectly()
     {
@@ -81,9 +89,7 @@ public class RealtimeMessageTests
     [Fact]
     public void DispatchMessage_AudioDelta_DecodesBase64AndFiresEvent()
     {
-        var apiKey = Substitute.For<IApiKeyService>();
-        var settings = new AppSettings();
-        var client = new RealtimeClient(apiKey, settings);
+        var client = CreateClient();
 
         byte[]? received = null;
         client.AudioDelta += (_, data) => received = data;
@@ -98,9 +104,7 @@ public class RealtimeMessageTests
     [Fact]
     public void DispatchMessage_OutputTranscriptDelta_FiresEvent()
     {
-        var apiKey = Substitute.For<IApiKeyService>();
-        var settings = new AppSettings();
-        var client = new RealtimeClient(apiKey, settings);
+        var client = CreateClient();
 
         string? received = null;
         client.OutputTranscriptDelta += (_, text) => received = text;
@@ -114,9 +118,7 @@ public class RealtimeMessageTests
     [Fact]
     public void DispatchMessage_OutputTranscriptCompleted_FiresEvent()
     {
-        var apiKey = Substitute.For<IApiKeyService>();
-        var settings = new AppSettings();
-        var client = new RealtimeClient(apiKey, settings);
+        var client = CreateClient();
 
         string? received = null;
         client.OutputTranscriptCompleted += (_, text) => received = text;
@@ -130,9 +132,7 @@ public class RealtimeMessageTests
     [Fact]
     public void DispatchMessage_InputTranscriptCompleted_FiresEvent()
     {
-        var apiKey = Substitute.For<IApiKeyService>();
-        var settings = new AppSettings();
-        var client = new RealtimeClient(apiKey, settings);
+        var client = CreateClient();
 
         string? received = null;
         client.InputTranscriptCompleted += (_, text) => received = text;
@@ -146,9 +146,7 @@ public class RealtimeMessageTests
     [Fact]
     public void DispatchMessage_SpeechStarted_FiresEvent()
     {
-        var apiKey = Substitute.For<IApiKeyService>();
-        var settings = new AppSettings();
-        var client = new RealtimeClient(apiKey, settings);
+        var client = CreateClient();
 
         bool fired = false;
         client.SpeechStarted += (_, _) => fired = true;
@@ -161,9 +159,7 @@ public class RealtimeMessageTests
     [Fact]
     public void DispatchMessage_SpeechStopped_FiresEvent()
     {
-        var apiKey = Substitute.For<IApiKeyService>();
-        var settings = new AppSettings();
-        var client = new RealtimeClient(apiKey, settings);
+        var client = CreateClient();
 
         bool fired = false;
         client.SpeechStopped += (_, _) => fired = true;
@@ -176,9 +172,7 @@ public class RealtimeMessageTests
     [Fact]
     public void DispatchMessage_ResponseDone_FiresWithInfo()
     {
-        var apiKey = Substitute.For<IApiKeyService>();
-        var settings = new AppSettings();
-        var client = new RealtimeClient(apiKey, settings);
+        var client = CreateClient();
 
         RealtimeResponseInfo? received = null;
         client.ResponseDone += (_, info) => received = info;
@@ -194,9 +188,7 @@ public class RealtimeMessageTests
     [Fact]
     public void DispatchMessage_Error_FiresWithMessage()
     {
-        var apiKey = Substitute.For<IApiKeyService>();
-        var settings = new AppSettings();
-        var client = new RealtimeClient(apiKey, settings);
+        var client = CreateClient();
 
         string? received = null;
         client.ErrorOccurred += (_, msg) => received = msg;
@@ -210,9 +202,7 @@ public class RealtimeMessageTests
     [Fact]
     public void DispatchMessage_UnknownType_DoesNotThrow()
     {
-        var apiKey = Substitute.For<IApiKeyService>();
-        var settings = new AppSettings();
-        var client = new RealtimeClient(apiKey, settings);
+        var client = CreateClient();
 
         var act = () => client.DispatchMessage("""{"type":"session.created","session":{}}""");
 
@@ -321,9 +311,7 @@ public class RealtimeMessageTests
     [Fact]
     public void DispatchMessage_ResponseDone_WithFunctionCall_FiresFunctionCallReceived()
     {
-        var apiKey = Substitute.For<IApiKeyService>();
-        var settings = new AppSettings();
-        var client = new RealtimeClient(apiKey, settings);
+        var client = CreateClient();
 
         FunctionCallInfo? received = null;
         client.FunctionCallReceived += (_, info) => received = info;

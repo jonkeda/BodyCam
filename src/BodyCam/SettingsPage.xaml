@@ -4,6 +4,7 @@
              xmlns:vm="clr-namespace:BodyCam.ViewModels"
              x:Class="BodyCam.SettingsPage"
              x:DataType="vm:SettingsViewModel"
+             Shell.TabBarIsVisible="False"
              Title="{Binding Title}">
 
     <ScrollView>
@@ -17,10 +18,12 @@
             <Label Text="Provider" FontSize="18" FontAttributes="Bold" Margin="0,8,0,0" />
 
             <HorizontalStackLayout Spacing="16">
-                <RadioButton Content="OpenAI"
+                <RadioButton AutomationId="ProviderOpenAiRadio"
+                             Content="OpenAI"
                              IsChecked="{Binding IsOpenAi}"
                              CheckedChanged="OnOpenAiChecked" />
-                <RadioButton Content="Azure"
+                <RadioButton AutomationId="ProviderAzureRadio"
+                             Content="Azure"
                              IsChecked="{Binding IsAzure}"
                              CheckedChanged="OnAzureChecked" />
             </HorizontalStackLayout>
@@ -31,37 +34,45 @@
 
                 <Label Text="Voice Model" FontSize="13" TextColor="Gray" />
                 <HorizontalStackLayout Spacing="8">
-                    <Picker ItemsSource="{Binding RealtimeModelOptions}"
+                    <Picker AutomationId="VoiceModelPicker"
+                            ItemsSource="{Binding RealtimeModelOptions}"
                             SelectedItem="{Binding SelectedRealtimeModel}"
                             HorizontalOptions="FillAndExpand" />
-                    <Label Text="{Binding RealtimeStatus}"
+                    <Label AutomationId="RealtimeStatusLabel"
+                           Text="{Binding RealtimeStatus}"
                            VerticalOptions="Center" FontSize="13" />
                 </HorizontalStackLayout>
 
                 <Label Text="Chat Model" FontSize="13" TextColor="Gray" />
                 <HorizontalStackLayout Spacing="8">
-                    <Picker ItemsSource="{Binding ChatModelOptions}"
+                    <Picker AutomationId="ChatModelPicker"
+                            ItemsSource="{Binding ChatModelOptions}"
                             SelectedItem="{Binding SelectedChatModel}"
                             HorizontalOptions="FillAndExpand" />
-                    <Label Text="{Binding ChatStatus}"
+                    <Label AutomationId="ChatStatusLabel"
+                           Text="{Binding ChatStatus}"
                            VerticalOptions="Center" FontSize="13" />
                 </HorizontalStackLayout>
 
                 <Label Text="Vision Model" FontSize="13" TextColor="Gray" />
                 <HorizontalStackLayout Spacing="8">
-                    <Picker ItemsSource="{Binding VisionModelOptions}"
+                    <Picker AutomationId="VisionModelPicker"
+                            ItemsSource="{Binding VisionModelOptions}"
                             SelectedItem="{Binding SelectedVisionModel}"
                             HorizontalOptions="FillAndExpand" />
-                    <Label Text="{Binding VisionStatus}"
+                    <Label AutomationId="VisionStatusLabel"
+                           Text="{Binding VisionStatus}"
                            VerticalOptions="Center" FontSize="13" />
                 </HorizontalStackLayout>
 
                 <Label Text="Transcription Model" FontSize="13" TextColor="Gray" />
                 <HorizontalStackLayout Spacing="8">
-                    <Picker ItemsSource="{Binding TranscriptionModelOptions}"
+                    <Picker AutomationId="TranscriptionModelPicker"
+                            ItemsSource="{Binding TranscriptionModelOptions}"
                             SelectedItem="{Binding SelectedTranscriptionModel}"
                             HorizontalOptions="FillAndExpand" />
-                    <Label Text="{Binding TranscriptionStatus}"
+                    <Label AutomationId="TranscriptionStatusLabel"
+                           Text="{Binding TranscriptionStatus}"
                            VerticalOptions="Center" FontSize="13" />
                 </HorizontalStackLayout>
             </VerticalStackLayout>
@@ -71,16 +82,19 @@
                 <Label Text="Azure Deployments" FontSize="18" FontAttributes="Bold" Margin="0,8,0,0" />
 
                 <Label Text="Endpoint" FontSize="13" TextColor="Gray" />
-                <Entry Text="{Binding AzureEndpoint}"
+                <Entry AutomationId="AzureEndpointEntry"
+                       Text="{Binding AzureEndpoint}"
                        Placeholder="https://your-resource.cognitiveservices.azure.com" />
 
                 <Label Text="API Version" FontSize="13" TextColor="Gray" />
-                <Entry Text="{Binding AzureApiVersion}"
+                <Entry AutomationId="AzureApiVersionEntry"
+                       Text="{Binding AzureApiVersion}"
                        Placeholder="2025-04-01-preview" />
 
                 <Label Text="Realtime Deployment" FontSize="13" TextColor="Gray" />
                 <HorizontalStackLayout Spacing="8">
-                    <Entry Text="{Binding AzureRealtimeDeployment}"
+                    <Entry AutomationId="AzureRealtimeDeploymentEntry"
+                           Text="{Binding AzureRealtimeDeployment}"
                            Placeholder="my-realtime-deployment"
                            HorizontalOptions="FillAndExpand" />
                     <Label Text="{Binding RealtimeStatus}"
@@ -89,7 +103,8 @@
 
                 <Label Text="Chat Deployment" FontSize="13" TextColor="Gray" />
                 <HorizontalStackLayout Spacing="8">
-                    <Entry Text="{Binding AzureChatDeployment}"
+                    <Entry AutomationId="AzureChatDeploymentEntry"
+                           Text="{Binding AzureChatDeployment}"
                            Placeholder="my-chat-deployment"
                            HorizontalOptions="FillAndExpand" />
                     <Label Text="{Binding ChatStatus}"
@@ -98,7 +113,8 @@
 
                 <Label Text="Vision Deployment" FontSize="13" TextColor="Gray" />
                 <HorizontalStackLayout Spacing="8">
-                    <Entry Text="{Binding AzureVisionDeployment}"
+                    <Entry AutomationId="AzureVisionDeploymentEntry"
+                           Text="{Binding AzureVisionDeployment}"
                            Placeholder="my-vision-deployment"
                            HorizontalOptions="FillAndExpand" />
                     <Label Text="{Binding VisionStatus}"
@@ -112,52 +128,62 @@
             <Label Text="Voice Settings" FontSize="18" FontAttributes="Bold" Margin="0,8,0,0" />
 
             <Label Text="Voice" FontSize="13" TextColor="Gray" />
-            <Picker ItemsSource="{Binding VoiceOptions}"
+            <Picker AutomationId="VoicePicker"
+                    ItemsSource="{Binding VoiceOptions}"
                     SelectedItem="{Binding SelectedVoice}" />
 
             <Label Text="Turn Detection" FontSize="13" TextColor="Gray" />
-            <Picker ItemsSource="{Binding TurnDetectionOptions}"
+            <Picker AutomationId="TurnDetectionPicker"
+                    ItemsSource="{Binding TurnDetectionOptions}"
                     SelectedItem="{Binding SelectedTurnDetection}" />
 
             <Label Text="Noise Reduction" FontSize="13" TextColor="Gray" />
-            <Picker ItemsSource="{Binding NoiseReductionOptions}"
+            <Picker AutomationId="NoiseReductionPicker"
+                    ItemsSource="{Binding NoiseReductionOptions}"
                     SelectedItem="{Binding SelectedNoiseReduction}" />
 
             <!-- SECTION: System Prompt -->
             <Label Text="System Instructions" FontSize="18" FontAttributes="Bold" Margin="0,8,0,0" />
-            <Editor Text="{Binding SystemInstructions}"
+            <Editor AutomationId="SystemInstructionsEditor"
+                    Text="{Binding SystemInstructions}"
                     HeightRequest="100"
                     Placeholder="You are a helpful assistant." />
 
             <!-- SECTION: API Key -->
             <Label Text="API Key" FontSize="18" FontAttributes="Bold" Margin="0,8,0,0" />
             <HorizontalStackLayout Spacing="8">
-                <Entry Text="{Binding ApiKeyDisplay}"
+                <Entry AutomationId="ApiKeyDisplay"
+                       Text="{Binding ApiKeyDisplay}"
                        IsPassword="{Binding IsKeyVisible, Converter={StaticResource InvertBoolConverter}}"
                        IsReadOnly="True"
                        HorizontalOptions="FillAndExpand"
                        WidthRequest="200" />
-                <Button Text="{Binding KeyToggleText}"
+                <Button AutomationId="ToggleKeyVisibilityButton"
+                        Text="{Binding KeyToggleText}"
                         Command="{Binding ToggleKeyVisibilityCommand}"
                         WidthRequest="60" Padding="4"
                         BackgroundColor="{AppThemeBinding Light=#E0E0E0, Dark=#333}"
                         TextColor="{AppThemeBinding Light=#333, Dark=#E0E0E0}" />
-                <Button Text="Change" Command="{Binding ChangeApiKeyCommand}"
+                <Button AutomationId="ChangeApiKeyButton"
+                        Text="Change" Command="{Binding ChangeApiKeyCommand}"
                         BackgroundColor="{AppThemeBinding Light=#512BD4, Dark=#7C4DFF}"
                         TextColor="White" />
-                <Button Text="Clear" Command="{Binding ClearApiKeyCommand}"
+                <Button AutomationId="ClearApiKeyButton"
+                        Text="Clear" Command="{Binding ClearApiKeyCommand}"
                         BackgroundColor="{AppThemeBinding Light=#E0E0E0, Dark=#333}"
                         TextColor="{AppThemeBinding Light=#333, Dark=#E0E0E0}" />
             </HorizontalStackLayout>
 
             <!-- SECTION: Test Connection -->
             <HorizontalStackLayout Spacing="8" Margin="0,4,0,0">
-                <Button Text="Test Connection"
+                <Button AutomationId="TestConnectionButton"
+                        Text="Test Connection"
                         Command="{Binding TestConnectionCommand}"
                         IsEnabled="{Binding IsTesting, Converter={StaticResource InvertBoolConverter}}"
                         BackgroundColor="{AppThemeBinding Light=#512BD4, Dark=#7C4DFF}"
                         TextColor="White" />
-                <Label Text="{Binding ConnectionStatus}"
+                <Label AutomationId="ConnectionStatusLabel"
+                       Text="{Binding ConnectionStatus}"
                        VerticalOptions="Center"
                        FontSize="13" />
             </HorizontalStackLayout>
@@ -167,14 +193,52 @@
 
             <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
                 <Label Text="Debug Mode" VerticalOptions="Center" Grid.Row="0" Grid.Column="0" />
-                <Switch IsToggled="{Binding DebugMode}" Grid.Row="0" Grid.Column="1" />
+                <Switch AutomationId="DebugModeSwitch" IsToggled="{Binding DebugMode}" Grid.Row="0" Grid.Column="1" />
 
                 <Label Text="Show Token Counts" VerticalOptions="Center" Grid.Row="1" Grid.Column="0" />
-                <Switch IsToggled="{Binding ShowTokenCounts}" Grid.Row="1" Grid.Column="1" />
+                <Switch AutomationId="ShowTokenCountsSwitch" IsToggled="{Binding ShowTokenCounts}" Grid.Row="1" Grid.Column="1" />
 
                 <Label Text="Show Cost Estimate" VerticalOptions="Center" Grid.Row="2" Grid.Column="0" />
-                <Switch IsToggled="{Binding ShowCostEstimate}" Grid.Row="2" Grid.Column="1" />
+                <Switch AutomationId="ShowCostEstimateSwitch" IsToggled="{Binding ShowCostEstimate}" Grid.Row="2" Grid.Column="1" />
             </Grid>
+
+            <!-- SECTION: Tool Settings -->
+            <Label Text="Tool Settings" FontSize="18" FontAttributes="Bold" Margin="0,16,0,0" />
+            <Label Text="Configure individual tool behavior." FontSize="12" TextColor="Gray" />
+
+            <CollectionView ItemsSource="{Binding ToolSettingsSections}"
+                            SelectionMode="None">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ToolSettingsSection">
+                        <VerticalStackLayout Padding="0,12,0,0">
+                            <Label Text="{Binding DisplayName}" FontSize="15" FontAttributes="Bold" />
+                            <Label Text="{Binding Description}" FontSize="12" TextColor="Gray" Margin="0,0,0,4" />
+                            <CollectionView ItemsSource="{Binding Items}"
+                                            SelectionMode="None">
+                                <CollectionView.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:ToolSettingItem">
+                                        <Grid ColumnDefinitions="*,Auto" Padding="0,4">
+                                            <Label Text="{Binding Label}" VerticalOptions="Center" />
+                                            <Switch IsToggled="{Binding BoolValue}"
+                                                    IsVisible="{Binding IsBoolean}"
+                                                    Grid.Column="1" />
+                                            <Entry Text="{Binding StringValue}"
+                                                   IsVisible="{Binding IsInteger}"
+                                                   Keyboard="Numeric"
+                                                   WidthRequest="80"
+                                                   Grid.Column="1" />
+                                            <Entry Text="{Binding StringValue}"
+                                                   IsVisible="{Binding IsText}"
+                                                   WidthRequest="200"
+                                                   Grid.Column="1" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </CollectionView.ItemTemplate>
+                            </CollectionView>
+                        </VerticalStackLayout>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
 
         </VerticalStackLayout>
     </ScrollView>

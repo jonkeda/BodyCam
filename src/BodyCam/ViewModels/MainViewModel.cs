@@ -8,6 +8,13 @@ using CommunityToolkit.Maui.Views;
 
 namespace BodyCam.ViewModels;
 
+public enum ListeningLayer
+{
+    Sleep,
+    WakeWord,
+    ActiveSession
+}
+
 public class MainViewModel : ViewModelBase
 {
     private readonly AgentOrchestrator _orchestrator;
@@ -23,6 +30,12 @@ public class MainViewModel : ViewModelBase
 
     internal TranscriptEntry? _currentAiEntry;
 
+    private ListeningLayer _currentLayer = ListeningLayer.Sleep;
+    private bool _showTranscriptTab = true;
+    private ImageSource? _snapshotImage;
+    private string? _snapshotCaption;
+    private bool _showSnapshot;
+
     public MainViewModel(AgentOrchestrator orchestrator, IApiKeyService apiKeyService, ISettingsService settingsService)
     {
         _orchestrator = orchestrator;
@@ -37,6 +50,54 @@ public class MainViewModel : ViewModelBase
         {
             Entries.Clear();
             _currentAiEntry = null;
+        });
+
+        SetStateCommand = new AsyncRelayCommand(async (object? param) =>
+        {
+            if (param is not string segment) return;
+            await SetLayerAsync(segment);
+        });
+
+        SwitchToTranscriptCommand = new RelayCommand(() =>
+        {
+            ShowTranscriptTab = true;
+            // Stop camera preview when switching away to save resources
+            if (CurrentLayer != ListeningLayer.ActiveSession)
+                _cameraView?.StopCameraPreview();
+        });
+        SwitchToCameraCommand = new AsyncRelayCommand(async () =>
+        {
+            ShowTranscriptTab = false;
+            // Start camera preview so the native control gets non-zero size
+            if (_cameraView is not null)
+                await _cameraView.StartCameraPreview(CancellationToken.None);
+        });
+        ToggleDebugCommand = new RelayCommand(() =>
+        {
+            DebugVisible = !DebugVisible;
+            _settingsService.DebugMode = DebugVisible;
+        });
+        DismissSnapshotCommand = new RelayCommand(() => ShowSnapshot = false);
+
+        LookCommand = new AsyncRelayCommand(async () =>
+        {
+            await SendVisionCommandAsync("Describe what you see in front of me.");
+        });
+        ReadCommand = new AsyncRelayCommand(async () =>
+        {
+            await SendVisionCommandAsync("Read any text you can see in front of me.");
+        });
+        FindCommand = new AsyncRelayCommand(async () =>
+        {
+            await SendVisionCommandAsync("Look around and tell me what objects you can find.");
+        });
+        AskCommand = new AsyncRelayCommand(async () =>
+        {
+            await SetLayerAsync("Active");
+        });
+        PhotoCommand = new AsyncRelayCommand(async () =>
+        {
+            await SendVisionCommandAsync("Take a photo of what you see.");
         });
 
         _orchestrator.TranscriptDelta += (_, delta) =>
@@ -138,27 +199,194 @@ public class MainViewModel : ViewModelBase
 
     public ICommand ToggleCommand { get; }
     public ICommand ClearCommand { get; }
+    public ICommand SetStateCommand { get; }
+    public ICommand SwitchToTranscriptCommand { get; }
+    public ICommand SwitchToCameraCommand { get; }
+    public ICommand ToggleDebugCommand { get; }
+    public ICommand DismissSnapshotCommand { get; }
+    public ICommand LookCommand { get; }
+    public ICommand ReadCommand { get; }
+    public ICommand FindCommand { get; }
+    public ICommand AskCommand { get; }
+    public ICommand PhotoCommand { get; }
+
+    private static readonly Color ActiveBg = Color.FromArgb("#512BD4");
+    private static readonly Color InactiveBg = Colors.Transparent;
+    private static readonly Color ActiveTextColor = Colors.White;
+    private static readonly Color InactiveTextColor = Color.FromArgb("#999999");
+
+    public ListeningLayer CurrentLayer
+    {
+        get => _currentLayer;
+        set
+        {
+            if (SetProperty(ref _currentLayer, value))
+            {
+                OnPropertyChanged(nameof(StateColor));
+                OnPropertyChanged(nameof(StatusText));
+                OnPropertyChanged(nameof(CanAct));
+                OnPropertyChanged(nameof(SleepSegmentColor));
+                OnPropertyChanged(nameof(SleepSegmentTextColor));
+                OnPropertyChanged(nameof(ListenSegmentColor));
+                OnPropertyChanged(nameof(ListenSegmentTextColor));
+                OnPropertyChanged(nameof(ActiveSegmentColor));
+                OnPropertyChanged(nameof(ActiveSegmentTextColor));
+            }
+        }
+    }
+
+    public bool CanAct => CurrentLayer != ListeningLayer.Sleep;
+
+    public bool ShowTranscriptTab
+    {
+        get => _showTranscriptTab;
+        set
+        {
+            if (SetProperty(ref _showTranscriptTab, value))
+            {
+                OnPropertyChanged(nameof(ShowCameraTab));
+                OnPropertyChanged(nameof(TranscriptTabBackground));
+                OnPropertyChanged(nameof(TranscriptTabTextColor));
+                OnPropertyChanged(nameof(CameraTabBackground));
+                OnPropertyChanged(nameof(CameraTabTextColor));
+            }
+        }
+    }
+    public bool ShowCameraTab => !ShowTranscriptTab;
+
+    private static readonly Color TabActiveBg = Color.FromArgb("#2196F3");
+    private static readonly Color TabActiveTxt = Colors.White;
+    private static readonly Color TabInactiveTxt = Color.FromArgb("#333333");
+
+    public Color TranscriptTabBackground => ShowTranscriptTab ? TabActiveBg : Colors.Transparent;
+    public Color TranscriptTabTextColor => ShowTranscriptTab ? TabActiveTxt : TabInactiveTxt;
+    public Color CameraTabBackground => ShowCameraTab ? TabActiveBg : Colors.Transparent;
+    public Color CameraTabTextColor => ShowCameraTab ? TabActiveTxt : TabInactiveTxt;
+
+    public ImageSource? SnapshotImage
+    {
+        get => _snapshotImage;
+        set => SetProperty(ref _snapshotImage, value);
+    }
+    public string? SnapshotCaption
+    {
+        get => _snapshotCaption;
+        set => SetProperty(ref _snapshotCaption, value);
+    }
+    public bool ShowSnapshot
+    {
+        get => _showSnapshot;
+        set => SetProperty(ref _showSnapshot, value);
+    }
+
+    public Color StateColor => CurrentLayer switch
+    {
+        ListeningLayer.Sleep => Color.FromArgb("#666666"),
+        ListeningLayer.WakeWord => Color.FromArgb("#4CAF50"),
+        ListeningLayer.ActiveSession => Color.FromArgb("#2196F3"),
+        _ => Color.FromArgb("#666666")
+    };
+
+    public Color SleepSegmentColor => CurrentLayer == ListeningLayer.Sleep ? ActiveBg : InactiveBg;
+    public Color ListenSegmentColor => CurrentLayer == ListeningLayer.WakeWord ? ActiveBg : InactiveBg;
+    public Color ActiveSegmentColor => CurrentLayer == ListeningLayer.ActiveSession ? ActiveBg : InactiveBg;
+    public Color SleepSegmentTextColor => CurrentLayer == ListeningLayer.Sleep ? ActiveTextColor : InactiveTextColor;
+    public Color ListenSegmentTextColor => CurrentLayer == ListeningLayer.WakeWord ? ActiveTextColor : InactiveTextColor;
+    public Color ActiveSegmentTextColor => CurrentLayer == ListeningLayer.ActiveSession ? ActiveTextColor : InactiveTextColor;
 
     private async Task ToggleAsync()
     {
-        // Refresh debug visibility from settings
         DebugVisible = _settingsService.DebugMode;
 
         if (IsRunning)
-        {
-            _cameraView?.StopCameraPreview();
-            VisionStatus = null;
-
-            await _orchestrator.StopAsync();
-            IsRunning = false;
-            ToggleButtonText = "Start";
-            StatusText = "Ready";
-        }
+            await SetLayerAsync("Sleep");
         else
+            await SetLayerAsync("Active");
+    }
+
+    private async Task SendVisionCommandAsync(string prompt)
+    {
+        // Option B: Session is running — send through Realtime API (spoken aloud)
+        if (IsRunning)
+        {
+            await _orchestrator.SendTextInputAsync(prompt);
+            return;
+        }
+
+        // Option A: No session — capture frame directly, call VisionAgent, show in transcript (no voice)
+        // Ensure camera preview is running so we can capture a frame
+        if (_cameraView is not null)
+            await _cameraView.StartCameraPreview(CancellationToken.None);
+
+        var frame = await CaptureFrameFromCameraViewAsync();
+
+        ImageSource? imageSource = null;
+        if (frame is not null)
+            imageSource = ImageSource.FromStream(() => new MemoryStream(frame));
+
+        // Add user action to transcript
+        Entries.Add(new TranscriptEntry
+        {
+            Role = "You",
+            Text = prompt,
+            Image = imageSource,
+            ImageCaption = "Captured frame"
+        });
+
+        if (frame is null)
+        {
+            Entries.Add(new TranscriptEntry { Role = "AI", Text = "Camera not available or no frame captured." });
+            return;
+        }
+
+        var description = await _orchestrator.Vision.DescribeFrameAsync(frame, prompt);
+
+        Entries.Add(new TranscriptEntry { Role = "AI", Text = description });
+
+        // Switch to transcript tab so the user sees the result
+        ShowTranscriptTab = true;
+    }
+
+    private async Task EnsureActiveAndSendAsync(string prompt)
+    {
+        if (CurrentLayer != ListeningLayer.ActiveSession)
+            await SetLayerAsync("Active");
+
+        if (!IsRunning) return;
+
+        await _orchestrator.SendTextInputAsync(prompt);
+    }
+
+    private async Task SetLayerAsync(string segment)
+    {
+        var target = segment switch
+        {
+            "Sleep" => ListeningLayer.Sleep,
+            "Listen" => ListeningLayer.WakeWord,
+            "Active" => ListeningLayer.ActiveSession,
+            _ => CurrentLayer
+        };
+
+        if (target == CurrentLayer) return;
+
+        // De-escalate
+        if (target < CurrentLayer)
+        {
+            if (CurrentLayer == ListeningLayer.ActiveSession)
+            {
+                _cameraView?.StopCameraPreview();
+                VisionStatus = null;
+                await _orchestrator.StopAsync();
+                IsRunning = false;
+                ToggleButtonText = "Start";
+            }
+        }
+
+        // Escalate to Active
+        if (target == ListeningLayer.ActiveSession && CurrentLayer < ListeningLayer.ActiveSession)
         {
             try
             {
-                // Ensure API key is available
                 var key = await _apiKeyService.GetApiKeyAsync();
                 if (string.IsNullOrWhiteSpace(key))
                 {
@@ -175,24 +403,31 @@ public class MainViewModel : ViewModelBase
                 StatusText = "Connecting...";
 
                 await _orchestrator.StartAsync();
-
                 _orchestrator.FrameCaptureFunc = CaptureFrameFromCameraViewAsync;
 
                 if (_cameraView is not null)
                     await _cameraView.StartCameraPreview(CancellationToken.None);
 
                 IsRunning = true;
-                StatusText = "Listening...";
-                OnPropertyChanged();
             }
             catch (Exception ex)
             {
                 IsRunning = false;
                 ToggleButtonText = "Start";
-                StatusText = $"Error: {ex.Message}";
                 DebugLog += $"[{DateTime.Now:HH:mm:ss}] Start failed: {ex.Message}{Environment.NewLine}";
+                return;
             }
         }
+
+        CurrentLayer = target;
+
+        StatusText = target switch
+        {
+            ListeningLayer.Sleep => "Sleeping",
+            ListeningLayer.WakeWord => "Listening...",
+            ListeningLayer.ActiveSession => "Active",
+            _ => "Ready"
+        };
     }
 
     private static async Task<string?> PromptForApiKeyAsync()

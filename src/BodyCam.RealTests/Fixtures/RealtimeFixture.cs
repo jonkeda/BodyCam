@@ -1,5 +1,6 @@
 using BodyCam.Models;
 using BodyCam.Services;
+using BodyCam.Tools;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -44,7 +45,7 @@ public class RealtimeFixture : IAsyncLifetime
     {
         var settings = LoadSettings();
         var apiKeyService = new StaticApiKeyService(LoadApiKey(settings.Provider));
-        _client = new RealtimeClient(apiKeyService, settings);
+        _client = new RealtimeClient(apiKeyService, settings, new ToolDispatcher([]));
     }
 
     public void SetOutput(ITestOutputHelper output) => _output = output;

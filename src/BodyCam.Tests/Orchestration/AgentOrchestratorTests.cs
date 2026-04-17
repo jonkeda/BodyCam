@@ -2,6 +2,7 @@ using BodyCam.Agents;
 using BodyCam.Models;
 using BodyCam.Orchestration;
 using BodyCam.Services;
+using BodyCam.Tools;
 using FluentAssertions;
 using Microsoft.Extensions.AI;
 using NSubstitute;
@@ -37,7 +38,13 @@ public class AgentOrchestratorTests
         settingsService.Provider.Returns(OpenAiProvider.OpenAi);
         settingsService.AzureApiVersion.Returns("2025-04-01-preview");
 
-        return new AgentOrchestrator(voiceIn, conversation, voiceOut, vision, realtime, settingsService, new AppSettings());
+        var describeSceneTool = new DescribeSceneTool(vision);
+        var deepAnalysisTool = new DeepAnalysisTool(conversation);
+        var dispatcher = new ToolDispatcher(new ITool[] { describeSceneTool, deepAnalysisTool });
+        var wakeWord = Substitute.For<IWakeWordService>();
+        var micCoordinator = Substitute.For<IMicrophoneCoordinator>();
+
+        return new AgentOrchestrator(voiceIn, conversation, voiceOut, vision, realtime, settingsService, new AppSettings(), dispatcher, wakeWord, micCoordinator);
     }
 
     [Fact]

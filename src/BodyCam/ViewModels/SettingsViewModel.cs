@@ -1,8 +1,10 @@
+using System.Collections.ObjectModel;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Windows.Input;
 using BodyCam.Mvvm;
 using BodyCam.Services;
+using BodyCam.Tools;
 
 namespace BodyCam.ViewModels;
 
@@ -13,7 +15,7 @@ public class SettingsViewModel : ViewModelBase
     private readonly Func<HttpClient> _httpClientFactory;
     private string? _fullKey;
 
-    public SettingsViewModel(ISettingsService settings, IApiKeyService apiKeyService, Func<HttpClient>? httpClientFactory = null)
+    public SettingsViewModel(ISettingsService settings, IApiKeyService apiKeyService, IEnumerable<ITool> tools, Func<HttpClient>? httpClientFactory = null)
     {
         _settings = settings;
         _apiKeyService = apiKeyService;
@@ -26,6 +28,36 @@ public class SettingsViewModel : ViewModelBase
         TestConnectionCommand = new AsyncRelayCommand(TestConnectionAsync);
 
         LoadApiKeyDisplay();
+        LoadToolSettings(tools);
+    }
+
+    public ObservableCollection<ToolSettingsSection> ToolSettingsSections { get; } = new();
+
+    private void LoadToolSettings(IEnumerable<ITool> tools)
+    {
+        foreach (var tool in tools.OfType<IToolSettings>())
+        {
+            tool.LoadSettings(_settings);
+            var section = new ToolSettingsSection
+            {
+                DisplayName = tool.SettingsDisplayName,
+                Description = tool.SettingsDescription
+            };
+
+            foreach (var descriptor in tool.GetSettingDescriptors())
+            {
+                var item = new ToolSettingItem(descriptor);
+                item.LoadFromDescriptor();
+                section.Items.Add(item);
+            }
+
+            ToolSettingsSections.Add(section);
+        }
+    }
+
+    public void SaveToolSettings()
+    {
+        // Settings are already applied via SetValue callbacks
     }
 
     // --- Provider ---

@@ -58,4 +58,46 @@ public class TranscriptEntryTests
 
         changed.Should().BeEmpty();
     }
+
+    [Fact]
+    public void HasImage_WithoutImage_ReturnsFalse()
+    {
+        var entry = new TranscriptEntry { Role = "AI" };
+
+        entry.HasImage.Should().BeFalse();
+        entry.Image.Should().BeNull();
+    }
+
+    [Fact]
+    public void RoleColor_You_IsGreen()
+    {
+        var entry = new TranscriptEntry { Role = "You" };
+        var expected = Color.FromArgb("#4CAF50");
+
+        entry.RoleColor.Red.Should().BeApproximately(expected.Red, 0.01f);
+        entry.RoleColor.Green.Should().BeApproximately(expected.Green, 0.01f);
+        entry.RoleColor.Blue.Should().BeApproximately(expected.Blue, 0.01f);
+    }
+
+    [Fact]
+    public void RoleColor_AI_IsBlue()
+    {
+        var entry = new TranscriptEntry { Role = "AI" };
+        var expected = Color.FromArgb("#2196F3");
+
+        entry.RoleColor.Red.Should().BeApproximately(expected.Red, 0.01f);
+        entry.RoleColor.Green.Should().BeApproximately(expected.Green, 0.01f);
+        entry.RoleColor.Blue.Should().BeApproximately(expected.Blue, 0.01f);
+    }
+
+    [Fact]
+    public void RoleColor_System_IsGray()
+    {
+        var entry = new TranscriptEntry { Role = "System" };
+        var expected = Color.FromArgb("#999999");
+
+        entry.RoleColor.Red.Should().BeApproximately(expected.Red, 0.01f);
+        entry.RoleColor.Green.Should().BeApproximately(expected.Green, 0.01f);
+        entry.RoleColor.Blue.Should().BeApproximately(expected.Blue, 0.01f);
+    }
 }

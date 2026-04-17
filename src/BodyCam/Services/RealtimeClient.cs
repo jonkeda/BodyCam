@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 using BodyCam.Models;
 using BodyCam.Services.Realtime;
+using BodyCam.Tools;
 
 namespace BodyCam.Services;
 
@@ -11,14 +12,16 @@ public class RealtimeClient : IRealtimeClient
 {
     private readonly IApiKeyService _apiKeyService;
     private readonly AppSettings _settings;
+    private readonly ToolDispatcher _dispatcher;
     private ClientWebSocket? _ws;
     private CancellationTokenSource? _receiveCts;
     private Task? _receiveLoop;
 
-    public RealtimeClient(IApiKeyService apiKeyService, AppSettings settings)
+    public RealtimeClient(IApiKeyService apiKeyService, AppSettings settings, ToolDispatcher dispatcher)
     {
         _apiKeyService = apiKeyService;
         _settings = settings;
+        _dispatcher = dispatcher;
     }
 
     public bool IsConnected { get; private set; }
@@ -163,57 +166,17 @@ public class RealtimeClient : IRealtimeClient
         await CreateResponseAsync(ct);
     }
 
-    private static readonly ToolDefinition[] s_toolDefinitions = CreateToolDefinitions();
-
-    private static ToolDefinition[] GetToolDefinitions() => s_toolDefinitions;
-
-    private static ToolDefinition[] CreateToolDefinitions()
+    private ToolDefinition[] GetToolDefinitions()
     {
-        var describeSceneParams = JsonDocument.Parse("""
+        return _dispatcher.GetToolDefinitions()
+            .Select(dto => new ToolDefinition
             {
-                "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "Optional question about the scene, e.g. 'What text is on the sign?' or 'How many people are visible?'"
-                    }
-                },
-                "required": []
-            }
-            """);
-
-        var deepAnalysisParams = JsonDocument.Parse("""
-            {
-                "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "The question or task to analyze in depth"
-                    },
-                    "context": {
-                        "type": "string",
-                        "description": "Relevant context from the conversation"
-                    }
-                },
-                "required": ["query"]
-            }
-            """);
-
-        return
-        [
-            new ToolDefinition
-            {
-                Name = "describe_scene",
-                Description = "Capture what the camera currently sees. Use when the user asks about their surroundings, asks you to look at something, or when visual context would help.",
-                Parameters = describeSceneParams.RootElement
-            },
-            new ToolDefinition
-            {
-                Name = "deep_analysis",
-                Description = "Perform deep analysis using a more capable reasoning model. Use for complex questions, code generation, detailed explanations, or tasks needing extended reasoning.",
-                Parameters = deepAnalysisParams.RootElement
-            }
-        ];
+                Type = dto.Type,
+                Name = dto.Name,
+                Description = dto.Description,
+                Parameters = JsonDocument.Parse(dto.ParametersJson).RootElement
+            })
+            .ToArray();
     }
 
     public async ValueTask DisposeAsync()

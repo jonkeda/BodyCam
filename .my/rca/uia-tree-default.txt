@@ -1,0 +1,74 @@
+<Window AutomationId="" Name="BodyCam" ClassName="WinUIDesktopWin32WindowClass">
+  <Pane AutomationId="" Name="Non Client Input Sink Window" ClassName="InputNonClientPointerSource">
+  </Pane>
+  <Pane AutomationId="" Name="AppWindow Custom Title Bar" ClassName="ReunionWindowingCaptionControls">
+    <Button AutomationId="Minimize" Name="Minimize" ClassName="">
+    </Button>
+    <Button AutomationId="Maximize" Name="Maximize" ClassName="">
+    </Button>
+    <Button AutomationId="Close" Name="Close" ClassName="">
+    </Button>
+  </Pane>
+  <Pane AutomationId="" Name="" ClassName="Microsoft.UI.Content.DesktopChildSiteBridge">
+    <Pane AutomationId="" Name="" ClassName="InputSiteWindowClass">
+      <Text AutomationId="AppTitle" Name="BodyCam" ClassName="TextBlock">
+      </Text>
+      <Custom AutomationId="" Name="" ClassName="">
+        <AppBar AutomationId="commandBar" Name="" ClassName="ApplicationBar">
+          <Text AutomationId="title" Name="BodyCam" ClassName="TextBlock">
+          </Text>
+        </AppBar>
+        <Custom AutomationId="" Name="" ClassName="">
+          <Pane AutomationId="" Name="" ClassName="ScrollViewer">
+            <Group AutomationId="TopNavMenuItemsHost" Name="" ClassName="">
+              <TabItem AutomationId="navViewItem" Name="Home" ClassName="Microsoft.UI.Xaml.Controls.NavigationViewItem">
+              </TabItem>
+              <TabItem AutomationId="navViewItem" Name="Settings" ClassName="Microsoft.UI.Xaml.Controls.NavigationViewItem">
+              </TabItem>
+            </Group>
+          </Pane>
+          <Group AutomationId="TopFooterMenuItemsHost" Name="" ClassName="">
+          </Group>
+          <Button AutomationId="SleepButton" Name="😴" ClassName="Button">
+          </Button>
+          <Button AutomationId="ListenButton" Name="👂" ClassName="Button">
+          </Button>
+          <Button AutomationId="ActiveButton" Name="💬" ClassName="Button">
+          </Button>
+          <Button AutomationId="DebugToggleButton" Name="🐛" ClassName="Button">
+          </Button>
+          <Button AutomationId="ClearButton" Name="Clear" ClassName="Button">
+          </Button>
+          <List AutomationId="TranscriptList" Name="" ClassName="ListView">
+          </List>
+          <Button AutomationId="TranscriptTabButton" Name="📝 Transcript" ClassName="Button">
+          </Button>
+          <Button AutomationId="CameraTabButton" Name="📷 Camera" ClassName="Button">
+          </Button>
+          <Button AutomationId="LookButton" Name="👁 Look" ClassName="Button">
+          </Button>
+          <Button AutomationId="ReadButton" Name="📖 Read" ClassName="Button">
+          </Button>
+          <Button AutomationId="FindButton" Name="🔍 Find" ClassName="Button">
+          </Button>
+          <Button AutomationId="AskButton" Name="💬 Ask" ClassName="Button">
+          </Button>
+          <Button AutomationId="PhotoButton" Name="📸 Photo" ClassName="Button">
+          </Button>
+        </Custom>
+      </Custom>
+    </Pane>
+  </Pane>
+  <TitleBar AutomationId="TitleBar" Name="" ClassName="">
+    <MenuBar AutomationId="SystemMenuBar" Name="System" ClassName="">
+      <MenuItem AutomationId="" Name="System" ClassName="">
+      </MenuItem>
+    </MenuBar>
+    <Button AutomationId="Minimize-Restore" Name="Minimize" ClassName="">
+    </Button>
+    <Button AutomationId="Maximize-Restore" Name="Maximize" ClassName="">
+    </Button>
+    <Button AutomationId="Close" Name="Close" ClassName="">
+    </Button>
+  </TitleBar>
+</Window>

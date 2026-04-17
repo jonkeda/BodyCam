@@ -1,6 +1,7 @@
 using BodyCam.Agents;
 using BodyCam.Models;
 using BodyCam.Services;
+using BodyCam.Tools;
 
 namespace BodyCam.Orchestration;
 
@@ -13,6 +14,11 @@ public class AgentOrchestrator
     private readonly IRealtimeClient _realtime;
     private readonly ISettingsService _settingsService;
     private readonly AppSettings _settings;
+    private readonly ToolDispatcher _dispatcher;
+    private readonly IWakeWordService _wakeWord;
+
+    public VisionAgent Vision => _vision;
+    private readonly IMicrophoneCoordinator _micCoordinator;
 
     private CancellationTokenSource? _cts;
     private DateTimeOffset _lastVisionTime = DateTimeOffset.MinValue;
@@ -37,7 +43,10 @@ public class AgentOrchestrator
         VisionAgent vision,
         IRealtimeClient realtime,
         ISettingsService settingsService,
-        AppSettings settings)
+        AppSettings settings,
+        ToolDispatcher dispatcher,
+        IWakeWordService wakeWord,
+        IMicrophoneCoordinator micCoordinator)
     {
         _voiceIn = voiceIn;
         _conversation = conversation;
@@ -46,6 +55,9 @@ public class AgentOrchestrator
         _realtime = realtime;
         _settingsService = settingsService;
         _settings = settings;
+        _dispatcher = dispatcher;
+        _wakeWord = wakeWord;
+        _micCoordinator = micCoordinator;
     }
 
     public async Task StartAsync()
@@ -188,18 +200,79 @@ public class AgentOrchestrator
         DebugLog?.Invoke(this, $"Realtime error: {error}");
     }
 
+    public async Task StartListeningAsync()
+    {
+        _wakeWord.WakeWordDetected += OnWakeWordDetected;
+        await _wakeWord.StartAsync(_cts?.Token ?? CancellationToken.None);
+        DebugLog?.Invoke(this, "Wake word listening started.");
+    }
+
+    public async Task StopListeningAsync()
+    {
+        _wakeWord.WakeWordDetected -= OnWakeWordDetected;
+        await _wakeWord.StopAsync();
+        DebugLog?.Invoke(this, "Wake word listening stopped.");
+    }
+
+    private async void OnWakeWordDetected(object? sender, WakeWordDetectedEventArgs e)
+    {
+        DebugLog?.Invoke(this, $"Wake word: {e.Keyword} ({e.Action})");
+
+        switch (e.Action)
+        {
+            case WakeWordAction.StartSession:
+                await _micCoordinator.TransitionToActiveSessionAsync();
+                await StartAsync();
+                break;
+
+            case WakeWordAction.GoToSleep:
+                await StopAsync();
+                await StopListeningAsync();
+                await _micCoordinator.TransitionToWakeWordAsync();
+                break;
+
+            case WakeWordAction.InvokeTool:
+                if (e.ToolName is not null)
+                {
+                    var wasActive = IsRunning;
+                    if (!wasActive)
+                        await StartAsync();
+
+                    var context = CreateToolContext();
+                    var result = await _dispatcher.ExecuteAsync(
+                        e.ToolName, null, context, _cts?.Token ?? CancellationToken.None);
+
+                    DebugLog?.Invoke(this, $"Wake word tool result: {result}");
+                }
+                break;
+        }
+    }
+
+    private ToolContext CreateToolContext() => new()
+    {
+        CaptureFrame = FrameCaptureFunc ?? ((ct) => Task.FromResult<byte[]?>(null)),
+        Session = Session,
+        Log = msg => DebugLog?.Invoke(this, msg),
+        RealtimeClient = _realtime
+    };
+
+    public async Task SendTextInputAsync(string text, CancellationToken ct = default)
+    {
+        if (!IsRunning)
+            throw new InvalidOperationException("Orchestrator is not running.");
+
+        await _realtime.SendTextInputAsync(text, ct);
+    }
+
     private async void OnFunctionCallReceived(object? sender, FunctionCallInfo info)
     {
         DebugLog?.Invoke(this, $"Function call: {info.Name}");
 
         try
         {
-            var result = info.Name switch
-            {
-                "describe_scene" => await ExecuteDescribeSceneAsync(info.Arguments),
-                "deep_analysis" => await ExecuteDeepAnalysisAsync(info.Arguments),
-                _ => System.Text.Json.JsonSerializer.Serialize(new { error = $"Unknown function: {info.Name}" })
-            };
+            var context = CreateToolContext();
+            var result = await _dispatcher.ExecuteAsync(
+                info.Name, info.Arguments, context, _cts?.Token ?? CancellationToken.None);
 
             await _realtime.SendFunctionCallOutputAsync(info.CallId, result);
             DebugLog?.Invoke(this, $"Function result sent for {info.Name}");
@@ -221,48 +294,4 @@ public class AgentOrchestrator
         }
     }
 
-    private async Task<string> ExecuteDescribeSceneAsync(string? argumentsJson = null)
-    {
-        string? userPrompt = null;
-        if (argumentsJson is not null)
-        {
-            using var doc = System.Text.Json.JsonDocument.Parse(argumentsJson);
-            if (doc.RootElement.TryGetProperty("query", out var q))
-                userPrompt = q.GetString();
-        }
-
-        // Rate-limit: return cached description if within cooldown
-        if (_vision.LastDescription is not null
-            && DateTimeOffset.UtcNow - _vision.LastCaptureTime < TimeSpan.FromSeconds(5))
-        {
-            return System.Text.Json.JsonSerializer.Serialize(new { description = _vision.LastDescription });
-        }
-
-        byte[]? frame = null;
-        if (FrameCaptureFunc is not null)
-            frame = await FrameCaptureFunc(_cts?.Token ?? CancellationToken.None);
-
-        if (frame is null)
-        {
-            var stale = _vision.LastDescription ?? "Camera not available or no frame captured.";
-            return System.Text.Json.JsonSerializer.Serialize(new { description = stale });
-        }
-
-        var description = await _vision.DescribeFrameAsync(frame, userPrompt);
-        Session.LastVisionDescription = description;
-
-        return System.Text.Json.JsonSerializer.Serialize(new { description });
-    }
-
-    private async Task<string> ExecuteDeepAnalysisAsync(string argumentsJson)
-    {
-        using var doc = System.Text.Json.JsonDocument.Parse(argumentsJson);
-        var root = doc.RootElement;
-
-        var query = root.TryGetProperty("query", out var q) ? q.GetString() ?? "" : "";
-        var context = root.TryGetProperty("context", out var c) ? c.GetString() : null;
-
-        var result = await _conversation.AnalyzeAsync(query, context);
-        return System.Text.Json.JsonSerializer.Serialize(new { analysis = result });
-    }
 }
