@@ -15,6 +15,12 @@ public interface IRealtimeClient : IAsyncDisposable
     Task TruncateResponseAudioAsync(string itemId, int audioEndMs, CancellationToken ct = default);
     Task UpdateSessionAsync(CancellationToken ct = default);
 
+    /// <summary>
+    /// Mode B: Send reply text to Realtime API to generate TTS audio.
+    /// Creates a conversation item with the text, then triggers response with audio.
+    /// </summary>
+    Task SendTextForTtsAsync(string text, CancellationToken ct = default);
+
     event EventHandler<byte[]>? AudioDelta;
     event EventHandler<string>? OutputTranscriptDelta;
     event EventHandler<string>? OutputTranscriptCompleted;

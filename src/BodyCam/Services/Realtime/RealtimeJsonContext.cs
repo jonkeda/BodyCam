@@ -8,5 +8,6 @@ namespace BodyCam.Services.Realtime;
 [JsonSerializable(typeof(SessionUpdateMessage))]
 [JsonSerializable(typeof(AudioBufferAppendMessage))]
 [JsonSerializable(typeof(TruncateMessage))]
+[JsonSerializable(typeof(ConversationItemCreateMessage))]
 [JsonSerializable(typeof(RealtimeMessage))]
 internal partial class RealtimeJsonContext : JsonSerializerContext { }

@@ -63,6 +63,8 @@ public class MainViewModel : ViewModelBase
                         Role = "You",
                         Text = msg[4..].Trim()
                     });
+                    if (_settingsService.Mode == ConversationMode.Separated)
+                        StatusText = "Thinking...";
                 }
                 else if (msg.StartsWith("AI:"))
                 {
@@ -70,6 +72,23 @@ public class MainViewModel : ViewModelBase
                         _currentAiEntry.Text = msg[3..].Trim();
                     _currentAiEntry = null;
                 }
+            });
+        };
+
+        _orchestrator.ConversationReplyDelta += (_, _) =>
+        {
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                if (StatusText == "Thinking...")
+                    StatusText = "Speaking...";
+            });
+        };
+
+        _orchestrator.ConversationReplyCompleted += (_, _) =>
+        {
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                StatusText = "Listening...";
             });
         };
 
@@ -114,6 +133,10 @@ public class MainViewModel : ViewModelBase
         set => SetProperty(ref _debugVisible, value);
     }
 
+    public string ModeLabel => _settingsService.Mode == ConversationMode.Separated
+        ? "[Mode B]"
+        : "[Realtime]";
+
     public ICommand ToggleCommand { get; }
     public ICommand ClearCommand { get; }
 
@@ -153,6 +176,7 @@ public class MainViewModel : ViewModelBase
 
                 IsRunning = true;
                 StatusText = "Listening...";
+                OnPropertyChanged(nameof(ModeLabel));
             }
             catch (Exception ex)
             {

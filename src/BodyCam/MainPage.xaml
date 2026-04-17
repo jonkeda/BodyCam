@@ -28,6 +28,11 @@
                 FontSize="16"
                 VerticalOptions="Center"
                 TextColor="{AppThemeBinding Light=#666, Dark=#AAA}" />
+            <Label
+                Text="{Binding ModeLabel}"
+                FontSize="12"
+                VerticalOptions="Center"
+                TextColor="{AppThemeBinding Light=#999, Dark=#666}" />
         </HorizontalStackLayout>
 
         <!-- Transcript -->

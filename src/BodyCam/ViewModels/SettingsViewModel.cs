@@ -55,6 +55,7 @@ public class SettingsViewModel : ViewModelBase
     public string[] VoiceOptions => ModelOptions.Voices;
     public string[] TurnDetectionOptions => ModelOptions.TurnDetectionModes;
     public string[] NoiseReductionOptions => ModelOptions.NoiseReductionModes;
+    public string[] ConversationModeOptions => ModelOptions.ConversationModes;
 
     // --- Model Selections ---
 
@@ -124,6 +125,16 @@ public class SettingsViewModel : ViewModelBase
     {
         get => _settings.Voice;
         set => SetProperty(_settings.Voice, value, v => _settings.Voice = v);
+    }
+
+    public string SelectedMode
+    {
+        get => _settings.Mode.ToString();
+        set
+        {
+            if (Enum.TryParse<ConversationMode>(value, true, out var mode))
+                SetProperty(_settings.Mode.ToString(), value, _ => _settings.Mode = mode);
+        }
     }
 
     public string SelectedTurnDetection

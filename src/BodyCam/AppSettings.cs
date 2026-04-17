@@ -2,10 +2,20 @@ namespace BodyCam;
 
 public enum OpenAiProvider { OpenAi, Azure }
 
+public enum ConversationMode
+{
+    /// <summary>Realtime API handles reasoning + TTS (M1 behavior).</summary>
+    Realtime,
+
+    /// <summary>Separated pipeline: Realtime STT → ConversationAgent → TTS.</summary>
+    Separated
+}
+
 public class AppSettings
 {
     // Provider
     public OpenAiProvider Provider { get; set; } = OpenAiProvider.OpenAi;
+    public ConversationMode Mode { get; set; } = ConversationMode.Realtime;
 
     // Models
     public string RealtimeModel { get; set; } = "gpt-realtime-1.5";
@@ -20,7 +30,17 @@ public class AppSettings
     public string Voice { get; set; } = "marin";
     public string TurnDetection { get; set; } = "semantic_vad";
     public string NoiseReduction { get; set; } = "near_field";
-    public string SystemInstructions { get; set; } = "You are a helpful assistant.";
+    public string SystemInstructions { get; set; } = """
+        You are BodyCam, an AI assistant integrated into smart glasses.
+        You can see what the user sees (when vision is active) and hear what they say.
+
+        Guidelines:
+        - Be concise — the user hears your response through small speakers
+        - Prefer short, direct answers (1-3 sentences)
+        - If vision context is available, reference what you see
+        - You can be asked to remember things for later
+        - Be conversational and natural
+        """;
 
     // Azure OpenAI
     public string? AzureEndpoint { get; set; }

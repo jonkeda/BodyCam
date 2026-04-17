@@ -21,7 +21,8 @@ public class AgentOrchestratorTests
         camera = Substitute.For<ICameraService>();
 
         var voiceIn = new VoiceInputAgent(audioIn, realtime);
-        var conversation = new ConversationAgent();
+        var chatClient = Substitute.For<IChatCompletionsClient>();
+        var conversation = new ConversationAgent(chatClient, new AppSettings());
         var voiceOut = new VoiceOutputAgent(audioOut);
         var vision = new VisionAgent(camera, new AppSettings());
         var settingsService = Substitute.For<ISettingsService>();

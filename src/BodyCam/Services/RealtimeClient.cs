@@ -109,12 +109,16 @@ public class RealtimeClient : IRealtimeClient
 
     public async Task UpdateSessionAsync(CancellationToken ct = default)
     {
+        var modalities = _settings.Mode == ConversationMode.Separated
+            ? new[] { "text" }           // STT only — no audio output from Realtime
+            : new[] { "text", "audio" }; // Full audio in+out (Mode A)
+
         var msg = new SessionUpdateMessage
         {
             Type = "session.update",
             Session = new SessionUpdatePayload
             {
-                Modalities = ["text", "audio"],
+                Modalities = modalities,
                 Voice = _settings.Voice,
                 Instructions = _settings.SystemInstructions,
                 InputAudioFormat = "pcm16",
@@ -124,6 +128,25 @@ public class RealtimeClient : IRealtimeClient
             }
         };
         await SendJsonAsync(msg, RealtimeJsonContext.Default.SessionUpdateMessage, ct);
+    }
+
+    public async Task SendTextForTtsAsync(string text, CancellationToken ct = default)
+    {
+        // Create a conversation item with the assistant's reply text
+        var itemMsg = new ConversationItemCreateMessage
+        {
+            Type = "conversation.item.create",
+            Item = new ConversationItem
+            {
+                Type = "message",
+                Role = "assistant",
+                Content = [new ContentPart { Type = "input_text", Text = text }]
+            }
+        };
+        await SendJsonAsync(itemMsg, RealtimeJsonContext.Default.ConversationItemCreateMessage, ct);
+
+        // Request a response — the Realtime API will generate audio from the text
+        await CreateResponseAsync(ct);
     }
 
     public async ValueTask DisposeAsync()

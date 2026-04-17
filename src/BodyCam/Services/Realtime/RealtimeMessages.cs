@@ -77,6 +77,33 @@ internal record TruncateMessage : RealtimeMessage
     public int AudioEndMs { get; init; }
 }
 
+internal record ConversationItemCreateMessage : RealtimeMessage
+{
+    [JsonPropertyName("item")]
+    public ConversationItem Item { get; init; } = new();
+}
+
+internal record ConversationItem
+{
+    [JsonPropertyName("type")]
+    public string Type { get; init; } = "message";
+
+    [JsonPropertyName("role")]
+    public string Role { get; init; } = "assistant";
+
+    [JsonPropertyName("content")]
+    public ContentPart[] Content { get; init; } = [];
+}
+
+internal record ContentPart
+{
+    [JsonPropertyName("type")]
+    public string Type { get; init; } = "input_text";
+
+    [JsonPropertyName("text")]
+    public string? Text { get; init; }
+}
+
 // --- Server → Client event parsing ---
 
 internal static class ServerEventParser

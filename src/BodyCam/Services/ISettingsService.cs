@@ -15,6 +15,7 @@ public interface ISettingsService
 
     // Provider
     OpenAiProvider Provider { get; set; }
+    ConversationMode Mode { get; set; }
     string? AzureEndpoint { get; set; }
     string? AzureRealtimeDeploymentName { get; set; }
     string? AzureChatDeploymentName { get; set; }

@@ -54,6 +54,13 @@ public class SettingsService : ISettingsService
         set => Preferences.Set(nameof(Provider), value.ToString());
     }
 
+    public ConversationMode Mode
+    {
+        get => Enum.TryParse<ConversationMode>(Preferences.Get(nameof(Mode), nameof(ConversationMode.Realtime)), true, out var m)
+            ? m : ConversationMode.Realtime;
+        set => Preferences.Set(nameof(Mode), value.ToString());
+    }
+
     public string? AzureEndpoint
     {
         get { var v = Preferences.Get(nameof(AzureEndpoint), string.Empty); return v.Length == 0 ? null : v; }

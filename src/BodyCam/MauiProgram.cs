@@ -2,7 +2,9 @@
 using BodyCam.Orchestration;
 using BodyCam.Services;
 using BodyCam.ViewModels;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
+using OpenAI;
 
 namespace BodyCam;
 
@@ -86,6 +88,31 @@ public static class MauiProgram
 		builder.Services.AddSingleton<ICameraService, CameraService>();
 		builder.Services.AddSingleton<IRealtimeClient, RealtimeClient>();
 		builder.Services.AddSingleton<IApiKeyService, ApiKeyService>();
+
+		// Chat Completions client (Mode B)
+		builder.Services.AddSingleton<IChatClient>(sp =>
+		{
+			var appSettings = sp.GetRequiredService<AppSettings>();
+			var apiKeyService = sp.GetRequiredService<IApiKeyService>();
+
+			if (appSettings.Provider == OpenAiProvider.Azure)
+			{
+				var credential = new Azure.AzureKeyCredential(
+					apiKeyService.GetApiKeyAsync().GetAwaiter().GetResult()
+					?? throw new InvalidOperationException("API key not configured."));
+				var azureClient = new Azure.AI.OpenAI.AzureOpenAIClient(
+					new Uri(appSettings.AzureEndpoint!), credential);
+				return azureClient.GetChatClient(appSettings.AzureChatDeploymentName!).AsIChatClient();
+			}
+			else
+			{
+				var key = apiKeyService.GetApiKeyAsync().GetAwaiter().GetResult()
+					?? throw new InvalidOperationException("API key not configured.");
+				var openAiClient = new OpenAIClient(key);
+				return openAiClient.GetChatClient(appSettings.ChatModel).AsIChatClient();
+			}
+		});
+		builder.Services.AddSingleton<IChatCompletionsClient, ChatCompletionsClient>();
 
 		// Agents
 		builder.Services.AddSingleton<VoiceInputAgent>();
