@@ -15,7 +15,13 @@ public class AgentOrchestrator
     private readonly AppSettings _settings;
 
     private CancellationTokenSource? _cts;
+    private DateTimeOffset _lastVisionTime = DateTimeOffset.MinValue;
     public SessionContext Session { get; } = new();
+
+    /// <summary>
+    /// Delegate for capturing a frame from the CameraView. Set by the ViewModel.
+    /// </summary>
+    public Func<CancellationToken, Task<byte[]?>>? FrameCaptureFunc { get; set; }
 
     public event EventHandler<string>? TranscriptUpdated;
     public event EventHandler<string>? TranscriptDelta;
@@ -108,6 +114,7 @@ public class AgentOrchestrator
 
         await _voiceIn.StopAsync();
         await _voiceOut.StopAsync();
+
         await _realtime.DisconnectAsync();
 
         Session.IsActive = false;
@@ -189,7 +196,7 @@ public class AgentOrchestrator
         {
             var result = info.Name switch
             {
-                "describe_scene" => await ExecuteDescribeSceneAsync(),
+                "describe_scene" => await ExecuteDescribeSceneAsync(info.Arguments),
                 "deep_analysis" => await ExecuteDeepAnalysisAsync(info.Arguments),
                 _ => System.Text.Json.JsonSerializer.Serialize(new { error = $"Unknown function: {info.Name}" })
             };
@@ -214,13 +221,37 @@ public class AgentOrchestrator
         }
     }
 
-    private async Task<string> ExecuteDescribeSceneAsync()
+    private async Task<string> ExecuteDescribeSceneAsync(string? argumentsJson = null)
     {
-        var description = await _vision.CaptureAndDescribeAsync();
-        return System.Text.Json.JsonSerializer.Serialize(new
+        string? userPrompt = null;
+        if (argumentsJson is not null)
         {
-            description = description ?? "Camera not available or no frame captured."
-        });
+            using var doc = System.Text.Json.JsonDocument.Parse(argumentsJson);
+            if (doc.RootElement.TryGetProperty("query", out var q))
+                userPrompt = q.GetString();
+        }
+
+        // Rate-limit: return cached description if within cooldown
+        if (_vision.LastDescription is not null
+            && DateTimeOffset.UtcNow - _vision.LastCaptureTime < TimeSpan.FromSeconds(5))
+        {
+            return System.Text.Json.JsonSerializer.Serialize(new { description = _vision.LastDescription });
+        }
+
+        byte[]? frame = null;
+        if (FrameCaptureFunc is not null)
+            frame = await FrameCaptureFunc(_cts?.Token ?? CancellationToken.None);
+
+        if (frame is null)
+        {
+            var stale = _vision.LastDescription ?? "Camera not available or no frame captured.";
+            return System.Text.Json.JsonSerializer.Serialize(new { description = stale });
+        }
+
+        var description = await _vision.DescribeFrameAsync(frame, userPrompt);
+        Session.LastVisionDescription = description;
+
+        return System.Text.Json.JsonSerializer.Serialize(new { description });
     }
 
     private async Task<string> ExecuteDeepAnalysisAsync(string argumentsJson)

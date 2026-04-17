@@ -172,7 +172,12 @@ public class RealtimeClient : IRealtimeClient
         var describeSceneParams = JsonDocument.Parse("""
             {
                 "type": "object",
-                "properties": {},
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Optional question about the scene, e.g. 'What text is on the sign?' or 'How many people are visible?'"
+                    }
+                },
                 "required": []
             }
             """);

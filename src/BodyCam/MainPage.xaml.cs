@@ -8,6 +8,7 @@ public partial class MainPage : ContentPage
 	{
 		InitializeComponent();
 		BindingContext = viewModel;
+		viewModel.SetCameraView(CameraPreview);
 
 		if (BindingContext is MainViewModel vm)
 		{

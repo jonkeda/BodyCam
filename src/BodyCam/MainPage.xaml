@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:BodyCam.ViewModels"
              xmlns:models="clr-namespace:BodyCam.Models"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              x:Class="BodyCam.MainPage"
              x:DataType="vm:MainViewModel"
              Title="{Binding Title}">
@@ -28,24 +29,42 @@
                 FontSize="16"
                 VerticalOptions="Center"
                 TextColor="{AppThemeBinding Light=#666, Dark=#AAA}" />
+            <Label
+                Text="{Binding VisionStatus}"
+                FontSize="12"
+                VerticalOptions="Center"
+                TextColor="{AppThemeBinding Light=#999, Dark=#666}"
+                IsVisible="{Binding IsRunning}" />
         </HorizontalStackLayout>
 
-        <!-- Transcript -->
-        <Frame Grid.Row="1" BorderColor="{AppThemeBinding Light=#E0E0E0, Dark=#333}" Padding="8" CornerRadius="4">
-            <CollectionView
-                x:Name="TranscriptList"
-                ItemsSource="{Binding Entries}">
-                <CollectionView.ItemTemplate>
-                    <DataTemplate x:DataType="models:TranscriptEntry">
-                        <VerticalStackLayout Padding="4,2">
-                            <Label Text="{Binding DisplayText}"
-                                   FontSize="14"
-                                   FontFamily="OpenSansRegular" />
-                        </VerticalStackLayout>
-                    </DataTemplate>
-                </CollectionView.ItemTemplate>
-            </CollectionView>
-        </Frame>
+        <!-- Transcript with camera preview overlay -->
+        <Grid Grid.Row="1">
+            <Frame BorderColor="{AppThemeBinding Light=#E0E0E0, Dark=#333}" Padding="8" CornerRadius="4">
+                <CollectionView
+                    x:Name="TranscriptList"
+                    ItemsSource="{Binding Entries}">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="models:TranscriptEntry">
+                            <VerticalStackLayout Padding="4,2">
+                                <Label Text="{Binding DisplayText}"
+                                       FontSize="14"
+                                       FontFamily="OpenSansRegular" />
+                            </VerticalStackLayout>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </Frame>
+
+            <Border StrokeShape="RoundRectangle 4"
+                    Stroke="{AppThemeBinding Light=#E0E0E0, Dark=#555}"
+                    BackgroundColor="Black"
+                    WidthRequest="160" HeightRequest="120"
+                    HorizontalOptions="End" VerticalOptions="Start"
+                    Margin="8"
+                    IsVisible="{Binding IsRunning}">
+                <toolkit:CameraView x:Name="CameraPreview" />
+            </Border>
+        </Grid>
 
         <!-- Section label -->
         <Label Grid.Row="2" Text="Debug Console" FontSize="12" TextColor="Gray"

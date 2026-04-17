@@ -1,9 +1,8 @@
-namespace BodyCam.Services;
+using BodyCam.Services;
 
-/// <summary>
-/// Stub camera service for unsupported platforms. CameraView handles preview natively.
-/// </summary>
-public class CameraService : ICameraService
+namespace BodyCam.Platforms.Android;
+
+public class AndroidCameraService : ICameraService
 {
     public bool IsCapturing { get; private set; }
 

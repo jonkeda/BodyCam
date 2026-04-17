@@ -4,6 +4,7 @@ using BodyCam.Models;
 using BodyCam.Mvvm;
 using BodyCam.Orchestration;
 using BodyCam.Services;
+using CommunityToolkit.Maui.Views;
 
 namespace BodyCam.ViewModels;
 
@@ -17,6 +18,8 @@ public class MainViewModel : ViewModelBase
     private string _statusText = "Ready";
     private bool _isRunning;
     private bool _debugVisible;
+    private string? _visionStatus;
+    private CameraView? _cameraView;
 
     internal TranscriptEntry? _currentAiEntry;
 
@@ -127,6 +130,12 @@ public class MainViewModel : ViewModelBase
         set => SetProperty(ref _debugVisible, value);
     }
 
+    public string? VisionStatus
+    {
+        get => _visionStatus;
+        set => SetProperty(ref _visionStatus, value);
+    }
+
     public ICommand ToggleCommand { get; }
     public ICommand ClearCommand { get; }
 
@@ -137,6 +146,9 @@ public class MainViewModel : ViewModelBase
 
         if (IsRunning)
         {
+            _cameraView?.StopCameraPreview();
+            VisionStatus = null;
+
             await _orchestrator.StopAsync();
             IsRunning = false;
             ToggleButtonText = "Start";
@@ -164,6 +176,11 @@ public class MainViewModel : ViewModelBase
 
                 await _orchestrator.StartAsync();
 
+                _orchestrator.FrameCaptureFunc = CaptureFrameFromCameraViewAsync;
+
+                if (_cameraView is not null)
+                    await _cameraView.StartCameraPreview(CancellationToken.None);
+
                 IsRunning = true;
                 StatusText = "Listening...";
                 OnPropertyChanged();
@@ -189,5 +206,63 @@ public class MainViewModel : ViewModelBase
             placeholder: "sk-proj-... or Azure key",
             maxLength: 200,
             keyboard: Keyboard.Text);
+    }
+
+    public void SetCameraView(CameraView cameraView)
+    {
+        _cameraView = cameraView;
+    }
+
+    /// <summary>
+    /// Captures a JPEG frame from the CameraView for the vision API.
+    /// </summary>
+    internal async Task<byte[]?> CaptureFrameFromCameraViewAsync(CancellationToken ct = default)
+    {
+        if (_cameraView is null) return null;
+
+        try
+        {
+            var tcs = new TaskCompletionSource<byte[]?>();
+
+            void OnMediaCaptured(object? s, CommunityToolkit.Maui.Core.MediaCapturedEventArgs e)
+            {
+                try
+                {
+                    if (e.Media is null || e.Media.Length == 0)
+                    {
+                        tcs.TrySetResult(null);
+                        return;
+                    }
+
+                    using var ms = new MemoryStream();
+                    e.Media.CopyTo(ms);
+                    tcs.TrySetResult(ms.ToArray());
+                }
+                catch (Exception ex)
+                {
+                    tcs.TrySetException(ex);
+                }
+            }
+
+            _cameraView.MediaCaptured += OnMediaCaptured;
+            try
+            {
+                await _cameraView.CaptureImage(ct);
+
+                using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                timeoutCts.CancelAfter(TimeSpan.FromSeconds(5));
+                timeoutCts.Token.Register(() => tcs.TrySetResult(null));
+
+                return await tcs.Task;
+            }
+            finally
+            {
+                _cameraView.MediaCaptured -= OnMediaCaptured;
+            }
+        }
+        catch
+        {
+            return null;
+        }
     }
 }

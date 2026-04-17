@@ -13,20 +13,18 @@ public class AgentOrchestratorTests
     private static AgentOrchestrator CreateOrchestrator(
         out IAudioInputService audioIn,
         out IAudioOutputService audioOut,
-        out IRealtimeClient realtime,
-        out ICameraService camera)
+        out IRealtimeClient realtime)
     {
         audioIn = Substitute.For<IAudioInputService>();
         audioOut = Substitute.For<IAudioOutputService>();
         realtime = Substitute.For<IRealtimeClient>();
-        camera = Substitute.For<ICameraService>();
 
         var voiceIn = new VoiceInputAgent(audioIn, realtime);
         var chatClient = Substitute.For<IChatClient>();
         var conversation = new ConversationAgent(chatClient, new AppSettings());
         var voiceOut = new VoiceOutputAgent(audioOut);
         var visionChatClient = Substitute.For<IChatClient>();
-        var vision = new VisionAgent(camera, visionChatClient, new AppSettings());
+        var vision = new VisionAgent(visionChatClient, new AppSettings());
         var settingsService = Substitute.For<ISettingsService>();
         settingsService.RealtimeModel.Returns(ModelOptions.DefaultRealtime);
         settingsService.ChatModel.Returns(ModelOptions.DefaultChat);
@@ -45,14 +43,14 @@ public class AgentOrchestratorTests
     [Fact]
     public void IsRunning_InitiallyFalse()
     {
-        var orchestrator = CreateOrchestrator(out _, out _, out _, out _);
+        var orchestrator = CreateOrchestrator(out _, out _, out _);
         orchestrator.IsRunning.Should().BeFalse();
     }
 
     [Fact]
     public async Task StartAsync_ConnectsRealtime()
     {
-        var orchestrator = CreateOrchestrator(out _, out _, out var realtime, out _);
+        var orchestrator = CreateOrchestrator(out _, out _, out var realtime);
 
         await orchestrator.StartAsync();
 
@@ -65,7 +63,7 @@ public class AgentOrchestratorTests
     [Fact]
     public async Task StartAsync_SetsSessionActive()
     {
-        var orchestrator = CreateOrchestrator(out _, out _, out _, out _);
+        var orchestrator = CreateOrchestrator(out _, out _, out _);
 
         await orchestrator.StartAsync();
         orchestrator.Session.IsActive.Should().BeTrue();
@@ -76,7 +74,7 @@ public class AgentOrchestratorTests
     [Fact]
     public async Task StartAsync_StartsAudioPipeline()
     {
-        var orchestrator = CreateOrchestrator(out var audioIn, out var audioOut, out _, out _);
+        var orchestrator = CreateOrchestrator(out var audioIn, out var audioOut, out _);
 
         await orchestrator.StartAsync();
 
@@ -89,7 +87,7 @@ public class AgentOrchestratorTests
     [Fact]
     public async Task StartAsync_EmitsDebugLogs()
     {
-        var orchestrator = CreateOrchestrator(out _, out _, out _, out _);
+        var orchestrator = CreateOrchestrator(out _, out _, out _);
         var logs = new List<string>();
         orchestrator.DebugLog += (_, msg) => logs.Add(msg);
 
@@ -104,7 +102,7 @@ public class AgentOrchestratorTests
     [Fact]
     public async Task StartAsync_DoubleStart_IsNoOp()
     {
-        var orchestrator = CreateOrchestrator(out _, out _, out var realtime, out _);
+        var orchestrator = CreateOrchestrator(out _, out _, out var realtime);
 
         await orchestrator.StartAsync();
         await orchestrator.StartAsync();
@@ -117,7 +115,7 @@ public class AgentOrchestratorTests
     [Fact]
     public async Task StopAsync_WhenNotRunning_IsNoOp()
     {
-        var orchestrator = CreateOrchestrator(out _, out _, out var realtime, out _);
+        var orchestrator = CreateOrchestrator(out _, out _, out var realtime);
 
         await orchestrator.StopAsync();
 
@@ -127,7 +125,7 @@ public class AgentOrchestratorTests
     [Fact]
     public async Task StopAsync_DisconnectsRealtime()
     {
-        var orchestrator = CreateOrchestrator(out _, out _, out var realtime, out _);
+        var orchestrator = CreateOrchestrator(out _, out _, out var realtime);
 
         await orchestrator.StartAsync();
         await orchestrator.StopAsync();
@@ -139,7 +137,7 @@ public class AgentOrchestratorTests
     [Fact]
     public async Task StopAsync_SetsSessionInactive()
     {
-        var orchestrator = CreateOrchestrator(out _, out _, out _, out _);
+        var orchestrator = CreateOrchestrator(out _, out _, out _);
 
         await orchestrator.StartAsync();
         await orchestrator.StopAsync();
@@ -150,7 +148,7 @@ public class AgentOrchestratorTests
     [Fact]
     public async Task StopAsync_EmitsDebugLog()
     {
-        var orchestrator = CreateOrchestrator(out _, out _, out _, out _);
+        var orchestrator = CreateOrchestrator(out _, out _, out _);
         var logs = new List<string>();
         orchestrator.DebugLog += (_, msg) => logs.Add(msg);
 
@@ -164,7 +162,7 @@ public class AgentOrchestratorTests
     [Fact]
     public async Task AudioDelta_RoutesToVoiceOutput()
     {
-        var orchestrator = CreateOrchestrator(out _, out var audioOut, out var realtime, out _);
+        var orchestrator = CreateOrchestrator(out _, out var audioOut, out var realtime);
 
         await orchestrator.StartAsync();
 
@@ -181,7 +179,7 @@ public class AgentOrchestratorTests
     [Fact]
     public async Task InputTranscriptCompleted_UpdatesSessionAndUI()
     {
-        var orchestrator = CreateOrchestrator(out _, out _, out var realtime, out _);
+        var orchestrator = CreateOrchestrator(out _, out _, out var realtime);
         var transcripts = new List<string>();
         var completed = new List<string>();
         orchestrator.TranscriptUpdated += (_, t) => transcripts.Add(t);
@@ -200,7 +198,7 @@ public class AgentOrchestratorTests
     [Fact]
     public async Task OutputTranscriptCompleted_AddsAssistantMessage()
     {
-        var orchestrator = CreateOrchestrator(out _, out _, out var realtime, out _);
+        var orchestrator = CreateOrchestrator(out _, out _, out var realtime);
         var logs = new List<string>();
         var completed = new List<string>();
         orchestrator.DebugLog += (_, msg) => logs.Add(msg);
@@ -219,7 +217,7 @@ public class AgentOrchestratorTests
     [Fact]
     public async Task OutputTranscriptDelta_EmitsTranscriptUpdated()
     {
-        var orchestrator = CreateOrchestrator(out _, out _, out var realtime, out _);
+        var orchestrator = CreateOrchestrator(out _, out _, out var realtime);
         var transcripts = new List<string>();
         var deltas = new List<string>();
         orchestrator.TranscriptUpdated += (_, t) => transcripts.Add(t);
@@ -238,7 +236,7 @@ public class AgentOrchestratorTests
     [Fact]
     public async Task ResponseDone_ResetsTracker()
     {
-        var orchestrator = CreateOrchestrator(out _, out _, out var realtime, out _);
+        var orchestrator = CreateOrchestrator(out _, out _, out var realtime);
         var logs = new List<string>();
         orchestrator.DebugLog += (_, msg) => logs.Add(msg);
 
@@ -256,7 +254,7 @@ public class AgentOrchestratorTests
     [Fact]
     public async Task ErrorOccurred_EmitsDebugLog()
     {
-        var orchestrator = CreateOrchestrator(out _, out _, out var realtime, out _);
+        var orchestrator = CreateOrchestrator(out _, out _, out var realtime);
         var logs = new List<string>();
         orchestrator.DebugLog += (_, msg) => logs.Add(msg);
 
@@ -272,7 +270,7 @@ public class AgentOrchestratorTests
     [Fact]
     public async Task StopAsync_UnsubscribesAllEvents_NoMoreCallbacks()
     {
-        var orchestrator = CreateOrchestrator(out _, out _, out var realtime, out _);
+        var orchestrator = CreateOrchestrator(out _, out _, out var realtime);
         var transcripts = new List<string>();
         orchestrator.TranscriptUpdated += (_, t) => transcripts.Add(t);
 

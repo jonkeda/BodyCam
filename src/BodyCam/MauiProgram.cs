@@ -2,6 +2,7 @@
 using BodyCam.Orchestration;
 using BodyCam.Services;
 using BodyCam.ViewModels;
+using CommunityToolkit.Maui;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using OpenAI;
@@ -15,6 +16,7 @@ public static class MauiProgram
 		var builder = MauiApp.CreateBuilder();
 		builder
 			.UseMauiApp<App>()
+			.UseMauiCommunityToolkitCamera()
 			.ConfigureFonts(fonts =>
 			{
 				fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
@@ -85,7 +87,13 @@ public static class MauiProgram
 #else
 		builder.Services.AddSingleton<IAudioOutputService, AudioOutputService>();
 #endif
+#if WINDOWS
+		builder.Services.AddSingleton<ICameraService, BodyCam.Platforms.Windows.WindowsCameraService>();
+#elif ANDROID
+		builder.Services.AddSingleton<ICameraService, BodyCam.Platforms.Android.AndroidCameraService>();
+#else
 		builder.Services.AddSingleton<ICameraService, CameraService>();
+#endif
 		builder.Services.AddSingleton<IRealtimeClient, RealtimeClient>();
 		builder.Services.AddSingleton<IApiKeyService, ApiKeyService>();
 
