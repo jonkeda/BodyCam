@@ -1,0 +1,22 @@
+# IDE
+.vs/
+.vscode/
+*.user
+*.suo
+
+# Build output
+bin/
+obj/
+artifacts/
+
+# NuGet
+*.nupkg
+*.snupkg
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Secrets — NEVER commit
+.env
+*.env.local

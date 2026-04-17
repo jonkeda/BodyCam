@@ -1,0 +1,76 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:BodyCam.ViewModels"
+             xmlns:models="clr-namespace:BodyCam.Models"
+             x:Class="BodyCam.MainPage"
+             x:DataType="vm:MainViewModel"
+             Title="{Binding Title}">
+
+    <Grid RowDefinitions="Auto,*,Auto,200" Padding="16" RowSpacing="12">
+
+        <!-- Header -->
+        <HorizontalStackLayout Grid.Row="0" Spacing="12" VerticalOptions="Center">
+            <Button
+                Text="{Binding ToggleButtonText}"
+                Command="{Binding ToggleCommand}"
+                WidthRequest="120"
+                BackgroundColor="{AppThemeBinding Light=#512BD4, Dark=#7C4DFF}"
+                TextColor="White" />
+            <Button
+                Text="Clear"
+                Command="{Binding ClearCommand}"
+                WidthRequest="80"
+                BackgroundColor="{AppThemeBinding Light=#E0E0E0, Dark=#333}"
+                TextColor="{AppThemeBinding Light=#333, Dark=#E0E0E0}" />
+            <Label
+                Text="{Binding StatusText}"
+                FontSize="16"
+                VerticalOptions="Center"
+                TextColor="{AppThemeBinding Light=#666, Dark=#AAA}" />
+        </HorizontalStackLayout>
+
+        <!-- Transcript -->
+        <Frame Grid.Row="1" BorderColor="{AppThemeBinding Light=#E0E0E0, Dark=#333}" Padding="8" CornerRadius="4">
+            <CollectionView
+                x:Name="TranscriptList"
+                ItemsSource="{Binding Entries}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:TranscriptEntry">
+                        <VerticalStackLayout Padding="4,2">
+                            <Label FontSize="14" FontFamily="OpenSansRegular">
+                                <Label.FormattedText>
+                                    <FormattedString>
+                                        <Span Text="{Binding Role}"
+                                              FontAttributes="Bold" />
+                                        <Span Text=": " FontAttributes="Bold" />
+                                        <Span Text="{Binding Text}" />
+                                    </FormattedString>
+                                </Label.FormattedText>
+                            </Label>
+                        </VerticalStackLayout>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </Frame>
+
+        <!-- Section label -->
+        <Label Grid.Row="2" Text="Debug Console" FontSize="12" TextColor="Gray"
+               IsVisible="{Binding DebugVisible}" />
+
+        <!-- Debug log -->
+        <Frame Grid.Row="3" BorderColor="{AppThemeBinding Light=#E0E0E0, Dark=#333}" Padding="8" CornerRadius="4"
+               BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#1A1A1A}"
+               IsVisible="{Binding DebugVisible}">
+            <ScrollView x:Name="DebugScroll">
+                <Label
+                    Text="{Binding DebugLog}"
+                    FontSize="11"
+                    FontFamily="OpenSansRegular"
+                    TextColor="Gray" />
+            </ScrollView>
+        </Frame>
+
+    </Grid>
+
+</ContentPage>

@@ -1,0 +1,61 @@
+using BodyCam.Models;
+using FluentAssertions;
+
+namespace BodyCam.Tests.Models;
+
+public class TranscriptEntryTests
+{
+    [Fact]
+    public void Text_RaisesPropertyChanged()
+    {
+        var entry = new TranscriptEntry { Role = "AI" };
+        var changed = new List<string?>();
+        entry.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+        entry.Text = "Hello";
+
+        changed.Should().Contain("Text");
+        entry.Text.Should().Be("Hello");
+    }
+
+    [Fact]
+    public void Text_AccumulatesDeltas()
+    {
+        var entry = new TranscriptEntry { Role = "AI" };
+
+        entry.Text += "Hello";
+        entry.Text += " world";
+        entry.Text += "!";
+
+        entry.Text.Should().Be("Hello world!");
+    }
+
+    [Fact]
+    public void Role_IsSetOnInit()
+    {
+        var ai = new TranscriptEntry { Role = "AI" };
+        var user = new TranscriptEntry { Role = "You" };
+
+        ai.Role.Should().Be("AI");
+        user.Role.Should().Be("You");
+    }
+
+    [Fact]
+    public void Text_DefaultsToEmpty()
+    {
+        var entry = new TranscriptEntry { Role = "AI" };
+        entry.Text.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Text_SameValue_DoesNotRaisePropertyChanged()
+    {
+        var entry = new TranscriptEntry { Role = "AI", Text = "Hello" };
+        var changed = new List<string?>();
+        entry.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+        entry.Text = "Hello";
+
+        changed.Should().BeEmpty();
+    }
+}
