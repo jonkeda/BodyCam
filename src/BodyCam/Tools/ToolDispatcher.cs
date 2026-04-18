@@ -35,17 +35,46 @@ public class ToolDispatcher
     {
         if (!_tools.TryGetValue(toolName, out var tool))
         {
-            return JsonSerializer.Serialize(new { error = $"Unknown function: {toolName}" });
+            return SerializeError($"Unknown function: {toolName}");
         }
 
         if (!tool.IsEnabled)
         {
-            return JsonSerializer.Serialize(new { error = $"Tool '{toolName}' is currently disabled." });
+            return SerializeError($"Tool '{toolName}' is currently disabled.");
         }
 
-        var result = await tool.ExecuteAsync(argumentsJson, context, ct);
-        return result.Json;
+        // Parse raw JSON string at the boundary
+        JsonElement? arguments = null;
+        if (!string.IsNullOrWhiteSpace(argumentsJson))
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(argumentsJson);
+                arguments = doc.RootElement.Clone();
+            }
+            catch (JsonException ex)
+            {
+                return SerializeError($"Invalid arguments for '{toolName}': {ex.Message}");
+            }
+        }
+
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeoutCts.CancelAfter(TimeSpan.FromSeconds(15));
+
+        try
+        {
+            var result = await tool.ExecuteAsync(arguments, context, timeoutCts.Token);
+            return result.Json;
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            return SerializeError($"Tool '{toolName}' timed out after 15 seconds.");
+        }
     }
+
+    private static string SerializeError(string message) =>
+        JsonSerializer.Serialize(new ToolErrorResult { Error = message },
+            ToolJsonContext.Default.ToolErrorResult);
 
     public IReadOnlyList<WakeWordEntry> BuildWakeWordEntries()
     {
@@ -99,3 +128,12 @@ public class ToolDefinitionDto
     public string Description { get; set; } = "";
     public string ParametersJson { get; set; } = "{}";
 }
+
+public class ToolErrorResult
+{
+    [System.Text.Json.Serialization.JsonPropertyName("error")]
+    public string Error { get; set; } = "";
+}
+
+[System.Text.Json.Serialization.JsonSerializable(typeof(ToolErrorResult))]
+internal partial class ToolJsonContext : System.Text.Json.Serialization.JsonSerializerContext { }

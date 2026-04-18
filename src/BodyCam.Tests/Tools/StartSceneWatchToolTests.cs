@@ -36,7 +36,7 @@ public class StartSceneWatchToolTests
         var tool = new StartSceneWatchTool(vision);
 
         var result = await tool.ExecuteAsync(
-            "{\"condition\":\"when the light turns green\"}",
+            JsonHelper.ParseElement("{\"condition\":\"when the light turns green\"}"),
             CreateContext(), CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();

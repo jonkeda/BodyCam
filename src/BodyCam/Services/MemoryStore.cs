@@ -5,6 +5,7 @@ namespace BodyCam.Services;
 public class MemoryStore
 {
     private readonly string _filePath;
+    private readonly SemaphoreSlim _lock = new(1, 1);
     private List<MemoryEntry> _entries = new();
     private bool _loaded;
 
@@ -15,30 +16,45 @@ public class MemoryStore
 
     public async Task SaveAsync(MemoryEntry entry)
     {
-        await EnsureLoadedAsync();
-        _entries.Add(entry);
-        await PersistAsync();
+        await _lock.WaitAsync();
+        try
+        {
+            await EnsureLoadedAsync();
+            _entries.Add(entry);
+            await PersistAsync();
+        }
+        finally { _lock.Release(); }
     }
 
     public async Task<IReadOnlyList<MemoryEntry>> SearchAsync(string query)
     {
-        await EnsureLoadedAsync();
-        if (string.IsNullOrWhiteSpace(query))
-            return _entries.OrderByDescending(e => e.Timestamp).Take(10).ToList();
+        await _lock.WaitAsync();
+        try
+        {
+            await EnsureLoadedAsync();
+            if (string.IsNullOrWhiteSpace(query))
+                return _entries.OrderByDescending(e => e.Timestamp).Take(10).ToList();
 
-        var lower = query.ToLowerInvariant();
-        return _entries
-            .Where(e => e.Content.Contains(lower, StringComparison.OrdinalIgnoreCase)
-                     || (e.Category?.Contains(lower, StringComparison.OrdinalIgnoreCase) ?? false))
-            .OrderByDescending(e => e.Timestamp)
-            .Take(10)
-            .ToList();
+            var lower = query.ToLowerInvariant();
+            return _entries
+                .Where(e => e.Content.Contains(lower, StringComparison.OrdinalIgnoreCase)
+                         || (e.Category?.Contains(lower, StringComparison.OrdinalIgnoreCase) ?? false))
+                .OrderByDescending(e => e.Timestamp)
+                .Take(10)
+                .ToList();
+        }
+        finally { _lock.Release(); }
     }
 
     public async Task<IReadOnlyList<MemoryEntry>> GetRecentAsync(int count = 10)
     {
-        await EnsureLoadedAsync();
-        return _entries.OrderByDescending(e => e.Timestamp).Take(count).ToList();
+        await _lock.WaitAsync();
+        try
+        {
+            await EnsureLoadedAsync();
+            return _entries.OrderByDescending(e => e.Timestamp).Take(count).ToList();
+        }
+        finally { _lock.Release(); }
     }
 
     private async Task EnsureLoadedAsync()

@@ -114,6 +114,14 @@ account and SDK integration.
 
 **Deliverables:** `MetaGlassesCameraProvider`, Meta SDK integration, pairing flow.
 
+### Phase 6: iOS Platform Support
+Implement `PlatformCameraProvider` for iOS using AVFoundation (`AVCaptureSession`,
+`AVCapturePhotoOutput`). Headless capture without requiring a visible preview.
+Register in DI with `#elif IOS` alongside existing Windows/Android providers.
+
+**Deliverables:** iOS `PlatformCameraProvider` (AVFoundation), camera permission
+handling, `CameraManager` initialization on iOS, settings picker works on iOS.
+
 ---
 
 ## Exit Criteria

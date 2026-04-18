@@ -43,6 +43,9 @@ public class AppSettings
     public int SampleRate { get; set; } = 24000;
     public int ChunkDurationMs { get; set; } = 50;
 
+    // Microphone coordination
+    public int MicReleaseDelayMs { get; set; } = 50;
+
     private string AzureBase => AzureEndpoint?.TrimEnd('/') ?? string.Empty;
 
     public Uri GetRealtimeUri() => Provider switch

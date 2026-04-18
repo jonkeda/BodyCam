@@ -10,16 +10,16 @@ public abstract class ToolBase<TArgs> : ITool where TArgs : class, new()
     public virtual WakeWordBinding? WakeWord => null;
     public string ParameterSchema => SchemaGenerator.Generate<TArgs>();
 
-    public async Task<ToolResult> ExecuteAsync(string? argumentsJson, ToolContext context, CancellationToken ct)
+    public async Task<ToolResult> ExecuteAsync(JsonElement? arguments, ToolContext context, CancellationToken ct)
     {
         TArgs args;
-        if (string.IsNullOrWhiteSpace(argumentsJson))
+        if (arguments is null || arguments.Value.ValueKind == JsonValueKind.Undefined)
         {
             args = new TArgs();
         }
         else
         {
-            args = JsonSerializer.Deserialize<TArgs>(argumentsJson, JsonOptions) ?? new TArgs();
+            args = arguments.Value.Deserialize<TArgs>(JsonOptions) ?? new TArgs();
         }
 
         return await ExecuteAsync(args, context, ct);

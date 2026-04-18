@@ -1,20 +1,20 @@
 # How We Built BodyCam
 
-*A short story about a developer and an AI who built smart glasses from scratch.*
+*A short story about how I built smart glasses from scratch — with an AI.*
 
 ---
 
-It started with a $35 pair of sunglasses from Alibaba.
+It started with a $30 pair of sunglasses from Alibaba.
 
-Jon had been staring at the RayBan Meta listing for weeks — $299 for a locked ecosystem you couldn't hack, couldn't extend, couldn't truly own. Then one night, scrolling through Alibaba at 2 AM, he found the TKYUAN BT5.3 glasses with a built-in camera. Bluetooth, open-ear speakers, front-facing 1080p camera. Fifty bucks shipped. He ordered two pairs because he knew from experience: first hardware always breaks.
+I'd been staring at the RayBan Meta listing for weeks — $399 for a locked ecosystem you couldn't hack, couldn't extend, couldn't truly own. Then one night, scrolling through Alibaba at 2 AM, I found the TKYUAN BT5.3 glasses with a built-in camera. Bluetooth, open-ear speakers, front-facing 1080p camera. Thirty bucks shipped. I ordered two pairs because I knew from experience: first hardware always breaks.
 
-He opened VS Code the next morning and typed the first prompt.
+I opened VS Code the next morning and typed the first prompt.
 
 ---
 
 ## The Roadmap
 
-The plan was ambitious — nine milestones to take a pair of cheap Chinese glasses and make them smarter than anything Meta sold.
+The plan was ambitious — nine milestones to take a pair of cheap Chinese glasses and make them smarter than anything Meta sold. I had two days.
 
 ```
 M0 (Scaffold) → M7 (Auth) → M1 (Audio) → M2 (Conversation) → M3 (Vision)
@@ -26,13 +26,13 @@ M0 (Scaffold) → M7 (Auth) → M1 (Audio) → M2 (Conversation) → M3 (Vision)
                                                           M6 (Polish)
 ```
 
-The insight was simple: the glasses are dumb sensors — a camera, a mic, two speakers. The phone is the brain. A .NET MAUI app would orchestrate everything: capture audio, stream it to OpenAI's Realtime API, pipe vision through GPT, and push speech back through the glasses speakers. The total hardware cost was under $75. The RayBan Meta couldn't be customized at all.
+The insight was simple: the glasses are dumb sensors — a camera, a mic, two speakers. The phone is the brain. A .NET MAUI app would orchestrate everything: capture audio, stream it to OpenAI's Realtime API, pipe vision through GPT, and push speech back through the glasses speakers. The total hardware cost was under $30. The RayBan Meta couldn't be customized at all.
 
 ---
 
 ## M0 — The Scaffold
 
-Every project starts with a blank solution and a folder structure. Jon's first file was `first.md` — a detailed prompt describing every agent, every service, every interface. VoiceInputAgent, ConversationAgent, VoiceOutputAgent, VisionAgent. An orchestrator to bind them. Platform services for mic, speaker, and camera.
+Every project starts with a blank solution and a folder structure. My first file was `first.md` — a detailed prompt describing every agent, every service, every interface. VoiceInputAgent, ConversationAgent, VoiceOutputAgent, VisionAgent. An orchestrator to bind them. Platform services for mic, speaker, and camera.
 
 The scaffold went up in a single session. DI wired. Settings loaded. A MainPage with a Start button that did nothing yet. But the app launched, and that mattered.
 
@@ -42,7 +42,7 @@ The scaffold went up in a single session. DI wired. Settings loaded. A MainPage 
 
 Audio was the hardest milestone. Not the code — the physics.
 
-PCM audio at 24kHz, 16-bit, mono. Captured in 100ms chunks from the default microphone. Streamed over WebSocket to OpenAI's Realtime API in base64. The first time it worked, Jon spoke "Hello?" into his laptop mic and watched the transcript appear on screen three seconds later. Then the AI spoke back, and he nearly fell out of his chair. The latency was under 500ms.
+PCM audio at 24kHz, 16-bit, mono. Captured in 100ms chunks from the default microphone. Streamed over WebSocket to OpenAI's Realtime API in base64. The first time it worked, I spoke "Hello?" into my laptop mic and watched the transcript appear on screen three seconds later. Then the AI spoke back, and I nearly fell out of my chair. The latency was under 500ms.
 
 But then came the bugs.
 
@@ -58,7 +58,7 @@ Nine steps, nine design docs, and the voice loop was solid. Speak, hear, respond
 
 With audio working, the conversation agent was almost anticlimactic. A `ConversationAgent` backed by GPT, a `SessionContext` to hold history, and a system prompt that gave the AI its personality. The orchestrator wired it in: VoiceIn → Conversation → VoiceOut. Seven steps.
 
-The first real conversation happened on a Wednesday. Jon asked the AI about the weather, then about the code he was writing, then told it a joke. It laughed. Well — it generated audio that sounded like a polite chuckle. Close enough.
+The first real conversation happened on the first day, around 1 o'clock. I asked the AI about the weather, then about the code I was writing, then told it a joke. It laughed. Well — it generated audio that sounded like a polite chuckle. Close enough.
 
 ---
 
@@ -68,7 +68,7 @@ Vision was where it got interesting.
 
 The camera service captured JPEG frames from the laptop webcam. The VisionAgent sent them to GPT-4 Vision with a prompt: "Describe what you see." The response fed back into the conversation context.
 
-Jon pointed the webcam at his desk and said, "What do you see?"
+I pointed the webcam at my desk and said, "What do you see?"
 
 *"A white desk with a 27-inch monitor showing a code editor. A mechanical keyboard, a wireless mouse, and a coffee mug with steam rising from it. Behind the monitor there is a bookshelf with technical books."*
 
@@ -76,7 +76,7 @@ It saw everything. The coffee mug. The steam. The books.
 
 Then came **RCA-006**: black frames. The camera preview worked but the captured JPEG was entirely black. The CameraView was initializing asynchronously and the first frame capture fired before the sensor had stabilized. Fix: wait for a ready signal before capturing. Then another variant — blurry frames from autofocus lag. Fix: a stabilization delay.
 
-By the end of M3, the app could see, hear, and speak. Eight steps, seven RCAs, and a working AI assistant that ran on a laptop.
+By the end of M3, the app could see, hear, and speak. Eight steps, seven RCAs, and a working AI assistant that ran on a laptop. Still day one.
 
 ---
 
@@ -84,7 +84,7 @@ By the end of M3, the app could see, hear, and speak. Eight steps, seven RCAs, a
 
 Milestone 5 was the big one: make the assistant actually *smart*.
 
-The design started with five documents and a single architectural insight: **everything is a tool**. Don't hardcode features into the orchestrator. Don't write switch statements. Make every capability — reading text, finding objects, saving memories, making phone calls — a self-contained plugin that the LLM discovers through function calling.
+The design started with five documents and a single architectural insight: **everything is a tool**. Don't hardcode features into the orchestrator. Don't write switch statements. Make every capability — reading text, finding objects, saving memories, making phone calls — a self-contained plugin that the LLM discovers through function calling. This was day two.
 
 ```csharp
 public interface ITool
@@ -120,7 +120,7 @@ By step 10, the test count was 229. All passing. Thirteen tools registered. The 
 
 Unit tests are a lie you tell yourself. They prove your mocks work.
 
-So we wrote real tests. Thirteen of them. They connected to the live OpenAI Realtime API, registered all thirteen tools, sent natural language prompts, and verified the model called the right function.
+So I wrote real tests. Thirteen of them. They connected to the live OpenAI Realtime API, registered all thirteen tools, sent natural language prompts, and verified the model called the right function.
 
 "Read the text on the sign in front of me." → `read_text` ✓
 
@@ -130,7 +130,7 @@ So we wrote real tests. Thirteen of them. They connected to the live OpenAI Real
 
 Then the round-trips: prompt the model, intercept the function call, send a mock result back, verify the model spoke the answer. ReadText got "EXIT ONLY — Do Not Enter" and the model said "The sign says Exit Only." SaveMemory got `{saved: true}` and the model said "Got it, I'll remember that."
 
-One surprise: when asked to navigate to "the nearest Starbucks," the model chose `lookup_address` instead of `navigate_to`. It wanted to find the address first, then navigate. Smarter than the test expected. We updated the test to accept both.
+One surprise: when asked to navigate to "the nearest Starbucks," the model chose `lookup_address` instead of `navigate_to`. It wanted to find the address first, then navigate. Smarter than the test expected. I updated the test to accept both.
 
 All thirteen passed. Zero failures.
 
@@ -138,24 +138,25 @@ All thirteen passed. Zero failures.
 
 ## The Numbers
 
-| What | Count |
-|---|---|
+| What                 | Count                         |
+| -------------------- | ----------------------------- |
+| Days                 | 2                             |
 | Milestones completed | 6 (M0, M1, M2, M3, M5, M8/M9) |
-| Unit tests | 229 |
-| Real API tests | 13 |
-| Tools | 13 |
-| RCAs written | 7 |
-| Design documents | 30+ |
-| Step plans | 40+ steps |
-| Lines of C# | thousands |
-| Hardware cost | ~$50 |
-| RayBan Meta cost | $299 |
+| Unit tests           | 229                           |
+| Real API tests       | 13                            |
+| Tools                | 13                            |
+| RCAs written         | 7                             |
+| Design documents     | 30+                           |
+| Step plans           | 40+ steps                     |
+| Lines of C#          | thousands                     |
+| Hardware cost        | ~$30                          |
+| RayBan Meta cost     | $299                          |
 
 ---
 
 ## What It Does Now
 
-You put on a pair of $35 sunglasses. You say "Hey BodyCam." The phone in your pocket wakes up.
+You put on a pair of $30 sunglasses. You say "Hey BodyCam." The phone in your pocket wakes up.
 
 "What do you see?"
 
@@ -175,8 +176,8 @@ The maps app opens with walking directions.
 
 You walk. The glasses play the AI's voice through open-ear speakers. Nobody around you knows. It looks like you're wearing sunglasses.
 
-A $35 pair of sunglasses from Alibaba. Open source. Extensible. Yours.
+A $30 pair of sunglasses from Alibaba. Open source. Extensible. Yours.
 
 ---
 
-*Built with .NET MAUI, OpenAI, SkiaSharp, Porcupine, xUnit, FluentAssertions, and an unreasonable number of late nights.*
+*Built in two days with .NET MAUI, OpenAI, SkiaSharp, Porcupine, xUnit, FluentAssertions, and one AI that never sleeps.*

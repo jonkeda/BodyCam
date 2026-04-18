@@ -1,3 +1,4 @@
+using System.Text.Json;
 using BodyCam.Models;
 using BodyCam.Services;
 using BodyCam.Tools;
@@ -24,7 +25,7 @@ public class ToolBaseTests
     {
         var tool = new TestTool();
 
-        await tool.ExecuteAsync("", CreateTestContext(), CancellationToken.None);
+        await tool.ExecuteAsync(default(JsonElement), CreateTestContext(), CancellationToken.None);
 
         tool.LastArgs.Should().NotBeNull();
         tool.LastArgs!.Target.Should().Be("");
@@ -35,7 +36,7 @@ public class ToolBaseTests
     {
         var tool = new TestTool();
 
-        await tool.ExecuteAsync("{\"target\":\"lamp\",\"count\":5}", CreateTestContext(), CancellationToken.None);
+        await tool.ExecuteAsync(JsonHelper.ParseElement("{\"target\":\"lamp\",\"count\":5}"), CreateTestContext(), CancellationToken.None);
 
         tool.LastArgs.Should().NotBeNull();
         tool.LastArgs!.Target.Should().Be("lamp");

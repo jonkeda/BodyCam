@@ -20,7 +20,7 @@ public class MakePhoneCallToolTests
     public async Task ExecuteAsync_EmptyContact_ReturnsFail()
     {
         var tool = new MakePhoneCallTool();
-        var argsJson = """{"contact":""}""";
+        var argsJson = JsonHelper.ParseElement("""{ "contact":""}""");
 
         var result = await tool.ExecuteAsync(argsJson, CreateContext(), CancellationToken.None);
 

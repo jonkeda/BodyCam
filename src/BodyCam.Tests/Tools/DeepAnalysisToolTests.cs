@@ -33,7 +33,7 @@ public class DeepAnalysisToolTests
         chatClient.GetResponseAsync(Arg.Any<IList<ChatMessage>>(), Arg.Any<ChatOptions?>(), Arg.Any<CancellationToken>())
             .Returns(new ChatResponse(new ChatMessage(ChatRole.Assistant, "Deep insight here")));
 
-        var argsJson = """{"query":"Explain quantum computing"}""";
+        var argsJson = JsonHelper.ParseElement("""{ "query":"Explain quantum computing"}""" );
         var result = await tool.ExecuteAsync(argsJson, CreateContext(), CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
@@ -44,7 +44,7 @@ public class DeepAnalysisToolTests
     public async Task ExecuteAsync_EmptyQuery_ReturnsFail()
     {
         var (tool, _) = CreateTool();
-        var argsJson = """{"query":""}""";
+        var argsJson = JsonHelper.ParseElement("""{ "query":""}""" );
         var result = await tool.ExecuteAsync(argsJson, CreateContext(), CancellationToken.None);
 
         result.IsSuccess.Should().BeFalse();

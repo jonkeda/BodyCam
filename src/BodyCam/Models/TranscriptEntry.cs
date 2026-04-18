@@ -9,8 +9,15 @@ namespace BodyCam.Models;
 public class TranscriptEntry : ObservableObject
 {
     private string _text = string.Empty;
+    private bool _isThinking;
 
     public required string Role { get; init; }
+
+    public bool IsThinking
+    {
+        get => _isThinking;
+        set => SetProperty(ref _isThinking, value);
+    }
 
     public string Text
     {

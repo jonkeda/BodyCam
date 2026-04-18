@@ -105,8 +105,24 @@
                                 ItemsSource="{Binding Entries}">
                     <CollectionView.ItemTemplate>
                         <DataTemplate x:DataType="models:TranscriptEntry">
-                            <VerticalStackLayout Padding="4,2">
+                            <VerticalStackLayout Padding="4,2" Opacity="0" TranslationY="20"
+                                                 Loaded="EntryItem_Loaded">
+
+                                <!-- Thinking dots — visible only while IsThinking -->
+                                <HorizontalStackLayout IsVisible="{Binding IsThinking}"
+                                                       Spacing="6" Padding="4,8"
+                                                       Loaded="ThinkingDots_Loaded">
+                                    <Ellipse WidthRequest="8" HeightRequest="8"
+                                             Fill="{Binding RoleColor}" Opacity="0.3" />
+                                    <Ellipse WidthRequest="8" HeightRequest="8"
+                                             Fill="{Binding RoleColor}" Opacity="0.3" />
+                                    <Ellipse WidthRequest="8" HeightRequest="8"
+                                             Fill="{Binding RoleColor}" Opacity="0.3" />
+                                </HorizontalStackLayout>
+
+                                <!-- Normal content — hidden while thinking -->
                                 <Label Text="{Binding DisplayText}"
+                                       IsVisible="{Binding IsThinking, Converter={StaticResource InvertBool}}"
                                        FontSize="14"
                                        FontFamily="OpenSansRegular"
                                        TextColor="{Binding RoleColor}" />

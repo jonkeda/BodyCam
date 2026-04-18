@@ -4,6 +4,8 @@ using System.Text.Json;
 using System.Windows.Input;
 using BodyCam.Mvvm;
 using BodyCam.Services;
+using BodyCam.Services.Audio;
+using BodyCam.Services.Camera;
 using BodyCam.Tools;
 
 namespace BodyCam.ViewModels;
@@ -15,17 +17,37 @@ public class SettingsViewModel : ViewModelBase
     private readonly Func<HttpClient> _httpClientFactory;
     private string? _fullKey;
 
-    public SettingsViewModel(ISettingsService settings, IApiKeyService apiKeyService, IEnumerable<ITool> tools, Func<HttpClient>? httpClientFactory = null)
+    private readonly CameraManager _cameraManager;
+    private readonly AudioInputManager _audioInputManager;
+    private readonly AudioOutputManager _audioOutputManager;
+
+    public SettingsViewModel(ISettingsService settings, IApiKeyService apiKeyService, IEnumerable<ITool> tools, CameraManager cameraManager, AudioInputManager audioInputManager, AudioOutputManager audioOutputManager, Func<HttpClient>? httpClientFactory = null)
     {
         _settings = settings;
         _apiKeyService = apiKeyService;
         _httpClientFactory = httpClientFactory ?? (() => new HttpClient { Timeout = TimeSpan.FromSeconds(10) });
+        _cameraManager = cameraManager;
+        _audioInputManager = audioInputManager;
+        _audioOutputManager = audioOutputManager;
         Title = "Settings";
 
         ChangeApiKeyCommand = new AsyncRelayCommand(ChangeApiKeyAsync);
         ClearApiKeyCommand = new AsyncRelayCommand(ClearApiKeyAsync);
         ToggleKeyVisibilityCommand = new RelayCommand(ToggleKeyVisibility);
         TestConnectionCommand = new AsyncRelayCommand(TestConnectionAsync);
+
+        // Refresh pickers when BT devices connect/disconnect
+        _audioInputManager.ProvidersChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(AudioInputProviders));
+            OnPropertyChanged(nameof(SelectedAudioInputProvider));
+        };
+
+        _audioOutputManager.ProvidersChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(AudioOutputProviders));
+            OnPropertyChanged(nameof(SelectedAudioOutputProvider));
+        };
 
         LoadApiKeyDisplay();
         LoadToolSettings(tools);
@@ -80,38 +102,54 @@ public class SettingsViewModel : ViewModelBase
 
     // --- Model Picker Options ---
 
-    public string[] RealtimeModelOptions => ModelOptions.RealtimeModels;
-    public string[] ChatModelOptions => ModelOptions.ChatModels;
-    public string[] VisionModelOptions => ModelOptions.VisionModels;
-    public string[] TranscriptionModelOptions => ModelOptions.TranscriptionModels;
+    public ModelInfo[] RealtimeModelOptions => ModelOptions.RealtimeModels;
+    public ModelInfo[] ChatModelOptions => ModelOptions.ChatModels;
+    public ModelInfo[] VisionModelOptions => ModelOptions.VisionModels;
+    public ModelInfo[] TranscriptionModelOptions => ModelOptions.TranscriptionModels;
     public string[] VoiceOptions => ModelOptions.Voices;
     public string[] TurnDetectionOptions => ModelOptions.TurnDetectionModes;
     public string[] NoiseReductionOptions => ModelOptions.NoiseReductionModes;
 
     // --- Model Selections ---
 
-    public string SelectedRealtimeModel
+    public ModelInfo? SelectedRealtimeModel
     {
-        get => _settings.RealtimeModel;
-        set => SetProperty(_settings.RealtimeModel, value, v => _settings.RealtimeModel = v);
+        get => ModelOptions.RealtimeModels.FirstOrDefault(m => m.Id == _settings.RealtimeModel);
+        set
+        {
+            if (value is not null)
+                SetProperty(_settings.RealtimeModel, value.Id, v => _settings.RealtimeModel = v);
+        }
     }
 
-    public string SelectedChatModel
+    public ModelInfo? SelectedChatModel
     {
-        get => _settings.ChatModel;
-        set => SetProperty(_settings.ChatModel, value, v => _settings.ChatModel = v);
+        get => ModelOptions.ChatModels.FirstOrDefault(m => m.Id == _settings.ChatModel);
+        set
+        {
+            if (value is not null)
+                SetProperty(_settings.ChatModel, value.Id, v => _settings.ChatModel = v);
+        }
     }
 
-    public string SelectedVisionModel
+    public ModelInfo? SelectedVisionModel
     {
-        get => _settings.VisionModel;
-        set => SetProperty(_settings.VisionModel, value, v => _settings.VisionModel = v);
+        get => ModelOptions.VisionModels.FirstOrDefault(m => m.Id == _settings.VisionModel);
+        set
+        {
+            if (value is not null)
+                SetProperty(_settings.VisionModel, value.Id, v => _settings.VisionModel = v);
+        }
     }
 
-    public string SelectedTranscriptionModel
+    public ModelInfo? SelectedTranscriptionModel
     {
-        get => _settings.TranscriptionModel;
-        set => SetProperty(_settings.TranscriptionModel, value, v => _settings.TranscriptionModel = v);
+        get => ModelOptions.TranscriptionModels.FirstOrDefault(m => m.Id == _settings.TranscriptionModel);
+        set
+        {
+            if (value is not null)
+                SetProperty(_settings.TranscriptionModel, value.Id, v => _settings.TranscriptionModel = v);
+        }
     }
 
     // --- Azure Deployment Names ---
@@ -267,6 +305,57 @@ public class SettingsViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(key)) return "(not set)";
         if (key.Length <= 8) return "****";
         return key[..4] + "****" + key[^4..];
+    }
+
+    // --- Camera ---
+
+    public IReadOnlyList<ICameraProvider> CameraProviders => _cameraManager.Providers;
+
+    public ICameraProvider? SelectedCameraProvider
+    {
+        get => _cameraManager.Active;
+        set
+        {
+            if (value is not null && value != _cameraManager.Active)
+            {
+                _ = _cameraManager.SetActiveAsync(value.ProviderId);
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    // --- Audio Input ---
+
+    public IReadOnlyList<IAudioInputProvider> AudioInputProviders => _audioInputManager.Providers;
+
+    public IAudioInputProvider? SelectedAudioInputProvider
+    {
+        get => _audioInputManager.Active;
+        set
+        {
+            if (value is not null && value != _audioInputManager.Active)
+            {
+                _ = _audioInputManager.SetActiveAsync(value.ProviderId);
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    // --- Audio Output ---
+
+    public IReadOnlyList<IAudioOutputProvider> AudioOutputProviders => _audioOutputManager.Providers;
+
+    public IAudioOutputProvider? SelectedAudioOutputProvider
+    {
+        get => _audioOutputManager.Active;
+        set
+        {
+            if (value is not null && value != _audioOutputManager.Active)
+            {
+                _ = _audioOutputManager.SetActiveAsync(value.ProviderId);
+                OnPropertyChanged();
+            }
+        }
     }
 
     // --- Test Connection ---

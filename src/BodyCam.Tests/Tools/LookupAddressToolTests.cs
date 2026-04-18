@@ -20,7 +20,7 @@ public class LookupAddressToolTests
     public async Task ExecuteAsync_WithQuery_ReturnsPassthrough()
     {
         var tool = new LookupAddressTool();
-        var argsJson = """{"query":"Eiffel Tower"}""";
+        var argsJson = JsonHelper.ParseElement("""{ "query":"Eiffel Tower"}""");
 
         var result = await tool.ExecuteAsync(argsJson, CreateContext(), CancellationToken.None);
 
@@ -32,7 +32,7 @@ public class LookupAddressToolTests
     public async Task ExecuteAsync_EmptyQuery_ReturnsFail()
     {
         var tool = new LookupAddressTool();
-        var argsJson = """{"query":""}""";
+        var argsJson = JsonHelper.ParseElement("""{ "query":""}""");
 
         var result = await tool.ExecuteAsync(argsJson, CreateContext(), CancellationToken.None);
 

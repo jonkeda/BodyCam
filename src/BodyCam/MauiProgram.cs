@@ -1,8 +1,4 @@
-﻿using BodyCam.Agents;
-using BodyCam.Orchestration;
-using BodyCam.Services;
-using BodyCam.Tools;
-using BodyCam.ViewModels;
+﻿using BodyCam.Services;
 using CommunityToolkit.Maui;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
@@ -74,33 +70,13 @@ public static class MauiProgram
 		builder.Services.AddSingleton(settings);
 
 		// Services
-#if WINDOWS
-		builder.Services.AddSingleton<IAudioInputService, BodyCam.Platforms.Windows.WindowsAudioInputService>();
-#elif ANDROID
-		builder.Services.AddSingleton<IAudioInputService, BodyCam.Platforms.Android.AndroidAudioInputService>();
-#else
-		builder.Services.AddSingleton<IAudioInputService, AudioInputService>();
-#endif
-#if WINDOWS
-		builder.Services.AddSingleton<IAudioOutputService, BodyCam.Platforms.Windows.WindowsAudioOutputService>();
-#elif ANDROID
-		builder.Services.AddSingleton<IAudioOutputService, BodyCam.Platforms.Android.AndroidAudioOutputService>();
-#else
-		builder.Services.AddSingleton<IAudioOutputService, AudioOutputService>();
-#endif
-#if WINDOWS
-		builder.Services.AddSingleton<ICameraService, BodyCam.Platforms.Windows.WindowsCameraService>();
-#elif ANDROID
-		builder.Services.AddSingleton<ICameraService, BodyCam.Platforms.Android.AndroidCameraService>();
-#else
-		builder.Services.AddSingleton<ICameraService, CameraService>();
-#endif
-		builder.Services.AddSingleton<IRealtimeClient, RealtimeClient>();
-
-		// Wake word service (NullWakeWordService until Porcupine is configured)
-		builder.Services.AddSingleton<IWakeWordService, NullWakeWordService>();
-		builder.Services.AddSingleton<IMicrophoneCoordinator, MicrophoneCoordinator>();
-		builder.Services.AddSingleton<IApiKeyService, ApiKeyService>();
+		builder.Services
+			.AddAudioServices()
+			.AddCameraServices()
+			.AddAgents()
+			.AddTools()
+			.AddOrchestration()
+			.AddViewModels();
 
 		// Chat Completions client (deep_analysis tool)
 		builder.Services.AddSingleton<IChatClient>(sp =>
@@ -126,47 +102,9 @@ public static class MauiProgram
 			}
 		});
 
-		// Agents
-		builder.Services.AddSingleton<VoiceInputAgent>();
-		builder.Services.AddSingleton<ConversationAgent>();
-		builder.Services.AddSingleton<VoiceOutputAgent>();
-		builder.Services.AddSingleton<VisionAgent>();
-
-		// Tools
-		builder.Services.AddSingleton<ITool, DescribeSceneTool>();
-		builder.Services.AddSingleton<ITool, DeepAnalysisTool>();
-
 		// Memory store
 		builder.Services.AddSingleton<MemoryStore>(sp =>
 			new MemoryStore(Path.Combine(FileSystem.AppDataDirectory, "memories.json")));
-
-		// Phase A tools
-		builder.Services.AddSingleton<ITool, ReadTextTool>();
-		builder.Services.AddSingleton<ITool, TakePhotoTool>();
-		builder.Services.AddSingleton<ITool, SaveMemoryTool>();
-		builder.Services.AddSingleton<ITool, RecallMemoryTool>();
-		builder.Services.AddSingleton<ITool, SetTranslationModeTool>();
-		builder.Services.AddSingleton<ITool, MakePhoneCallTool>();
-		builder.Services.AddSingleton<ITool, SendMessageTool>();
-		builder.Services.AddSingleton<ITool, LookupAddressTool>();
-
-		// Phase B tools
-		builder.Services.AddSingleton<ITool, FindObjectTool>();
-		builder.Services.AddSingleton<ITool, NavigateToTool>();
-		builder.Services.AddSingleton<ITool, StartSceneWatchTool>();
-
-		builder.Services.AddSingleton<ToolDispatcher>();
-
-		// Orchestration
-		builder.Services.AddSingleton<AgentOrchestrator>();
-
-		// ViewModels
-		builder.Services.AddTransient<MainViewModel>();
-		builder.Services.AddTransient<ViewModels.SettingsViewModel>();
-
-		// Pages
-		builder.Services.AddTransient<MainPage>();
-		builder.Services.AddTransient<SettingsPage>();
 
 #if DEBUG
 		builder.Logging.AddDebug();

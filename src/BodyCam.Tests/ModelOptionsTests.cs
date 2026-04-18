@@ -7,25 +7,25 @@ public class ModelOptionsTests
     [Fact]
     public void RealtimeModels_ContainsDefault()
     {
-        ModelOptions.RealtimeModels.Should().Contain(ModelOptions.DefaultRealtime);
+        ModelOptions.RealtimeModels.Should().Contain(m => m.Id == ModelOptions.DefaultRealtime);
     }
 
     [Fact]
     public void ChatModels_ContainsDefault()
     {
-        ModelOptions.ChatModels.Should().Contain(ModelOptions.DefaultChat);
+        ModelOptions.ChatModels.Should().Contain(m => m.Id == ModelOptions.DefaultChat);
     }
 
     [Fact]
     public void VisionModels_ContainsDefault()
     {
-        ModelOptions.VisionModels.Should().Contain(ModelOptions.DefaultVision);
+        ModelOptions.VisionModels.Should().Contain(m => m.Id == ModelOptions.DefaultVision);
     }
 
     [Fact]
     public void TranscriptionModels_ContainsDefault()
     {
-        ModelOptions.TranscriptionModels.Should().Contain(ModelOptions.DefaultTranscription);
+        ModelOptions.TranscriptionModels.Should().Contain(m => m.Id == ModelOptions.DefaultTranscription);
     }
 
     [Fact]

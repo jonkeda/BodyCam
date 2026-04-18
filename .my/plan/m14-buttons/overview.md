@@ -36,6 +36,7 @@ don't care where the input came from.
 |--------|----------|---------|-------|
 | **BT glasses — AVRCP** | Android (MediaSession), Windows (SMTC) | <50ms | Media play/pause button events |
 | **BT glasses — GATT** | Android + Windows (BLE) | <100ms | Custom button characteristic, glasses-specific |
+| **BLE remotes — BTHome** | Android + Windows (BLE scan) | <100ms | Shelly BLU Remote, BLU Button1, any BTHome device |
 | **Phone volume keys** | Android (AudioManager), Windows (raw input) | <30ms | Optional, can conflict with system volume |
 | **Phone shake** | Android + iOS (Accelerometer) | 100-300ms | MAUI Essentials accelerometer API |
 | **Keyboard shortcuts** | Windows only | <10ms | Dev-time convenience, global hotkeys |
@@ -50,6 +51,7 @@ don't care where the input came from.
 IButtonInputProvider (per source type)
   ├── AvrcpButtonProvider        ← BT glasses media button
   ├── GattButtonProvider         ← BT glasses custom GATT button
+  ├── BtHomeButtonProvider       ← BLE remotes (Shelly BLU, BTHome protocol)
   ├── VolumeButtonProvider       ← Phone volume keys
   ├── ShakeGestureProvider       ← Accelerometer shake detection
   └── KeyboardShortcutProvider   ← Windows keyboard shortcuts
@@ -60,6 +62,7 @@ GestureRecognizer (tap / double-tap / long-press from raw events)
 ButtonInputManager (aggregates all providers)
   → Receives raw button events from providers
   → Passes through GestureRecognizer
+  → Also accepts PreRecognizedGesture events (bypasses GestureRecognizer)
   → Maps recognized gestures to actions via ActionMap
   → Executes the mapped action on MainViewModel / Orchestrator
 ```
@@ -103,13 +106,27 @@ Wire into `MainViewModel` to execute actions.
 **Deliverables:** `IButtonInputProvider`, `GestureRecognizer`, `ButtonInputManager`,
 `KeyboardShortcutProvider`, action mapping settings, integration with MainViewModel.
 
-### Phase 2: BT Glasses Buttons
+### Phase 2: BT Glasses Buttons & BLE Remotes
 Implement `AvrcpButtonProvider` using Android MediaSession and Windows SMTC.
 Implement `GattButtonProvider` for glasses that expose a custom BLE button
-characteristic.
+characteristic. Implement `BtHomeButtonProvider` for BLE remotes using the
+BTHome v2 protocol (Shelly BLU Remote, BLU Button1, any BTHome device).
 
-**Deliverables:** `AvrcpButtonProvider`, `GattButtonProvider`, BLE scanning
-for button characteristics, platform-specific media button handling.
+BTHome devices emit **pre-recognized gestures** from firmware (press, double_press,
+long_press), so `BtHomeButtonProvider` raises `PreRecognizedGesture` events that
+bypass `GestureRecognizer` and go directly to the `ActionMap`. This avoids the
+300ms single-tap delay. Add `PreRecognizedGesture` event to `IButtonInputProvider`.
+
+Primary target: **Shelly BLU Remote Control ZB** — 4 buttons + scroll wheel,
+BLE 5.0, ~2yr battery, BTHome v2 passive scanning (no pairing required).
+
+**Deliverables:** `AvrcpButtonProvider`, `GattButtonProvider`, `BtHomeButtonProvider`,
+`BtHomeParser` (BTHome v2 protocol), `BtHomeDeviceProfile` (button name mapping),
+BLE scanning (Android `BluetoothLeScanner`, Windows `BluetoothLEAdvertisementWatcher`),
+platform-specific media button handling, default action mapping for Shelly remote.
+
+See [ble-remotes.md](ble-remotes.md) for full BTHome protocol details, parser
+implementation, and device profiles.
 
 ### Phase 3: Phone Inputs
 Implement `VolumeButtonProvider` for phone volume key interception.
@@ -127,6 +144,15 @@ photographer" maps double-tap to photo).
 
 **Deliverables:** Button mapping settings page, preset configurations,
 per-source gesture-to-action mapping.
+
+### Phase 5: iOS Platform Support
+Implement iOS-specific button input providers. `ShakeGestureProvider` already uses
+MAUI Essentials accelerometer (cross-platform). Add `VolumeButtonProvider` for iOS
+using `AVAudioSession` volume change notifications (`outputVolumeDidChange`). No
+keyboard shortcut provider on iOS (Mac Catalyst only if needed later).
+
+**Deliverables:** iOS `VolumeButtonProvider` (AVAudioSession volume observation),
+verify `ShakeGestureProvider` works on iOS, platform-specific DI registration.
 
 ---
 
@@ -149,4 +175,5 @@ per-source gesture-to-action mapping.
 | [overview.md](overview.md) | This file — scope, phases, exit criteria |
 | [button-abstraction.md](button-abstraction.md) | IButtonInputProvider, GestureRecognizer, ButtonInputManager, action mapping |
 | [bt-buttons.md](bt-buttons.md) | BT glasses buttons — AVRCP media controls, custom GATT characteristics |
+| [ble-remotes.md](ble-remotes.md) | BLE remote controls — Shelly BLU Remote Control ZB, BTHome protocol, device profiles |
 | [phone-buttons.md](phone-buttons.md) | Phone volume keys, shake gesture, keyboard shortcuts |

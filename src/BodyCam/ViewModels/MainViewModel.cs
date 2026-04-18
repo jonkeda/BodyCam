@@ -4,7 +4,8 @@ using BodyCam.Models;
 using BodyCam.Mvvm;
 using BodyCam.Orchestration;
 using BodyCam.Services;
-using CommunityToolkit.Maui.Views;
+using BodyCam.Services.Camera;
+using BodyCam.Services.Input;
 
 namespace BodyCam.ViewModels;
 
@@ -26,7 +27,6 @@ public class MainViewModel : ViewModelBase
     private bool _isRunning;
     private bool _debugVisible;
     private string? _visionStatus;
-    private CameraView? _cameraView;
 
     internal TranscriptEntry? _currentAiEntry;
 
@@ -35,15 +35,23 @@ public class MainViewModel : ViewModelBase
     private ImageSource? _snapshotImage;
     private string? _snapshotCaption;
     private bool _showSnapshot;
+    private bool _isTransitioning;
 
-    public MainViewModel(AgentOrchestrator orchestrator, IApiKeyService apiKeyService, ISettingsService settingsService)
+    private readonly CameraManager _cameraManager;
+    private readonly ButtonInputManager _buttonInput;
+
+    public MainViewModel(AgentOrchestrator orchestrator, IApiKeyService apiKeyService, ISettingsService settingsService, CameraManager cameraManager, ButtonInputManager buttonInput)
     {
         _orchestrator = orchestrator;
         _apiKeyService = apiKeyService;
         _settingsService = settingsService;
+        _cameraManager = cameraManager;
+        _buttonInput = buttonInput;
         Title = "BodyCam";
 
         _debugVisible = _settingsService.DebugMode;
+
+        _buttonInput.ActionTriggered += OnButtonAction;
 
         ToggleCommand = new AsyncRelayCommand(ToggleAsync);
         ClearCommand = new RelayCommand(() =>
@@ -61,16 +69,12 @@ public class MainViewModel : ViewModelBase
         SwitchToTranscriptCommand = new RelayCommand(() =>
         {
             ShowTranscriptTab = true;
-            // Stop camera preview when switching away to save resources
-            if (CurrentLayer != ListeningLayer.ActiveSession)
-                _cameraView?.StopCameraPreview();
         });
         SwitchToCameraCommand = new AsyncRelayCommand(async () =>
         {
             ShowTranscriptTab = false;
-            // Start camera preview so the native control gets non-zero size
-            if (_cameraView is not null)
-                await _cameraView.StartCameraPreview(CancellationToken.None);
+            if (_cameraManager.Active is not null)
+                await _cameraManager.Active.StartAsync();
         });
         ToggleDebugCommand = new RelayCommand(() =>
         {
@@ -79,26 +83,11 @@ public class MainViewModel : ViewModelBase
         });
         DismissSnapshotCommand = new RelayCommand(() => ShowSnapshot = false);
 
-        LookCommand = new AsyncRelayCommand(async () =>
-        {
-            await SendVisionCommandAsync("Describe what you see in front of me.");
-        });
-        ReadCommand = new AsyncRelayCommand(async () =>
-        {
-            await SendVisionCommandAsync("Read any text you can see in front of me.");
-        });
-        FindCommand = new AsyncRelayCommand(async () =>
-        {
-            await SendVisionCommandAsync("Look around and tell me what objects you can find.");
-        });
-        AskCommand = new AsyncRelayCommand(async () =>
-        {
-            await SetLayerAsync("Active");
-        });
-        PhotoCommand = new AsyncRelayCommand(async () =>
-        {
-            await SendVisionCommandAsync("Take a photo of what you see.");
-        });
+        LookCommand = new AsyncRelayCommand(() => DispatchActionAsync(ButtonAction.Look));
+        ReadCommand = new AsyncRelayCommand(() => DispatchActionAsync(ButtonAction.Read));
+        FindCommand = new AsyncRelayCommand(() => DispatchActionAsync(ButtonAction.Find));
+        AskCommand = new AsyncRelayCommand(() => DispatchActionAsync(ButtonAction.ToggleSession));
+        PhotoCommand = new AsyncRelayCommand(() => DispatchActionAsync(ButtonAction.Photo));
 
         _orchestrator.TranscriptDelta += (_, delta) =>
         {
@@ -108,9 +97,13 @@ public class MainViewModel : ViewModelBase
 
                 if (_currentAiEntry is null)
                 {
-                    _currentAiEntry = new TranscriptEntry { Role = "AI" };
+                    _currentAiEntry = new TranscriptEntry { Role = "AI", IsThinking = true };
                     Entries.Add(_currentAiEntry);
                 }
+
+                if (_currentAiEntry.IsThinking)
+                    _currentAiEntry.IsThinking = false;
+
                 _currentAiEntry.Text += delta;
             });
         };
@@ -144,7 +137,10 @@ public class MainViewModel : ViewModelBase
                 else if (msg.StartsWith("AI:"))
                 {
                     if (_currentAiEntry is not null)
+                    {
+                        _currentAiEntry.IsThinking = false;
                         _currentAiEntry.Text = msg[3..].Trim();
+                    }
                     _currentAiEntry = null;
                 }
             });
@@ -309,16 +305,16 @@ public class MainViewModel : ViewModelBase
         // Option B: Session is running — send through Realtime API (spoken aloud)
         if (IsRunning)
         {
+            // Show thinking indicator immediately for realtime path
+            _currentAiEntry = new TranscriptEntry { Role = "AI", IsThinking = true };
+            Entries.Add(_currentAiEntry);
+
             await _orchestrator.SendTextInputAsync(prompt);
             return;
         }
 
         // Option A: No session — capture frame directly, call VisionAgent, show in transcript (no voice)
-        // Ensure camera preview is running so we can capture a frame
-        if (_cameraView is not null)
-            await _cameraView.StartCameraPreview(CancellationToken.None);
-
-        var frame = await CaptureFrameFromCameraViewAsync();
+        var frame = await _cameraManager.CaptureFrameAsync();
 
         ImageSource? imageSource = null;
         if (frame is not null)
@@ -339,9 +335,14 @@ public class MainViewModel : ViewModelBase
             return;
         }
 
+        // Show thinking indicator while vision processes
+        var aiEntry = new TranscriptEntry { Role = "AI", IsThinking = true };
+        Entries.Add(aiEntry);
+
         var description = await _orchestrator.Vision.DescribeFrameAsync(frame, prompt);
 
-        Entries.Add(new TranscriptEntry { Role = "AI", Text = description });
+        aiEntry.IsThinking = false;
+        aiEntry.Text = description;
 
         // Switch to transcript tab so the user sees the result
         ShowTranscriptTab = true;
@@ -359,75 +360,127 @@ public class MainViewModel : ViewModelBase
 
     private async Task SetLayerAsync(string segment)
     {
-        var target = segment switch
+        if (_isTransitioning) return;
+        _isTransitioning = true;
+        try
         {
-            "Sleep" => ListeningLayer.Sleep,
-            "Listen" => ListeningLayer.WakeWord,
-            "Active" => ListeningLayer.ActiveSession,
-            _ => CurrentLayer
-        };
-
-        if (target == CurrentLayer) return;
-
-        // De-escalate
-        if (target < CurrentLayer)
-        {
-            if (CurrentLayer == ListeningLayer.ActiveSession)
+            var target = segment switch
             {
-                _cameraView?.StopCameraPreview();
-                VisionStatus = null;
-                await _orchestrator.StopAsync();
-                IsRunning = false;
-                ToggleButtonText = "Start";
-            }
-        }
+                "Sleep" => ListeningLayer.Sleep,
+                "Listen" => ListeningLayer.WakeWord,
+                "Active" => ListeningLayer.ActiveSession,
+                _ => CurrentLayer
+            };
 
-        // Escalate to Active
-        if (target == ListeningLayer.ActiveSession && CurrentLayer < ListeningLayer.ActiveSession)
-        {
-            try
+            if (target == CurrentLayer) return;
+
+            // De-escalate
+            if (target < CurrentLayer)
             {
-                var key = await _apiKeyService.GetApiKeyAsync();
-                if (string.IsNullOrWhiteSpace(key))
+                if (CurrentLayer == ListeningLayer.ActiveSession)
                 {
-                    key = await PromptForApiKeyAsync();
+                    VisionStatus = null;
+                    await _orchestrator.StopAsync();
+                    IsRunning = false;
+                    ToggleButtonText = "Start";
+                }
+            }
+
+            // Escalate to Active
+            if (target == ListeningLayer.ActiveSession && CurrentLayer < ListeningLayer.ActiveSession)
+            {
+                try
+                {
+                    var key = await _apiKeyService.GetApiKeyAsync();
                     if (string.IsNullOrWhiteSpace(key))
                     {
-                        StatusText = "API key required";
-                        return;
+                        key = await PromptForApiKeyAsync();
+                        if (string.IsNullOrWhiteSpace(key))
+                        {
+                            StatusText = "API key required";
+                            return;
+                        }
+                        await _apiKeyService.SetApiKeyAsync(key);
                     }
-                    await _apiKeyService.SetApiKeyAsync(key);
+
+                    ToggleButtonText = "Stop";
+                    StatusText = "Connecting...";
+
+                    await _orchestrator.StartAsync();
+
+                    IsRunning = true;
                 }
-
-                ToggleButtonText = "Stop";
-                StatusText = "Connecting...";
-
-                await _orchestrator.StartAsync();
-                _orchestrator.FrameCaptureFunc = CaptureFrameFromCameraViewAsync;
-
-                if (_cameraView is not null)
-                    await _cameraView.StartCameraPreview(CancellationToken.None);
-
-                IsRunning = true;
+                catch (Exception ex)
+                {
+                    IsRunning = false;
+                    ToggleButtonText = "Start";
+                    StatusText = "Ready";
+                    DebugLog += $"[{DateTime.Now:HH:mm:ss}] Start failed: {ex.Message}{Environment.NewLine}";
+                    return;
+                }
             }
-            catch (Exception ex)
+
+            CurrentLayer = target;
+
+            StatusText = target switch
             {
-                IsRunning = false;
-                ToggleButtonText = "Start";
-                DebugLog += $"[{DateTime.Now:HH:mm:ss}] Start failed: {ex.Message}{Environment.NewLine}";
-                return;
+                ListeningLayer.Sleep => "Sleeping",
+                ListeningLayer.WakeWord => "Listening...",
+                ListeningLayer.ActiveSession => "Active",
+                _ => "Ready"
+            };
+        }
+        finally { _isTransitioning = false; }
+    }
+
+    public async Task DispatchActionAsync(ButtonAction action)
+    {
+        try
+        {
+            switch (action)
+            {
+                case ButtonAction.Look:
+                    await SendVisionCommandAsync("Describe what you see in front of me.");
+                    break;
+                case ButtonAction.Read:
+                    await SendVisionCommandAsync("Read any text you can see in front of me.");
+                    break;
+                case ButtonAction.Find:
+                    await SendVisionCommandAsync("Look around and tell me what objects you can find.");
+                    break;
+                case ButtonAction.Photo:
+                    await SendVisionCommandAsync("Take a photo of what you see.");
+                    break;
+                case ButtonAction.ToggleSession:
+                    if (IsRunning)
+                        await SetLayerAsync("Sleep");
+                    else
+                        await SetLayerAsync("Active");
+                    break;
+                case ButtonAction.ToggleSleepActive:
+                    if (CurrentLayer == ListeningLayer.Sleep)
+                        await SetLayerAsync("Active");
+                    else
+                        await SetLayerAsync("Sleep");
+                    break;
             }
         }
-
-        CurrentLayer = target;
-
-        StatusText = target switch
+        catch (Exception ex)
         {
-            ListeningLayer.Sleep => "Sleeping",
-            ListeningLayer.WakeWord => "Listening...",
-            ListeningLayer.ActiveSession => "Active",
-            _ => "Ready"
-        };
+            DebugLog += $"[{DateTime.Now:HH:mm:ss}] Action error ({action}): {ex.Message}{Environment.NewLine}";
+        }
+    }
+
+    private async void OnButtonAction(object? sender, ButtonActionEvent e)
+    {
+        try
+        {
+            await DispatchActionAsync(e.Action);
+        }
+        catch (Exception ex)
+        {
+            DebugLog += $"[{DateTime.Now:HH:mm:ss}] Button handler error: {ex.Message}{Environment.NewLine}";
+        }
     }
 
     private static async Task<string?> PromptForApiKeyAsync()
@@ -443,61 +496,4 @@ public class MainViewModel : ViewModelBase
             keyboard: Keyboard.Text);
     }
 
-    public void SetCameraView(CameraView cameraView)
-    {
-        _cameraView = cameraView;
-    }
-
-    /// <summary>
-    /// Captures a JPEG frame from the CameraView for the vision API.
-    /// </summary>
-    internal async Task<byte[]?> CaptureFrameFromCameraViewAsync(CancellationToken ct = default)
-    {
-        if (_cameraView is null) return null;
-
-        try
-        {
-            var tcs = new TaskCompletionSource<byte[]?>();
-
-            void OnMediaCaptured(object? s, CommunityToolkit.Maui.Core.MediaCapturedEventArgs e)
-            {
-                try
-                {
-                    if (e.Media is null || e.Media.Length == 0)
-                    {
-                        tcs.TrySetResult(null);
-                        return;
-                    }
-
-                    using var ms = new MemoryStream();
-                    e.Media.CopyTo(ms);
-                    tcs.TrySetResult(ms.ToArray());
-                }
-                catch (Exception ex)
-                {
-                    tcs.TrySetException(ex);
-                }
-            }
-
-            _cameraView.MediaCaptured += OnMediaCaptured;
-            try
-            {
-                await _cameraView.CaptureImage(ct);
-
-                using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                timeoutCts.CancelAfter(TimeSpan.FromSeconds(5));
-                timeoutCts.Token.Register(() => tcs.TrySetResult(null));
-
-                return await tcs.Task;
-            }
-            finally
-            {
-                _cameraView.MediaCaptured -= OnMediaCaptured;
-            }
-        }
-        catch
-        {
-            return null;
-        }
-    }
 }

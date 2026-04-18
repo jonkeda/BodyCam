@@ -11,7 +11,7 @@ public class MicrophoneCoordinatorTests
     {
         var wakeWord = Substitute.For<IWakeWordService>();
         wakeWord.IsListening.Returns(true);
-        var coordinator = new MicrophoneCoordinator(wakeWord);
+        var coordinator = new MicrophoneCoordinator(wakeWord, new AppSettings());
 
         await coordinator.TransitionToActiveSessionAsync();
 
@@ -23,7 +23,7 @@ public class MicrophoneCoordinatorTests
     {
         var wakeWord = Substitute.For<IWakeWordService>();
         wakeWord.IsListening.Returns(false);
-        var coordinator = new MicrophoneCoordinator(wakeWord);
+        var coordinator = new MicrophoneCoordinator(wakeWord, new AppSettings());
 
         await coordinator.TransitionToActiveSessionAsync();
 
@@ -35,7 +35,7 @@ public class MicrophoneCoordinatorTests
     {
         var wakeWord = Substitute.For<IWakeWordService>();
         wakeWord.IsListening.Returns(false);
-        var coordinator = new MicrophoneCoordinator(wakeWord);
+        var coordinator = new MicrophoneCoordinator(wakeWord, new AppSettings());
 
         await coordinator.TransitionToWakeWordAsync();
 
@@ -47,7 +47,7 @@ public class MicrophoneCoordinatorTests
     {
         var wakeWord = Substitute.For<IWakeWordService>();
         wakeWord.IsListening.Returns(true);
-        var coordinator = new MicrophoneCoordinator(wakeWord);
+        var coordinator = new MicrophoneCoordinator(wakeWord, new AppSettings());
 
         await coordinator.TransitionToWakeWordAsync();
 

@@ -109,4 +109,32 @@ public class SettingsService : ISettingsService
         get => Preferences.Get(nameof(SystemInstructions), "You are a helpful assistant.");
         set => Preferences.Set(nameof(SystemInstructions), value);
     }
+
+    // Camera
+    public string? ActiveCameraProvider
+    {
+        get { var v = Preferences.Get(nameof(ActiveCameraProvider), string.Empty); return v.Length == 0 ? null : v; }
+        set => Preferences.Set(nameof(ActiveCameraProvider), value ?? string.Empty);
+    }
+
+    // Audio Input
+    public string? ActiveAudioInputProvider
+    {
+        get { var v = Preferences.Get(nameof(ActiveAudioInputProvider), string.Empty); return v.Length == 0 ? null : v; }
+        set => Preferences.Set(nameof(ActiveAudioInputProvider), value ?? string.Empty);
+    }
+
+    // Audio Output
+    public string? ActiveAudioOutputProvider
+    {
+        get { var v = Preferences.Get(nameof(ActiveAudioOutputProvider), string.Empty); return v.Length == 0 ? null : v; }
+        set => Preferences.Set(nameof(ActiveAudioOutputProvider), value ?? string.Empty);
+    }
+
+    // Wake Word
+    public string? PicovoiceAccessKey
+    {
+        get { var v = Preferences.Get(nameof(PicovoiceAccessKey), string.Empty); return v.Length == 0 ? null : v; }
+        set => Preferences.Set(nameof(PicovoiceAccessKey), value ?? string.Empty);
+    }
 }

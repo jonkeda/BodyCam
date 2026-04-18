@@ -2,6 +2,7 @@ using BodyCam.Agents;
 using BodyCam.Models;
 using BodyCam.Orchestration;
 using BodyCam.Services;
+using BodyCam.Services.Camera;
 using BodyCam.Tools;
 using FluentAssertions;
 using Microsoft.Extensions.AI;
@@ -43,8 +44,9 @@ public class AgentOrchestratorTests
         var dispatcher = new ToolDispatcher(new ITool[] { describeSceneTool, deepAnalysisTool });
         var wakeWord = Substitute.For<IWakeWordService>();
         var micCoordinator = Substitute.For<IMicrophoneCoordinator>();
+        var cameraManager = new CameraManager([], settingsService);
 
-        return new AgentOrchestrator(voiceIn, conversation, voiceOut, vision, realtime, settingsService, new AppSettings(), dispatcher, wakeWord, micCoordinator);
+        return new AgentOrchestrator(voiceIn, conversation, voiceOut, vision, realtime, settingsService, new AppSettings(), dispatcher, new Lazy<IWakeWordService>(() => wakeWord), micCoordinator, cameraManager);
     }
 
     [Fact]

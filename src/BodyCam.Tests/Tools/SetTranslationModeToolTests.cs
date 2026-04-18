@@ -21,7 +21,7 @@ public class SetTranslationModeToolTests
     {
         var tool = new SetTranslationModeTool();
         var ctx = CreateContext();
-        var argsJson = """{"targetLanguage":"Spanish","active":true}""";
+        var argsJson = JsonHelper.ParseElement("""{ "targetLanguage":"Spanish","active":true}""");
 
         var result = await tool.ExecuteAsync(argsJson, ctx, CancellationToken.None);
 
@@ -34,7 +34,7 @@ public class SetTranslationModeToolTests
     public async Task ExecuteAsync_NoLanguage_ReturnsFail()
     {
         var tool = new SetTranslationModeTool();
-        var argsJson = """{"active":true,"targetLanguage":""}""";
+        var argsJson = JsonHelper.ParseElement("""{ "active":true,"targetLanguage":""}""");
 
         var result = await tool.ExecuteAsync(argsJson, CreateContext(), CancellationToken.None);
 

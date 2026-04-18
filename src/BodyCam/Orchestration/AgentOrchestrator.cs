@@ -1,6 +1,7 @@
 using BodyCam.Agents;
 using BodyCam.Models;
 using BodyCam.Services;
+using BodyCam.Services.Camera;
 using BodyCam.Tools;
 
 namespace BodyCam.Orchestration;
@@ -15,7 +16,8 @@ public class AgentOrchestrator
     private readonly ISettingsService _settingsService;
     private readonly AppSettings _settings;
     private readonly ToolDispatcher _dispatcher;
-    private readonly IWakeWordService _wakeWord;
+    private readonly Lazy<IWakeWordService> _wakeWord;
+    private readonly CameraManager _cameraManager;
 
     public VisionAgent Vision => _vision;
     private readonly IMicrophoneCoordinator _micCoordinator;
@@ -24,15 +26,12 @@ public class AgentOrchestrator
     private DateTimeOffset _lastVisionTime = DateTimeOffset.MinValue;
     public SessionContext Session { get; } = new();
 
-    /// <summary>
-    /// Delegate for capturing a frame from the CameraView. Set by the ViewModel.
-    /// </summary>
-    public Func<CancellationToken, Task<byte[]?>>? FrameCaptureFunc { get; set; }
-
     public event EventHandler<string>? TranscriptUpdated;
     public event EventHandler<string>? TranscriptDelta;
     public event EventHandler<string>? TranscriptCompleted;
     public event EventHandler<string>? DebugLog;
+
+    public SessionConfig? CurrentConfig { get; private set; }
 
     public bool IsRunning => _cts is not null && !_cts.IsCancellationRequested;
 
@@ -45,8 +44,9 @@ public class AgentOrchestrator
         ISettingsService settingsService,
         AppSettings settings,
         ToolDispatcher dispatcher,
-        IWakeWordService wakeWord,
-        IMicrophoneCoordinator micCoordinator)
+        Lazy<IWakeWordService> wakeWord,
+        IMicrophoneCoordinator micCoordinator,
+        CameraManager cameraManager)
     {
         _voiceIn = voiceIn;
         _conversation = conversation;
@@ -58,6 +58,7 @@ public class AgentOrchestrator
         _dispatcher = dispatcher;
         _wakeWord = wakeWord;
         _micCoordinator = micCoordinator;
+        _cameraManager = cameraManager;
     }
 
     public async Task StartAsync()
@@ -84,6 +85,18 @@ public class AgentOrchestrator
         _settings.AzureVisionDeploymentName = _settingsService.AzureVisionDeploymentName;
         _settings.AzureApiVersion = _settingsService.AzureApiVersion;
 
+        CurrentConfig = new SessionConfig
+        {
+            RealtimeModel = _settings.RealtimeModel,
+            ChatModel = _settings.ChatModel,
+            VisionModel = _settings.VisionModel,
+            TranscriptionModel = _settings.TranscriptionModel,
+            Voice = _settings.Voice,
+            TurnDetection = _settings.TurnDetection,
+            NoiseReduction = _settings.NoiseReduction,
+            SystemInstructions = _settings.SystemInstructions,
+        };
+
         DebugLog?.Invoke(this, $"Model: {_settings.RealtimeModel}");
 
         // Subscribe to Realtime events
@@ -96,6 +109,7 @@ public class AgentOrchestrator
         _realtime.ErrorOccurred += OnError;
         _realtime.OutputItemAdded += OnOutputItemAdded;
         _realtime.FunctionCallReceived += OnFunctionCallReceived;
+        _realtime.ConnectionLost += OnConnectionLost;
 
         // Connect to OpenAI
         await _realtime.ConnectAsync(_cts.Token);
@@ -121,6 +135,7 @@ public class AgentOrchestrator
         _realtime.ErrorOccurred -= OnError;
         _realtime.OutputItemAdded -= OnOutputItemAdded;
         _realtime.FunctionCallReceived -= OnFunctionCallReceived;
+        _realtime.ConnectionLost -= OnConnectionLost;
 
         _cts?.Cancel();
 
@@ -130,6 +145,7 @@ public class AgentOrchestrator
         await _realtime.DisconnectAsync();
 
         Session.IsActive = false;
+        CurrentConfig = null;
         _cts?.Dispose();
         _cts = null;
         DebugLog?.Invoke(this, "Orchestrator stopped.");
@@ -164,23 +180,30 @@ public class AgentOrchestrator
 
     private async void OnSpeechStarted(object? sender, EventArgs e)
     {
-        // Truncation logic
-        if (_voiceOut.Tracker.CurrentItemId is not null)
+        try
         {
-            _voiceOut.HandleInterruption();
-            var itemId = _voiceOut.Tracker.CurrentItemId;
-            var playedMs = _voiceOut.Tracker.PlayedMs;
-            _voiceOut.ResetTracker();
+            // Truncation logic
+            if (_voiceOut.Tracker.CurrentItemId is not null)
+            {
+                _voiceOut.HandleInterruption();
+                var itemId = _voiceOut.Tracker.CurrentItemId;
+                var playedMs = _voiceOut.Tracker.PlayedMs;
+                _voiceOut.ResetTracker();
 
-            try
-            {
-                await _realtime.TruncateResponseAudioAsync(itemId, playedMs);
-                DebugLog?.Invoke(this, $"Interrupted at {playedMs}ms.");
+                try
+                {
+                    await _realtime.TruncateResponseAudioAsync(itemId, playedMs);
+                    DebugLog?.Invoke(this, $"Interrupted at {playedMs}ms.");
+                }
+                catch (Exception ex)
+                {
+                    DebugLog?.Invoke(this, $"Truncation error: {ex.Message}");
+                }
             }
-            catch (Exception ex)
-            {
-                DebugLog?.Invoke(this, $"Truncation error: {ex.Message}");
-            }
+        }
+        catch (Exception ex)
+        {
+            DebugLog?.Invoke(this, $"SpeechStarted handler error: {ex.Message}");
         }
     }
 
@@ -200,57 +223,105 @@ public class AgentOrchestrator
         DebugLog?.Invoke(this, $"Realtime error: {error}");
     }
 
+    private async void OnConnectionLost(object? sender, string reason)
+    {
+        try
+        {
+            DebugLog?.Invoke(this, $"Connection lost: {reason}");
+            await ReconnectAsync();
+        }
+        catch (Exception ex)
+        {
+            DebugLog?.Invoke(this, $"Reconnect handler error: {ex.Message}");
+        }
+    }
+
+    private async Task ReconnectAsync()
+    {
+        var delay = TimeSpan.FromSeconds(1);
+        const int maxRetries = 5;
+
+        for (int i = 0; i < maxRetries; i++)
+        {
+            DebugLog?.Invoke(this, $"Reconnecting ({i + 1}/{maxRetries})...");
+            try
+            {
+                await _realtime.ConnectAsync(_cts?.Token ?? CancellationToken.None);
+                await _realtime.UpdateSessionAsync(_cts?.Token ?? CancellationToken.None);
+                await _voiceIn.StartAsync(_cts?.Token ?? CancellationToken.None);
+                DebugLog?.Invoke(this, "Reconnected.");
+                return;
+            }
+            catch (Exception ex)
+            {
+                DebugLog?.Invoke(this, $"Reconnect failed: {ex.Message}");
+                await Task.Delay(delay);
+                delay *= 2; // exponential backoff: 1s, 2s, 4s, 8s, 16s
+            }
+        }
+
+        DebugLog?.Invoke(this, "Reconnection failed after 5 attempts. Stopping session.");
+        await StopAsync();
+    }
+
     public async Task StartListeningAsync()
     {
-        _wakeWord.WakeWordDetected += OnWakeWordDetected;
-        await _wakeWord.StartAsync(_cts?.Token ?? CancellationToken.None);
+        _wakeWord.Value.WakeWordDetected += OnWakeWordDetected;
+        await _wakeWord.Value.StartAsync(_cts?.Token ?? CancellationToken.None);
         DebugLog?.Invoke(this, "Wake word listening started.");
     }
 
     public async Task StopListeningAsync()
     {
-        _wakeWord.WakeWordDetected -= OnWakeWordDetected;
-        await _wakeWord.StopAsync();
+        _wakeWord.Value.WakeWordDetected -= OnWakeWordDetected;
+        await _wakeWord.Value.StopAsync();
         DebugLog?.Invoke(this, "Wake word listening stopped.");
     }
 
     private async void OnWakeWordDetected(object? sender, WakeWordDetectedEventArgs e)
     {
-        DebugLog?.Invoke(this, $"Wake word: {e.Keyword} ({e.Action})");
-
-        switch (e.Action)
+        try
         {
-            case WakeWordAction.StartSession:
-                await _micCoordinator.TransitionToActiveSessionAsync();
-                await StartAsync();
-                break;
+            DebugLog?.Invoke(this, $"Wake word: {e.Keyword} ({e.Action})");
 
-            case WakeWordAction.GoToSleep:
-                await StopAsync();
-                await StopListeningAsync();
-                await _micCoordinator.TransitionToWakeWordAsync();
-                break;
+            switch (e.Action)
+            {
+                case WakeWordAction.StartSession:
+                    await _micCoordinator.TransitionToActiveSessionAsync();
+                    await StartAsync();
+                    break;
 
-            case WakeWordAction.InvokeTool:
-                if (e.ToolName is not null)
-                {
-                    var wasActive = IsRunning;
-                    if (!wasActive)
-                        await StartAsync();
+                case WakeWordAction.GoToSleep:
+                    await StopAsync();
+                    await StopListeningAsync();
+                    await _micCoordinator.TransitionToWakeWordAsync();
+                    break;
 
-                    var context = CreateToolContext();
-                    var result = await _dispatcher.ExecuteAsync(
-                        e.ToolName, null, context, _cts?.Token ?? CancellationToken.None);
+                case WakeWordAction.InvokeTool:
+                    if (e.ToolName is not null)
+                    {
+                        var wasActive = IsRunning;
+                        if (!wasActive)
+                            await StartAsync();
 
-                    DebugLog?.Invoke(this, $"Wake word tool result: {result}");
-                }
-                break;
+                        var context = CreateToolContext();
+                        var result = await _dispatcher.ExecuteAsync(
+                            e.ToolName, null, context, _cts?.Token ?? CancellationToken.None);
+
+                        DebugLog?.Invoke(this, $"Wake word tool result: {result}");
+                    }
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            DebugLog?.Invoke(this, $"Wake word handler error: {ex.Message}");
         }
     }
 
     private ToolContext CreateToolContext() => new()
     {
-        CaptureFrame = FrameCaptureFunc ?? ((ct) => Task.FromResult<byte[]?>(null)),
+        CaptureFrame = _cameraManager.CaptureFrameAsync,
         Session = Session,
         Log = msg => DebugLog?.Invoke(this, msg),
         RealtimeClient = _realtime

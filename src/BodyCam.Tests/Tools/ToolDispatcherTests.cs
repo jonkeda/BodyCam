@@ -12,11 +12,11 @@ public class ToolDispatcherTests
         public string Description { get; set; } = "A fake tool";
         public string ParameterSchema => """{"type":"object","properties":{}}""";
         public bool IsEnabled { get; set; } = true;
-        public string? LastArgs { get; private set; }
+        public JsonElement? LastArgs { get; private set; }
 
-        public Task<ToolResult> ExecuteAsync(string? argumentsJson, ToolContext context, CancellationToken ct)
+        public Task<ToolResult> ExecuteAsync(JsonElement? arguments, ToolContext context, CancellationToken ct)
         {
-            LastArgs = argumentsJson;
+            LastArgs = arguments;
             return Task.FromResult(ToolResult.Success(new { result = "ok" }));
         }
     }
@@ -37,7 +37,8 @@ public class ToolDispatcherTests
 
         var result = await dispatcher.ExecuteAsync("my_tool", """{"x":1}""", CreateContext(), CancellationToken.None);
 
-        tool.LastArgs.Should().Be("""{"x":1}""");
+        tool.LastArgs.Should().NotBeNull();
+        tool.LastArgs!.Value.GetProperty("x").GetInt32().Should().Be(1);
         result.Should().Contain("ok");
     }
 

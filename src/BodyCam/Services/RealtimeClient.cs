@@ -193,6 +193,7 @@ public class RealtimeClient : IRealtimeClient
     public event EventHandler? SpeechStopped;
     public event EventHandler<RealtimeResponseInfo>? ResponseDone;
     public event EventHandler<string>? ErrorOccurred;
+    public event EventHandler<string>? ConnectionLost;
     public event EventHandler<string>? OutputItemAdded;
     public event EventHandler<FunctionCallInfo>? FunctionCallReceived;
 
@@ -237,10 +238,14 @@ public class RealtimeClient : IRealtimeClient
         catch (Exception ex)
         {
             ErrorOccurred?.Invoke(this, $"Receive loop error: {ex.Message}");
+            // ConnectionLost will fire in finally block
         }
         finally
         {
+            var wasConnected = IsConnected;
             IsConnected = false;
+            if (wasConnected)
+                ConnectionLost?.Invoke(this, "WebSocket connection lost");
         }
     }
 

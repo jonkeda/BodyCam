@@ -28,6 +28,7 @@ public interface IRealtimeClient : IAsyncDisposable
     event EventHandler? SpeechStopped;
     event EventHandler<RealtimeResponseInfo>? ResponseDone;
     event EventHandler<string>? ErrorOccurred;
+    event EventHandler<string>? ConnectionLost;
 
     /// <summary>
     /// Fired when a new output item is added to the response, providing the item ID for truncation tracking.

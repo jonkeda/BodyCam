@@ -64,7 +64,7 @@ public class ReadTextToolTests
             });
 
         var ctx = CreateContext(new byte[] { 0xFF, 0xD8 });
-        var argsJson = """{"focus":"menu"}""";
+        var argsJson = JsonHelper.ParseElement("""{ "focus":"menu"}""");
         var result = await tool.ExecuteAsync(argsJson, ctx, CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();

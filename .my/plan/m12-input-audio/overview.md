@@ -130,6 +130,15 @@ depends on glasses model — could be raw PCM over TCP, WebSocket, or custom pro
 
 **Deliverables:** `WifiAudioProvider`, WiFi audio stream client, protocol adapters.
 
+### Phase 5: iOS Platform Support
+Implement `PlatformMicProvider` for iOS using `AVAudioEngine` with an input node
+tap for PCM capture. Handle `AVAudioSession` category/mode configuration
+(`.playAndRecord` with `.measurement` mode for low-latency). Register in DI with
+`#elif IOS`. Microphone permission via `NSMicrophoneUsageDescription`.
+
+**Deliverables:** iOS `PlatformMicProvider` (AVAudioEngine), `AVAudioSession`
+configuration, microphone permission handling, audio route change notifications.
+
 ---
 
 ## Exit Criteria

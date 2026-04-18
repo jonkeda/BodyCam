@@ -124,6 +124,15 @@ while voice on glasses).
 **Deliverables:** Volume control per-provider, audio ducking, audio focus management,
 notification audio routing.
 
+### Phase 5: iOS Platform Support
+Implement `PhoneSpeakerProvider` for iOS using `AVAudioEngine` with a player node
+for PCM playback. Handle `AVAudioSession` configuration for output routing.
+`ClearBuffer` resets the player node for interruption handling. Register in DI with
+`#elif IOS`.
+
+**Deliverables:** iOS `PhoneSpeakerProvider` (AVAudioEngine), `ClearBuffer` via
+player node reset, `AVAudioSession` output routing, audio route change handling.
+
 ---
 
 ## Exit Criteria

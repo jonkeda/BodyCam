@@ -43,7 +43,7 @@ public class FindObjectToolTests
 
         var frame = new byte[] { 0xFF, 0xD8, 0xFF, 0xE0 }; // fake JPEG header
         var result = await tool.ExecuteAsync(
-            "{\"target\":\"red mug\"}", CreateContext(frame), CancellationToken.None);
+            JsonHelper.ParseElement("{\"target\":\"red mug\"}"), CreateContext(frame), CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
         result.Json.Should().Contain("found");
@@ -64,7 +64,7 @@ public class FindObjectToolTests
 
         var frame = new byte[] { 0xFF, 0xD8, 0xFF, 0xE0 };
         var result = await tool.ExecuteAsync(
-            "{\"target\":\"unicorn\"}", CreateContext(frame), CancellationToken.None);
+            JsonHelper.ParseElement("{\"target\":\"unicorn\"}"), CreateContext(frame), CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue(); // Success with found=false
         result.Json.Should().Contain("false");

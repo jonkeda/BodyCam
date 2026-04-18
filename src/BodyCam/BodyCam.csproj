@@ -62,6 +62,7 @@
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.*" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.*" />
+		<PackageReference Include="Porcupine" Version="4.0.2" />
 	</ItemGroup>
 
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">

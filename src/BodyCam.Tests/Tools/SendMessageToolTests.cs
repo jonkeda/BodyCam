@@ -20,7 +20,7 @@ public class SendMessageToolTests
     public async Task ExecuteAsync_EmptyRecipient_ReturnsFail()
     {
         var tool = new SendMessageTool();
-        var argsJson = """{"recipient":"","message":"Hello"}""";
+        var argsJson = JsonHelper.ParseElement("""{"recipient":"","message":"Hello"}""");
 
         var result = await tool.ExecuteAsync(argsJson, CreateContext(), CancellationToken.None);
 
@@ -32,7 +32,7 @@ public class SendMessageToolTests
     public async Task ExecuteAsync_EmptyMessage_ReturnsFail()
     {
         var tool = new SendMessageTool();
-        var argsJson = """{"recipient":"555-1234","message":""}""";
+        var argsJson = JsonHelper.ParseElement("""{"recipient":"555-1234","message":""}""");
 
         var result = await tool.ExecuteAsync(argsJson, CreateContext(), CancellationToken.None);
 

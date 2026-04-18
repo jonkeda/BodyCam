@@ -1,38 +1,40 @@
 namespace BodyCam;
 
+public record ModelInfo(string Id, string Label);
+
 public static class ModelOptions
 {
     // --- Realtime (voice) ---
     public const string DefaultRealtime = "gpt-realtime-1.5";
-    public static readonly string[] RealtimeModels =
+    public static readonly ModelInfo[] RealtimeModels =
     [
-        "gpt-realtime-1.5",
-        "gpt-realtime-mini",
+        new("gpt-realtime-1.5", "Realtime 1.5 (Premium)"),
+        new("gpt-realtime-mini", "Realtime Mini (Budget)"),
     ];
 
     // --- Chat (text reasoning) ---
     public const string DefaultChat = "gpt-5.4-mini";
-    public static readonly string[] ChatModels =
+    public static readonly ModelInfo[] ChatModels =
     [
-        "gpt-5.4",
-        "gpt-5.4-mini",
-        "gpt-5.4-nano",
+        new("gpt-5.4", "GPT-5.4 (Flagship)"),
+        new("gpt-5.4-mini", "GPT-5.4 Mini"),
+        new("gpt-5.4-nano", "GPT-5.4 Nano (Cheapest)"),
     ];
 
     // --- Vision ---
     public const string DefaultVision = "gpt-5.4";
-    public static readonly string[] VisionModels =
+    public static readonly ModelInfo[] VisionModels =
     [
-        "gpt-5.4",
-        "gpt-5.4-mini",
+        new("gpt-5.4", "GPT-5.4 (Flagship)"),
+        new("gpt-5.4-mini", "GPT-5.4 Mini"),
     ];
 
     // --- Transcription (inside Realtime session) ---
     public const string DefaultTranscription = "gpt-4o-mini-transcribe";
-    public static readonly string[] TranscriptionModels =
+    public static readonly ModelInfo[] TranscriptionModels =
     [
-        "gpt-4o-mini-transcribe",
-        "gpt-4o-transcribe",
+        new("gpt-4o-mini-transcribe", "GPT-4o Mini Transcribe"),
+        new("gpt-4o-transcribe", "GPT-4o Transcribe (Best)"),
     ];
 
     // --- Voice presets ---
@@ -59,15 +61,13 @@ public static class ModelOptions
         "far_field",
     ];
 
-    public static string Label(string modelId) => modelId switch
+    public static string Label(string modelId)
     {
-        "gpt-realtime-1.5"       => "Realtime 1.5 (Premium)",
-        "gpt-realtime-mini"      => "Realtime Mini (Budget)",
-        "gpt-5.4"                => "GPT-5.4 (Flagship)",
-        "gpt-5.4-mini"           => "GPT-5.4 Mini",
-        "gpt-5.4-nano"           => "GPT-5.4 Nano (Cheapest)",
-        "gpt-4o-mini-transcribe" => "GPT-4o Mini Transcribe",
-        "gpt-4o-transcribe"      => "GPT-4o Transcribe (Best)",
-        _ => modelId,
-    };
+        var all = RealtimeModels
+            .Concat(ChatModels)
+            .Concat(VisionModels)
+            .Concat(TranscriptionModels);
+
+        return all.FirstOrDefault(m => m.Id == modelId)?.Label ?? modelId;
+    }
 }

@@ -27,7 +27,7 @@ public class RecallMemoryToolTests
             await store.SaveAsync(new MemoryEntry { Content = "Meeting at 2pm" });
 
             var tool = new RecallMemoryTool(store);
-            var argsJson = """{"query":"car"}""";
+            var argsJson = JsonHelper.ParseElement("""{ "query":"car"}""");
 
             var result = await tool.ExecuteAsync(argsJson, CreateContext(), CancellationToken.None);
 
@@ -49,7 +49,7 @@ public class RecallMemoryToolTests
         {
             var store = new MemoryStore(tempFile);
             var tool = new RecallMemoryTool(store);
-            var argsJson = """{"query":"something"}""";
+            var argsJson = JsonHelper.ParseElement("""{ "query":"something"}""");
 
             var result = await tool.ExecuteAsync(argsJson, CreateContext(), CancellationToken.None);
 

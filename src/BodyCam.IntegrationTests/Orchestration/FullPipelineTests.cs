@@ -65,7 +65,7 @@ public class FullPipelineTests : IClassFixture<OpenAiWireMockFixture>
         var deepAnalysisTool = new DeepAnalysisTool(conversation);
         var dispatcher = new ToolDispatcher(new ITool[] { describeSceneTool, deepAnalysisTool });
         var wakeWord = Substitute.For<IWakeWordService>();
-        var orchestrator = new AgentOrchestrator(voiceIn, conversation, voiceOut, vision, realtime, settingsService, new AppSettings(), dispatcher, wakeWord);
+        var orchestrator = new AgentOrchestrator(voiceIn, conversation, voiceOut, vision, realtime, settingsService, new AppSettings(), dispatcher, new Lazy<IWakeWordService>(() => wakeWord));
 
         var transcripts = new List<string>();
         var debugLogs = new List<string>();

@@ -28,4 +28,16 @@ public interface ISettingsService
 
     // System
     string SystemInstructions { get; set; }
+
+    // Camera
+    string? ActiveCameraProvider { get; set; }
+
+    // Audio Input
+    string? ActiveAudioInputProvider { get; set; }
+
+    // Audio Output
+    string? ActiveAudioOutputProvider { get; set; }
+
+    // Wake Word
+    string? PicovoiceAccessKey { get; set; }
 }

@@ -24,7 +24,7 @@ public class SaveMemoryToolTests
         {
             var store = new MemoryStore(tempFile);
             var tool = new SaveMemoryTool(store);
-            var argsJson = """{"content":"Buy milk","category":"general"}""";
+            var argsJson = JsonHelper.ParseElement("""{ "content":"Buy milk","category":"general"}""");
 
             var result = await tool.ExecuteAsync(argsJson, CreateContext(), CancellationToken.None);
 
@@ -46,7 +46,7 @@ public class SaveMemoryToolTests
         {
             var store = new MemoryStore(tempFile);
             var tool = new SaveMemoryTool(store);
-            var argsJson = """{"content":""}""";
+            var argsJson = JsonHelper.ParseElement("""{ "content":""}""");
 
             var result = await tool.ExecuteAsync(argsJson, CreateContext(), CancellationToken.None);
 

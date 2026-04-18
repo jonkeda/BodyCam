@@ -36,6 +36,7 @@
                 <HorizontalStackLayout Spacing="8">
                     <Picker AutomationId="VoiceModelPicker"
                             ItemsSource="{Binding RealtimeModelOptions}"
+                            ItemDisplayBinding="{Binding Label}"
                             SelectedItem="{Binding SelectedRealtimeModel}"
                             HorizontalOptions="FillAndExpand" />
                     <Label AutomationId="RealtimeStatusLabel"
@@ -47,6 +48,7 @@
                 <HorizontalStackLayout Spacing="8">
                     <Picker AutomationId="ChatModelPicker"
                             ItemsSource="{Binding ChatModelOptions}"
+                            ItemDisplayBinding="{Binding Label}"
                             SelectedItem="{Binding SelectedChatModel}"
                             HorizontalOptions="FillAndExpand" />
                     <Label AutomationId="ChatStatusLabel"
@@ -58,6 +60,7 @@
                 <HorizontalStackLayout Spacing="8">
                     <Picker AutomationId="VisionModelPicker"
                             ItemsSource="{Binding VisionModelOptions}"
+                            ItemDisplayBinding="{Binding Label}"
                             SelectedItem="{Binding SelectedVisionModel}"
                             HorizontalOptions="FillAndExpand" />
                     <Label AutomationId="VisionStatusLabel"
@@ -69,6 +72,7 @@
                 <HorizontalStackLayout Spacing="8">
                     <Picker AutomationId="TranscriptionModelPicker"
                             ItemsSource="{Binding TranscriptionModelOptions}"
+                            ItemDisplayBinding="{Binding Label}"
                             SelectedItem="{Binding SelectedTranscriptionModel}"
                             HorizontalOptions="FillAndExpand" />
                     <Label AutomationId="TranscriptionStatusLabel"
@@ -187,6 +191,30 @@
                        VerticalOptions="Center"
                        FontSize="13" />
             </HorizontalStackLayout>
+
+            <!-- SECTION: Camera -->
+            <Label Text="Camera" FontSize="18" FontAttributes="Bold" Margin="0,8,0,0" />
+            <Label Text="Camera Source" FontSize="13" TextColor="Gray" />
+            <Picker AutomationId="CameraSourcePicker"
+                    ItemsSource="{Binding CameraProviders}"
+                    ItemDisplayBinding="{Binding DisplayName}"
+                    SelectedItem="{Binding SelectedCameraProvider}" />
+
+            <!-- SECTION: Audio Input -->
+            <Label Text="Audio Input" FontSize="18" FontAttributes="Bold" Margin="0,8,0,0" />
+            <Label Text="Microphone Source" FontSize="13" TextColor="Gray" />
+            <Picker AutomationId="AudioInputPicker"
+                    ItemsSource="{Binding AudioInputProviders}"
+                    ItemDisplayBinding="{Binding DisplayName}"
+                    SelectedItem="{Binding SelectedAudioInputProvider}" />
+
+            <!-- SECTION: Audio Output -->
+            <Label Text="Audio Output" FontSize="18" FontAttributes="Bold" Margin="0,8,0,0" />
+            <Label Text="Speaker" FontSize="13" TextColor="Gray" />
+            <Picker AutomationId="AudioOutputPicker"
+                    ItemsSource="{Binding AudioOutputProviders}"
+                    ItemDisplayBinding="{Binding DisplayName}"
+                    SelectedItem="{Binding SelectedAudioOutputProvider}" />
 
             <!-- SECTION: Debug -->
             <Label Text="Debug" FontSize="18" FontAttributes="Bold" Margin="0,8,0,0" />

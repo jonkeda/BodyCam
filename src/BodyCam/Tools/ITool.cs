@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace BodyCam.Tools;
 
 public interface ITool
@@ -7,5 +9,5 @@ public interface ITool
     string ParameterSchema { get; }
     bool IsEnabled { get; }
     WakeWordBinding? WakeWord => null;
-    Task<ToolResult> ExecuteAsync(string? argumentsJson, ToolContext context, CancellationToken ct);
+    Task<ToolResult> ExecuteAsync(JsonElement? arguments, ToolContext context, CancellationToken ct);
 }

@@ -59,7 +59,7 @@ public class DescribeSceneToolTests
             .Returns(new ChatResponse(new ChatMessage(ChatRole.Assistant, "It's a book")));
 
         var ctx = CreateContext(new byte[] { 0xFF, 0xD8 });
-        var argsJson = """{"query":"What is that object?"}""";
+        var argsJson = JsonHelper.ParseElement("""{ "query":"What is that object?"}""");
         var result = await tool.ExecuteAsync(argsJson, ctx, CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
