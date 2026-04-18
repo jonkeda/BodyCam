@@ -16,7 +16,11 @@ public class TranscriptEntry : ObservableObject
     public bool IsThinking
     {
         get => _isThinking;
-        set => SetProperty(ref _isThinking, value);
+        set
+        {
+            if (SetProperty(ref _isThinking, value))
+                OnPropertyChanged(nameof(AccessibleText));
+        }
     }
 
     public string Text
@@ -25,20 +29,35 @@ public class TranscriptEntry : ObservableObject
         set
         {
             if (SetProperty(ref _text, value))
+            {
                 OnPropertyChanged(nameof(DisplayText));
+                OnPropertyChanged(nameof(AccessibleText));
+            }
         }
     }
 
     public string DisplayText => $"{Role}: {Text}";
 
+    public string AccessibleText => IsThinking
+        ? $"{Role} is thinking"
+        : string.IsNullOrEmpty(Text)
+            ? Role
+            : $"{Role}: {Text}";
+
     public ImageSource? Image { get; set; }
     public string? ImageCaption { get; set; }
     public bool HasImage => Image is not null;
 
-    public Color RoleColor => Role switch
+    public Color RoleColor => (Role, IsLightTheme) switch
     {
-        "You" => Color.FromArgb("#4CAF50"),
-        "AI" => Color.FromArgb("#2196F3"),
-        _ => Color.FromArgb("#999999")
+        ("You", true)  => Color.FromArgb("#2E7D32"),
+        ("You", false) => Color.FromArgb("#81C784"),
+        ("AI", true)   => Color.FromArgb("#1565C0"),
+        ("AI", false)  => Color.FromArgb("#64B5F6"),
+        (_, true)      => Color.FromArgb("#616161"),
+        (_, false)     => Color.FromArgb("#BDBDBD"),
     };
+
+    private static bool IsLightTheme =>
+        Application.Current?.RequestedTheme != AppTheme.Dark;
 }

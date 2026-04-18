@@ -219,6 +219,7 @@ public class MainViewModel : ViewModelBase
             if (SetProperty(ref _currentLayer, value))
             {
                 OnPropertyChanged(nameof(StateColor));
+                OnPropertyChanged(nameof(StateDescription));
                 OnPropertyChanged(nameof(StatusText));
                 OnPropertyChanged(nameof(CanAct));
                 OnPropertyChanged(nameof(SleepSegmentColor));
@@ -250,7 +251,7 @@ public class MainViewModel : ViewModelBase
     }
     public bool ShowCameraTab => !ShowTranscriptTab;
 
-    private static readonly Color TabActiveBg = Color.FromArgb("#2196F3");
+    private static readonly Color TabActiveBg = Color.FromArgb("#1976D2");
     private static readonly Color TabActiveTxt = Colors.White;
     private static readonly Color TabInactiveTxt = Color.FromArgb("#333333");
 
@@ -281,6 +282,14 @@ public class MainViewModel : ViewModelBase
         ListeningLayer.WakeWord => Color.FromArgb("#4CAF50"),
         ListeningLayer.ActiveSession => Color.FromArgb("#2196F3"),
         _ => Color.FromArgb("#666666")
+    };
+
+    public string StateDescription => CurrentLayer switch
+    {
+        ListeningLayer.Sleep => "Sleep mode",
+        ListeningLayer.WakeWord => "Listening for wake word",
+        ListeningLayer.ActiveSession => "Active session",
+        _ => "Unknown state"
     };
 
     public Color SleepSegmentColor => CurrentLayer == ListeningLayer.Sleep ? ActiveBg : InactiveBg;

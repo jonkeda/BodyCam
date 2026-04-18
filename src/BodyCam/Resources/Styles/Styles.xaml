@@ -43,6 +43,12 @@
                             <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}" />
                         </VisualState.Setters>
                     </VisualState>
+                    <VisualState x:Name="Focused">
+                        <VisualState.Setters>
+                            <Setter Property="BorderColor" Value="{StaticResource Primary}" />
+                            <Setter Property="BorderWidth" Value="2" />
+                        </VisualState.Setters>
+                    </VisualState>
                     <VisualState x:Name="PointerOver" />
                 </VisualStateGroup>
             </VisualStateGroupList>

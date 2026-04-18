@@ -1,4 +1,5 @@
-﻿using BodyCam.Services.Audio;
+﻿using BodyCam.Helpers;
+using BodyCam.Services.Audio;
 using BodyCam.Services.Input;
 using BodyCam.Services.Camera;
 using BodyCam.ViewModels;
@@ -59,12 +60,26 @@ public partial class MainPage : ContentPage
 					TranscriptList.ScrollTo(vm.Entries.Count - 1, position: ScrollToPosition.End, animate: false);
 				}
 			};
+
+			vm.PropertyChanged += (_, e) =>
+			{
+				if (e.PropertyName == nameof(MainViewModel.ShowSnapshot) && vm.ShowSnapshot)
+					DismissSnapshotButton.Focus();
+			};
 		}
 	}
 
 	private async void EntryItem_Loaded(object sender, EventArgs e)
 	{
 		if (sender is not VisualElement element) return;
+
+		if (MotionPreference.PrefersReducedMotion)
+		{
+			element.Opacity = 1;
+			element.TranslationY = 0;
+			return;
+		}
+
 		await Task.WhenAll(
 			element.FadeTo(1, 250, Easing.CubicOut),
 			element.TranslateTo(0, 0, 250, Easing.CubicOut));
@@ -76,6 +91,13 @@ public partial class MainPage : ContentPage
 
 		var dots = layout.Children.OfType<Ellipse>().ToList();
 		if (dots.Count < 3) return;
+
+		if (MotionPreference.PrefersReducedMotion)
+		{
+			foreach (var dot in dots)
+				dot.Opacity = 1.0;
+			return;
+		}
 
 		while (layout.IsVisible)
 		{

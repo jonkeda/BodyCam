@@ -13,14 +13,32 @@
     <ContentPage.Resources>
         <converters:InvertBoolConverter x:Key="InvertBool" />
         <Style x:Key="ActionButton" TargetType="Button">
-            <Setter Property="HeightRequest" Value="44" />
-            <Setter Property="FontSize" Value="14" />
+            <Setter Property="MinimumHeightRequest" Value="44" />
+            <Setter Property="FontSize" Value="Body" />
             <Setter Property="CornerRadius" Value="8" />
             <Setter Property="Padding" Value="4,0" />
             <Setter Property="BackgroundColor"
                     Value="{AppThemeBinding Light=#EEEEEE, Dark=#2A2A2A}" />
             <Setter Property="TextColor"
                     Value="{AppThemeBinding Light=#333333, Dark=#E0E0E0}" />
+            <Setter Property="VisualStateManager.VisualStateGroups">
+                <VisualStateGroupList>
+                    <VisualStateGroup x:Name="CommonStates">
+                        <VisualState x:Name="Normal" />
+                        <VisualState x:Name="Focused">
+                            <VisualState.Setters>
+                                <Setter Property="BorderColor" Value="{StaticResource Primary}" />
+                                <Setter Property="BorderWidth" Value="2" />
+                            </VisualState.Setters>
+                        </VisualState>
+                        <VisualState x:Name="Disabled">
+                            <VisualState.Setters>
+                                <Setter Property="Opacity" Value="0.5" />
+                            </VisualState.Setters>
+                        </VisualState>
+                    </VisualStateGroup>
+                </VisualStateGroupList>
+            </Setter>
         </Style>
     </ContentPage.Resources>
 
@@ -34,64 +52,117 @@
             <Ellipse AutomationId="StatusDot"
                      WidthRequest="12" HeightRequest="12"
                      Fill="{Binding StateColor}"
-                     VerticalOptions="Center" />
+                     VerticalOptions="Center"
+                     SemanticProperties.Description="{Binding StateDescription}" />
 
             <!-- State pill (segmented control) -->
             <Border Grid.Column="1" StrokeShape="RoundRectangle 16"
                     Stroke="{AppThemeBinding Light=#E0E0E0, Dark=#333333}"
                     Padding="2" Margin="8,0"
                     HorizontalOptions="Start"
-                    HeightRequest="36">
+                    MinimumHeightRequest="36">
                 <Grid ColumnDefinitions="Auto,Auto,Auto" ColumnSpacing="0">
                     <Button AutomationId="SleepButton"
-                            Text="😴"
+                            Text="😴" TabIndex="10"
                             Command="{Binding SetStateCommand}"
                             CommandParameter="Sleep"
                             BackgroundColor="{Binding SleepSegmentColor}"
                             TextColor="{Binding SleepSegmentTextColor}"
                             CornerRadius="14"
-                            HeightRequest="32" MinimumWidthRequest="56"
-                            FontSize="14" Padding="8,0"
-                            VerticalOptions="Center" />
+                            MinimumHeightRequest="32" MinimumWidthRequest="56"
+                            FontSize="Body" Padding="8,0"
+                            VerticalOptions="Center"
+                            SemanticProperties.Description="Sleep mode"
+                            SemanticProperties.Hint="Puts the assistant to sleep">
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroupList>
+                                <VisualStateGroup x:Name="CommonStates">
+                                    <VisualState x:Name="Normal" />
+                                    <VisualState x:Name="Focused">
+                                        <VisualState.Setters>
+                                            <Setter Property="BorderColor" Value="{StaticResource Primary}" />
+                                            <Setter Property="BorderWidth" Value="2" />
+                                        </VisualState.Setters>
+                                    </VisualState>
+                                </VisualStateGroup>
+                            </VisualStateGroupList>
+                        </VisualStateManager.VisualStateGroups>
+                    </Button>
                     <Button Grid.Column="1" AutomationId="ListenButton"
-                            Text="👂"
+                            Text="👂" TabIndex="11"
                             Command="{Binding SetStateCommand}"
                             CommandParameter="Listen"
                             BackgroundColor="{Binding ListenSegmentColor}"
                             TextColor="{Binding ListenSegmentTextColor}"
                             CornerRadius="14"
-                            HeightRequest="32" MinimumWidthRequest="56"
-                            FontSize="14" Padding="8,0"
-                            VerticalOptions="Center" />
+                            MinimumHeightRequest="32" MinimumWidthRequest="56"
+                            FontSize="Body" Padding="8,0"
+                            VerticalOptions="Center"
+                            SemanticProperties.Description="Listen mode"
+                            SemanticProperties.Hint="Activates wake word listening">
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroupList>
+                                <VisualStateGroup x:Name="CommonStates">
+                                    <VisualState x:Name="Normal" />
+                                    <VisualState x:Name="Focused">
+                                        <VisualState.Setters>
+                                            <Setter Property="BorderColor" Value="{StaticResource Primary}" />
+                                            <Setter Property="BorderWidth" Value="2" />
+                                        </VisualState.Setters>
+                                    </VisualState>
+                                </VisualStateGroup>
+                            </VisualStateGroupList>
+                        </VisualStateManager.VisualStateGroups>
+                    </Button>
                     <Button Grid.Column="2" AutomationId="ActiveButton"
-                            Text="💬"
+                            Text="💬" TabIndex="12"
                             Command="{Binding SetStateCommand}"
                             CommandParameter="Active"
                             BackgroundColor="{Binding ActiveSegmentColor}"
                             TextColor="{Binding ActiveSegmentTextColor}"
                             CornerRadius="14"
-                            HeightRequest="32" MinimumWidthRequest="56"
-                            FontSize="14" Padding="8,0"
-                            VerticalOptions="Center" />
+                            MinimumHeightRequest="32" MinimumWidthRequest="56"
+                            FontSize="Body" Padding="8,0"
+                            VerticalOptions="Center"
+                            SemanticProperties.Description="Active session"
+                            SemanticProperties.Hint="Starts an active conversation">
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroupList>
+                                <VisualStateGroup x:Name="CommonStates">
+                                    <VisualState x:Name="Normal" />
+                                    <VisualState x:Name="Focused">
+                                        <VisualState.Setters>
+                                            <Setter Property="BorderColor" Value="{StaticResource Primary}" />
+                                            <Setter Property="BorderWidth" Value="2" />
+                                        </VisualState.Setters>
+                                    </VisualState>
+                                </VisualStateGroup>
+                            </VisualStateGroupList>
+                        </VisualStateManager.VisualStateGroups>
+                    </Button>
                 </Grid>
             </Border>
 
             <!-- Debug toggle -->
             <Button Grid.Column="2" AutomationId="DebugToggleButton"
-                    Text="🐛"
+                    Text="🐛" TabIndex="13"
                     Command="{Binding ToggleDebugCommand}"
-                    WidthRequest="40" HeightRequest="32"
-                    FontSize="16" Padding="0"
-                    BackgroundColor="Transparent" />
+                    WidthRequest="40" MinimumHeightRequest="32"
+                    FontSize="Subtitle" Padding="0"
+                    BackgroundColor="Transparent"
+                    SemanticProperties.Description="Toggle debug console"
+                    SemanticProperties.Hint="Shows or hides the debug log" />
 
             <!-- Clear button -->
             <Button Grid.Column="3" AutomationId="ClearButton"
-                    Text="Clear"
+                    Text="Clear" TabIndex="14"
                     Command="{Binding ClearCommand}"
-                    WidthRequest="60" HeightRequest="32"
-                    FontSize="12"
+                    WidthRequest="60" MinimumHeightRequest="32"
+                    FontSize="Caption"
                     BackgroundColor="{AppThemeBinding Light=#E0E0E0, Dark=#333}"
-                    TextColor="{AppThemeBinding Light=#333, Dark=#E0E0E0}" />
+                    TextColor="{AppThemeBinding Light=#333, Dark=#E0E0E0}"
+                    SemanticProperties.Description="Clear transcript"
+                    SemanticProperties.Hint="Removes all transcript entries" />
         </Grid>
 
         <!-- Row 1: Content area (transcript OR camera) -->
@@ -106,12 +177,14 @@
                     <CollectionView.ItemTemplate>
                         <DataTemplate x:DataType="models:TranscriptEntry">
                             <VerticalStackLayout Padding="4,2" Opacity="0" TranslationY="20"
-                                                 Loaded="EntryItem_Loaded">
+                                                 Loaded="EntryItem_Loaded"
+                                                 SemanticProperties.Description="{Binding AccessibleText}">
 
                                 <!-- Thinking dots — visible only while IsThinking -->
                                 <HorizontalStackLayout IsVisible="{Binding IsThinking}"
                                                        Spacing="6" Padding="4,8"
-                                                       Loaded="ThinkingDots_Loaded">
+                                                       Loaded="ThinkingDots_Loaded"
+                                                       SemanticProperties.Description="Thinking...">
                                     <Ellipse WidthRequest="8" HeightRequest="8"
                                              Fill="{Binding RoleColor}" Opacity="0.3" />
                                     <Ellipse WidthRequest="8" HeightRequest="8"
@@ -123,18 +196,19 @@
                                 <!-- Normal content — hidden while thinking -->
                                 <Label Text="{Binding DisplayText}"
                                        IsVisible="{Binding IsThinking, Converter={StaticResource InvertBool}}"
-                                       FontSize="14"
+                                       FontSize="Body"
                                        FontFamily="OpenSansRegular"
                                        TextColor="{Binding RoleColor}" />
                                 <Image Source="{Binding Image}"
                                        IsVisible="{Binding HasImage}"
                                        HeightRequest="200"
                                        Aspect="AspectFit"
-                                       Margin="0,4" />
+                                       Margin="0,4"
+                                       SemanticProperties.Description="{Binding ImageCaption}" />
                                 <Label Text="{Binding ImageCaption}"
                                        IsVisible="{Binding HasImage}"
-                                       FontSize="12"
-                                       TextColor="Gray"
+                                       FontSize="Caption"
+                                       TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}"
                                        FontAttributes="Italic" />
                             </VerticalStackLayout>
                         </DataTemplate>
@@ -147,7 +221,9 @@
                 <Label AutomationId="CameraPlaceholder" 
                        Text="Camera initializing..."
                        HorizontalOptions="Center" VerticalOptions="Center"
-                       TextColor="Gray" />
+                       FontSize="Body"
+                       TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}"
+                       SemanticProperties.Description="Camera is initializing" />
                 <toolkit:CameraView x:Name="CameraPreview" AutomationId="CameraPreview" />
 
                 <!-- Snapshot overlay -->
@@ -164,16 +240,19 @@
                             <Image AutomationId="SnapshotImage"
                                    Source="{Binding SnapshotImage}"
                                    HeightRequest="300"
-                                   Aspect="AspectFit" />
+                                   Aspect="AspectFit"
+                                   SemanticProperties.Description="{Binding SnapshotCaption}" />
                             <Label AutomationId="SnapshotCaption"
                                    Text="{Binding SnapshotCaption}"
-                                   FontSize="14"
+                                   FontSize="Body"
                                    HorizontalTextAlignment="Center" />
                             <Button AutomationId="DismissSnapshotButton"
-                                    Text="Dismiss"
+                                    x:Name="DismissSnapshotButton"
+                                    Text="Dismiss" TabIndex="40"
                                     Command="{Binding DismissSnapshotCommand}"
                                     HorizontalOptions="Center"
-                                    BackgroundColor="{AppThemeBinding Light=#E0E0E0, Dark=#333}" />
+                                    BackgroundColor="{AppThemeBinding Light=#E0E0E0, Dark=#333}"
+                                    SemanticProperties.Hint="Closes the snapshot overlay" />
                         </VerticalStackLayout>
                     </Border>
                 </Grid>
@@ -188,56 +267,71 @@
                     <ScrollView x:Name="DebugScroll" AutomationId="DebugScroll">
                         <Label AutomationId="DebugLabel"
                                Text="{Binding DebugLog}"
-                               FontSize="11"
+                               FontSize="Micro"
                                FontFamily="OpenSansRegular"
-                               TextColor="Gray" />
+                               TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}"
+                               SemanticProperties.Description="Debug log output" />
                     </ScrollView>
                 </Frame>
             </Grid>
         </Grid>
 
         <!-- Row 2: Tab selector -->
-        <Grid Grid.Row="2" ColumnDefinitions="*,*" HeightRequest="40"
+        <Grid Grid.Row="2" ColumnDefinitions="*,*" MinimumHeightRequest="40"
               BackgroundColor="{AppThemeBinding Light=#F0F0F0, Dark=#222222}">
             <Button AutomationId="TranscriptTabButton"
-                    Text="📝 Transcript"
+                    Text="📝 Transcript" TabIndex="20"
                     Command="{Binding SwitchToTranscriptCommand}"
                     BackgroundColor="{Binding TranscriptTabBackground}"
                     TextColor="{Binding TranscriptTabTextColor}"
                     CornerRadius="8"
-                    FontSize="14" />
+                    FontSize="Body"
+                    SemanticProperties.Description="Transcript tab"
+                    SemanticProperties.Hint="Shows the conversation transcript" />
             <Button Grid.Column="1" AutomationId="CameraTabButton"
-                    Text="📷 Camera"
+                    Text="📷 Camera" TabIndex="21"
                     Command="{Binding SwitchToCameraCommand}"
                     BackgroundColor="{Binding CameraTabBackground}"
                     TextColor="{Binding CameraTabTextColor}"
                     CornerRadius="8"
-                    FontSize="14" />
+                    FontSize="Body"
+                    SemanticProperties.Description="Camera tab"
+                    SemanticProperties.Hint="Shows the live camera feed" />
         </Grid>
 
         <!-- Row 3: Quick action bar -->
         <Grid Grid.Row="3" ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto"
               ColumnSpacing="4" RowSpacing="4" Padding="8">
             <Button AutomationId="LookButton"
-                    Text="👁 Look"
+                    Text="👁 Look" TabIndex="30"
                     Command="{Binding LookCommand}"
-                    Style="{StaticResource ActionButton}" />
+                    Style="{StaticResource ActionButton}"
+                    SemanticProperties.Description="Look"
+                    SemanticProperties.Hint="Describes what the camera sees" />
             <Button Grid.Column="1" AutomationId="ReadButton"
-                    Text="📖 Read"
+                    Text="📖 Read" TabIndex="31"
                     Command="{Binding ReadCommand}"
-                    Style="{StaticResource ActionButton}" />
+                    Style="{StaticResource ActionButton}"
+                    SemanticProperties.Description="Read"
+                    SemanticProperties.Hint="Reads text visible to the camera" />
             <Button Grid.Column="2" AutomationId="FindButton"
-                    Text="🔍 Find"
+                    Text="🔍 Find" TabIndex="32"
                     Command="{Binding FindCommand}"
-                    Style="{StaticResource ActionButton}" />
+                    Style="{StaticResource ActionButton}"
+                    SemanticProperties.Description="Find"
+                    SemanticProperties.Hint="Finds specific objects in the camera view" />
             <Button Grid.Row="1" AutomationId="AskButton"
-                    Text="💬 Ask"
+                    Text="💬 Ask" TabIndex="33"
                     Command="{Binding AskCommand}"
-                    Style="{StaticResource ActionButton}" />
+                    Style="{StaticResource ActionButton}"
+                    SemanticProperties.Description="Ask"
+                    SemanticProperties.Hint="Asks the AI a question" />
             <Button Grid.Row="1" Grid.Column="1" AutomationId="PhotoButton"
-                    Text="📸 Photo"
+                    Text="📸 Photo" TabIndex="34"
                     Command="{Binding PhotoCommand}"
-                    Style="{StaticResource ActionButton}" />
+                    Style="{StaticResource ActionButton}"
+                    SemanticProperties.Description="Photo"
+                    SemanticProperties.Hint="Takes a photo with the camera" />
         </Grid>
     </Grid>
 </ContentPage>

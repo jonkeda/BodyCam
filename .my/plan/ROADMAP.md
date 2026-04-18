@@ -331,24 +331,102 @@ Replace ad-hoc `DebugLog` string events with structured `ILogger<T>`, persist to
   - [ ] Wire into MAUI logging pipeline (`MauiProgram.cs`)
   - [ ] Update MainViewModel to consume `InAppLoggerProvider`
   - [ ] Remove `AgentOrchestrator.DebugLog` event
-- **Phase 2: Remote Sink (Azure App Insights)**
-  - [ ] Add Application Insights SDK
+- **Phase 2: Remote Sink (OpenTelemetry + Azure Monitor)**
+  - [ ] Add `OpenTelemetry` + `Azure.Monitor.OpenTelemetry.Exporter` packages
+  - [ ] Configure OpenTelemetry logging exporter in MAUI pipeline
   - [ ] Configure connection string via settings (opt-in)
   - [ ] Filter: Warning+ to remote, privacy-safe properties only
-  - [ ] Structured properties: SessionId, Platform, AppVersion
-- **Phase 3: Crash Reporting**
-  - [ ] `MauiExceptions.UnhandledException` handler
-  - [ ] Breadcrumb trail (last N log entries)
-  - [ ] Device info + session context in crash payload
+  - [ ] Resource attributes: SessionId, Platform, AppVersion
+- **Phase 3: Crash Reporting (Sentry)**
+  - [ ] Add `Sentry.Maui` package
+  - [ ] Configure `UseSentry()` in `MauiProgram.cs`
+  - [ ] `BeforeSend` callback to strip API keys and transcript text
+  - [ ] Breadcrumbs from ILogger entries
+  - [ ] Offline envelope caching
   - [ ] Exclude PII, API keys, transcript text
-- **Phase 4: Usage Analytics**
-  - [ ] Custom events: SessionStarted, ToolExecuted, VisionCaptured
-  - [ ] Metrics: session duration, tool call count, error rate
+- **Phase 4: Usage Analytics (OpenTelemetry)**
+  - [ ] Custom events via `ActivitySource`: SessionStarted, ToolExecuted, VisionCaptured
+  - [ ] Metrics via `Meter`: session duration, tool call count, error rate
   - [ ] Opt-in toggle in settings
 - **Phase 5: iOS Platform Support**
-  - [ ] Verify App Insights SDK on iOS
-  - [ ] iOS crash symbolication
+  - [ ] Verify OpenTelemetry exporter on iOS (.NET AOT)
+  - [ ] Verify Sentry.Maui on iOS
+  - [ ] iOS crash symbolication (Sentry dSYM upload)
   - [ ] Background logging with iOS lifecycle constraints
+
+## M20 — Barcode Product Lookup
+
+**Status:** Not started  
+**Plan:** [m20-barcode/](m20-barcode/)
+
+Scan product barcodes (EAN-13, UPC-A, etc.) from camera feed and look up product
+information via open APIs. Reads barcode aloud with product name, brand, nutritional
+info, and pricing. Depends on M18 Phase 2 (barcode scanning support).
+
+- **Phase 1: Barcode Lookup Service**
+  - [ ] `IBarcodeLookupService` interface
+  - [ ] `OpenFoodFactsClient` (Open Food Facts API — food/drink products)
+  - [ ] `UpcItemDbClient` (UPCitemdb API — general products)
+  - [ ] `BarcodeLookupService` (aggregates multiple sources, caches results)
+  - [ ] `ProductInfo` model (name, brand, category, image URL, nutrition, ingredients)
+  - [ ] `LookupBarcodeTool` (ITool — scans barcode → looks up → returns product info)
+  - [ ] Wake word binding: "scan barcode" → QuickAction
+  - [ ] Unit tests (mock HTTP responses)
+  - [ ] DI registration
+- **Phase 2: Smart Responses**
+  - [ ] AI summarization of product info (concise spoken description)
+  - [ ] Nutritional highlights (calories, allergens, dietary flags)
+  - [ ] Price comparison hints (when available from API)
+  - [ ] "Tell me more about this product" follow-up via conversation
+- **Phase 3: History & Favorites**
+  - [ ] `BarcodeHistoryService` (persist scanned products)
+  - [ ] `RecallLastProductTool` — "what was that product?"
+  - [ ] Favorites / shopping list integration via memory store
+  - [ ] Scan history UI in settings
+- **Phase 4: iOS Platform Support**
+  - [ ] Verify HTTP clients work on iOS (.NET AOT)
+  - [ ] Test barcode scanning + lookup end-to-end on iOS
+
+## M21 — Accessibility Improvements
+
+**Status:** Phases 1–5 implemented, Phase 6 deferred  
+**Plan:** [m21-accessibility/](m21-accessibility/)
+
+Screen reader support, keyboard navigation, dynamic text scaling, and color contrast
+fixes. Makes the app usable with Narrator (Windows), TalkBack (Android), and
+VoiceOver (iOS).
+
+- **Phase 1: Semantic Labels & Screen Reader Support**
+  - [x] `SemanticProperties.Description` on all MainPage interactive controls
+  - [x] `SemanticProperties.Description` on all SettingsPage controls
+  - [x] `SemanticProperties.HeadingLevel` on section headers
+  - [x] `AccessibleText` property on `TranscriptEntry`
+  - [x] `StateDescription` property on `MainViewModel`
+  - [ ] Narrator (Windows) + TalkBack (Android) testing
+- **Phase 2: Keyboard & Focus Navigation**
+  - [x] `TabIndex` on all interactive controls (logical order)
+  - [x] Focus ring visual states (`VisualStateManager`)
+  - [x] Modal focus trap in snapshot overlay
+  - [ ] Keyboard activation verification (Enter/Space)
+- **Phase 3: Dynamic Type & Text Scaling**
+  - [x] Replace fixed `FontSize` with named sizes (`Body`, `Caption`, `Title`)
+  - [ ] Verify `FontAutoScalingEnabled` not disabled
+  - [ ] Test at 200% text scaling (Windows) and largest font (Android)
+  - [x] Remove hardcoded `HeightRequest` on buttons
+- **Phase 4: Color Contrast & High Contrast**
+  - [x] Fix `TextColor="Gray"` usages (fails WCAG AA for small text)
+  - [x] Audit status / role colors for contrast ratios
+  - [ ] High contrast resource dictionary
+  - [ ] Test with Windows High Contrast mode + Android high contrast text
+- **Phase 5: Reduced Motion & Audio Cues**
+  - [x] Check `PreferReducedMotion` before transcript item animations
+  - [ ] `IAudioCueService` — short earcons for state changes, tool activity, errors
+  - [x] Audio cue files: activate, deactivate, listen, tool_start, tool_done, error, connected
+  - [ ] Settings toggle for audio cues
+- **Phase 6: iOS Platform Support**
+  - [ ] VoiceOver navigation testing
+  - [ ] Dynamic Type scaling verification
+  - [ ] Switch Control navigation
 
 ## M30 — Polish & Optimization
 
