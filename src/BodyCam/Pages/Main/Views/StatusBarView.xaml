@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:BodyCam.ViewModels"
+             x:Class="BodyCam.Pages.Main.Views.StatusBarView"
+             x:DataType="vm:MainViewModel">
+
+    <Grid ColumnDefinitions="Auto,*,Auto,Auto" Padding="12,8"
+          BackgroundColor="{AppThemeBinding Light=#FAFAFA, Dark=#1A1A1A}">
+
+        <Ellipse AutomationId="StatusDot"
+                 WidthRequest="12" HeightRequest="12"
+                 Fill="{Binding StateColor}"
+                 VerticalOptions="Center" />
+
+        <Border Grid.Column="1" StrokeShape="RoundRectangle 16"
+                Stroke="{AppThemeBinding Light=#E0E0E0, Dark=#333333}"
+                Padding="2" Margin="8,0"
+                HorizontalOptions="Start"
+                HeightRequest="36">
+            <Grid ColumnDefinitions="Auto,Auto,Auto" ColumnSpacing="0">
+                <Button AutomationId="SleepButton"
+                        Text="😴"
+                        Command="{Binding SetStateCommand}"
+                        CommandParameter="Sleep"
+                        BackgroundColor="{Binding SleepSegmentColor}"
+                        TextColor="{Binding SleepSegmentTextColor}"
+                        CornerRadius="14"
+                        HeightRequest="32" MinimumWidthRequest="56"
+                        FontSize="14" Padding="8,0" />
+                <Button Grid.Column="1" AutomationId="ListenButton"
+                        Text="👂"
+                        Command="{Binding SetStateCommand}"
+                        CommandParameter="Listen"
+                        BackgroundColor="{Binding ListenSegmentColor}"
+                        TextColor="{Binding ListenSegmentTextColor}"
+                        CornerRadius="14"
+                        HeightRequest="32" MinimumWidthRequest="56"
+                        FontSize="14" Padding="8,0" />
+                <Button Grid.Column="2" AutomationId="ActiveButton"
+                        Text="💬"
+                        Command="{Binding SetStateCommand}"
+                        CommandParameter="Active"
+                        BackgroundColor="{Binding ActiveSegmentColor}"
+                        TextColor="{Binding ActiveSegmentTextColor}"
+                        CornerRadius="14"
+                        HeightRequest="32" MinimumWidthRequest="56"
+                        FontSize="14" Padding="8,0" />
+            </Grid>
+        </Border>
+
+        <Button Grid.Column="2" AutomationId="DebugToggleButton"
+                Text="🐛"
+                Command="{Binding ToggleDebugCommand}"
+                WidthRequest="40" HeightRequest="32"
+                FontSize="16" Padding="0"
+                BackgroundColor="Transparent" />
+
+        <Button Grid.Column="3" AutomationId="ClearButton"
+                Text="Clear"
+                Command="{Binding ClearCommand}"
+                WidthRequest="60" HeightRequest="32"
+                FontSize="12"
+                BackgroundColor="{AppThemeBinding Light=#E0E0E0, Dark=#333}"
+                TextColor="{AppThemeBinding Light=#333, Dark=#E0E0E0}" />
+    </Grid>
+</ContentView>

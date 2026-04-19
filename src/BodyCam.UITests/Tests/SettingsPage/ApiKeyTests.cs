@@ -13,9 +13,9 @@ public class ApiKeyTests
     public ApiKeyTests(BodyCamFixture fixture)
     {
         _fixture = fixture;
-        _fixture.NavigateToSettings();
-        _fixture.SettingsPage.ConnectionSettingsCard.Click();
-        _fixture.ConnectionSettingsPage.WaitReady(10000);
+        _fixture.NavigateToSettingsSubPage(
+            () => _fixture.SettingsPage.ConnectionSettingsCard.Click(),
+            _fixture.ConnectionSettingsPage);
     }
 
     [Fact]

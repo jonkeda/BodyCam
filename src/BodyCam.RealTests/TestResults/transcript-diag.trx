@@ -1,0 +1,281 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="311dde60-ddd8-49ae-b11c-1df11a88a6f8" name="JONK435491@LT-25-195 2026-04-19 23:18:10" runUser="ecs\JONK435491" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-04-19T23:18:10.9840833+02:00" queuing="2026-04-19T23:18:10.9840834+02:00" start="2026-04-19T23:18:09.1243853+02:00" finish="2026-04-19T23:18:13.6311388+02:00" />
+  <TestSettings name="default" id="68008958-ae8e-4982-8411-b78f700cb2ac">
+    <Deployment runDeploymentRoot="JONK435491_LT-25-195_2026-04-19_23_18_10" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="a51b7a4e-b4f2-4692-b57e-0b711b6ba6b5" testId="321339eb-1364-fc62-b27d-fa87a7192f4c" testName="BodyCam.RealTests.Pipeline.TranscriptDiagnosticTests.Orchestrator_SendText_TranscriptEventsAreFired" computerName="LT-25-195" duration="00:00:01.4064783" startTime="2026-04-19T23:18:12.1740181+02:00" endTime="2026-04-19T23:18:13.5758127+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a51b7a4e-b4f2-4692-b57e-0b711b6ba6b5">
+      <Output>
+        <StdOut>Session.Options type: Microsoft.Extensions.AI.RealtimeSessionOptions&#xD;
+  AudioTranscriptDone: "Great question! 2 + 2 equals 4. If you need more details or another example, just let me know!"&#xD;
+  ResponseDone&#xD;
+
+=== Results ===&#xD;
+TextDeltas (0): ""&#xD;
+TextDone: ""&#xD;
+AudioTranscript: "Great question! 2 + 2 equals 4. If you need more details or another example, just let me know!"&#xD;
+AudioBytes: 304800&#xD;
+
+hasTextStream (for TranscriptDelta): False&#xD;
+hasCompletion (for TranscriptCompleted): True</StdOut>
+        <ErrorInfo>
+          <Message>Expected hasTextStream to be True because OutputModalities=['text','audio'] should produce OutputTextDelta events for live transcript streaming, but found False.</Message>
+          <StackTrace>   at FluentAssertions.Primitives.BooleanAssertions`1.BeTrue(String because, Object[] becauseArgs)&#xD;
+   at BodyCam.RealTests.Pipeline.TranscriptDiagnosticTests.Orchestrator_SendText_TranscriptEventsAreFired() in E:\repos\Private\BodyCam\src\BodyCam.RealTests\Pipeline\TranscriptDiagnosticTests.cs:line 323&#xD;
+--- End of stack trace from previous location ---</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="4e4bff01-8dc1-4714-ad7d-557f2daff7ad" testId="56d77e7f-cb9f-15fa-a24f-5bd03ce33ec9" testName="BodyCam.RealTests.Pipeline.TranscriptDiagnosticTests.SessionWithOrchestratorOptions_SendText_LogsAllMessages" computerName="LT-25-195" duration="00:00:01.2746249" startTime="2026-04-19T23:18:10.8958026+02:00" endTime="2026-04-19T23:18:12.1690890+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="4e4bff01-8dc1-4714-ad7d-557f2daff7ad">
+      <Output>
+        <StdOut>Provider: Azure&#xD;
+OutputModalities: text, audio&#xD;
+TranscriptionModel: gpt-4o-mini-transcribe&#xD;
+Session created&#xD;
+Text sent, streaming...
+&#xD;
+  [1] RealtimeServerMessage Type=RawContentOnly&#xD;
+  [2] ERROR: Invalid modalities: ['text', 'audio']. Supported combinations are: ['text'] and ['audio'].&#xD;
+  [3] ResponseOutputItemRealtimeServerMessage Type=ConversationItemAdded&#xD;
+  [4] ResponseOutputItemRealtimeServerMessage Type=ConversationItemDone&#xD;
+  [5] ResponseCreatedRealtimeServerMessage Type=ResponseCreated&#xD;
+  [6] ResponseOutputItemRealtimeServerMessage Type=ResponseOutputItemAdded&#xD;
+  [7] ResponseOutputItemRealtimeServerMessage Type=ConversationItemAdded&#xD;
+  [8] RealtimeServerMessage Type=RawContentOnly&#xD;
+  [9] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta delta="Hey"&#xD;
+  [10] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta delta=" there"&#xD;
+  [11] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta delta="!"&#xD;
+  [12] OutputTextAudioRealtimeServerMessage Type=OutputAudioDelta audio=9600b&#xD;
+  [13] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta delta=" Hello"&#xD;
+  [14] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta delta="!"&#xD;
+  [15] OutputTextAudioRealtimeServerMessage Type=OutputAudioDelta audio=19200b&#xD;
+  [16] OutputTextAudioRealtimeServerMessage Type=OutputAudioDelta audio=19200b&#xD;
+  [17] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta delta=" It"&#xD;
+  [18] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta delta="’s"&#xD;
+  [19] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta delta=" great"&#xD;
+  [20] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta delta=" to"&#xD;
+  [21] OutputTextAudioRealtimeServerMessage Type=OutputAudioDelta audio=19200b&#xD;
+  [22] OutputTextAudioRealtimeServerMessage Type=OutputAudioDelta audio=19200b&#xD;
+  [23] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta delta=" connect"&#xD;
+  [24] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta delta=" with"&#xD;
+  [25] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta delta=" you"&#xD;
+  [26] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta delta="—"&#xD;
+  [27] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta delta="how"&#xD;
+  [28] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta delta="’s"&#xD;
+  [29] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta delta=" your"&#xD;
+  [30] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta delta=" day"&#xD;
+  [31] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta delta=" going"&#xD;
+  [32] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta delta="?"&#xD;
+  [33] OutputTextAudioRealtimeServerMessage Type=OutputAudioDelta audio=19200b&#xD;
+  [34] OutputTextAudioRealtimeServerMessage Type=OutputAudioDelta audio=19200b&#xD;
+  [35] OutputTextAudioRealtimeServerMessage Type=OutputAudioDelta audio=19200b&#xD;
+  [36] OutputTextAudioRealtimeServerMessage Type=OutputAudioDelta audio=19200b&#xD;
+  [37] OutputTextAudioRealtimeServerMessage Type=OutputAudioDelta audio=19200b&#xD;
+  [38] OutputTextAudioRealtimeServerMessage Type=OutputAudioDelta audio=19200b&#xD;
+  [39] OutputTextAudioRealtimeServerMessage Type=OutputAudioDelta audio=19200b&#xD;
+  [40] OutputTextAudioRealtimeServerMessage Type=OutputAudioDelta audio=2400b&#xD;
+  [41] OutputTextAudioRealtimeServerMessage Type=OutputAudioDone&#xD;
+  [42] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDone transcript="Hey there! Hello! It’s great to connect with you—how’s your day going?"&#xD;
+  [43] RealtimeServerMessage Type=RawContentOnly&#xD;
+  [44] ResponseOutputItemRealtimeServerMessage Type=ConversationItemDone&#xD;
+  [45] ResponseOutputItemRealtimeServerMessage Type=ResponseOutputItemDone&#xD;
+  [46] ResponseCreatedRealtimeServerMessage Type=ResponseDone&#xD;
+
+=== Summary ===&#xD;
+Total messages: 46&#xD;
+Text deltas: 0 =&gt; ""&#xD;
+Audio bytes: 223200&#xD;
+Completed texts: [audio-transcript]Hey there! Hello! It’s great to connect with you—how’s your day going?</StdOut>
+        <ErrorInfo>
+          <Message>Expected textDeltas not to be empty because OutputModalities includes 'text' — should get OutputTextDelta messages.</Message>
+          <StackTrace>   at FluentAssertions.Collections.GenericCollectionAssertions`3.&lt;NotBeEmpty&gt;b__59_0(AssertionChain chain)&#xD;
+   at FluentAssertions.Collections.GenericCollectionAssertions`3.NotBeEmpty(String because, Object[] becauseArgs)&#xD;
+   at BodyCam.RealTests.Pipeline.TranscriptDiagnosticTests.SessionWithOrchestratorOptions_SendText_LogsAllMessages() in E:\repos\Private\BodyCam\src\BodyCam.RealTests\Pipeline\TranscriptDiagnosticTests.cs:line 135&#xD;
+--- End of stack trace from previous location ---</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="b1e68b1c-a121-4997-8f17-7c8673b6fe9f" testId="ef62ab52-7df6-3b1f-2726-6b4b772081ef" testName="BodyCam.RealTests.Pipeline.TranscriptDiagnosticTests.SessionWithoutOutputModalities_SendText_LogsAllMessages" computerName="LT-25-195" duration="00:00:01.2991576" startTime="2026-04-19T23:18:09.5832928+02:00" endTime="2026-04-19T23:18:10.8891174+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b1e68b1c-a121-4997-8f17-7c8673b6fe9f">
+      <Output>
+        <StdOut>Provider: Azure&#xD;
+OutputModalities: NOT SET (server default)&#xD;
+Session created&#xD;
+Text sent, streaming...
+&#xD;
+  [1] RealtimeServerMessage Type=RawContentOnly&#xD;
+  [2] RealtimeServerMessage Type=RawContentOnly&#xD;
+  [3] ResponseOutputItemRealtimeServerMessage Type=ConversationItemAdded&#xD;
+  [4] ResponseOutputItemRealtimeServerMessage Type=ConversationItemDone&#xD;
+  [5] ResponseCreatedRealtimeServerMessage Type=ResponseCreated&#xD;
+  [6] ResponseOutputItemRealtimeServerMessage Type=ResponseOutputItemAdded&#xD;
+  [7] ResponseOutputItemRealtimeServerMessage Type=ConversationItemAdded&#xD;
+  [8] RealtimeServerMessage Type=RawContentOnly&#xD;
+  [9] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta&#xD;
+  [10] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta&#xD;
+  [11] OutputTextAudioRealtimeServerMessage Type=OutputAudioDelta audio=9600b&#xD;
+  [12] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta&#xD;
+  [13] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta&#xD;
+  [14] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta&#xD;
+  [15] OutputTextAudioRealtimeServerMessage Type=OutputAudioDelta audio=19200b&#xD;
+  [16] OutputTextAudioRealtimeServerMessage Type=OutputAudioDelta audio=19200b&#xD;
+  [17] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta&#xD;
+  [18] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta&#xD;
+  [19] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta&#xD;
+  [20] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta&#xD;
+  [23] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta&#xD;
+  [24] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta&#xD;
+  [25] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta&#xD;
+  [26] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta&#xD;
+  [27] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta&#xD;
+  [28] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta&#xD;
+  [35] OutputTextAudioRealtimeServerMessage Type=OutputAudioDone&#xD;
+  [36] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDone&#xD;
+  [37] RealtimeServerMessage Type=RawContentOnly&#xD;
+  [38] ResponseOutputItemRealtimeServerMessage Type=ConversationItemDone&#xD;
+  [39] ResponseOutputItemRealtimeServerMessage Type=ResponseOutputItemDone&#xD;
+  [40] ResponseCreatedRealtimeServerMessage Type=ResponseDone&#xD;
+
+=== Summary ===&#xD;
+Total messages: 40&#xD;
+Text deltas: 0&#xD;
+Audio bytes: 196800&#xD;
+Had text: False, Had audio: True</StdOut>
+      </Output>
+    </UnitTestResult>
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="BodyCam.RealTests.Pipeline.TranscriptDiagnosticTests.Orchestrator_SendText_TranscriptEventsAreFired" storage="e:\repos\private\bodycam\src\bodycam.realtests\bin\debug\net10.0-windows10.0.19041.0\bodycam.realtests.dll" id="321339eb-1364-fc62-b27d-fa87a7192f4c">
+      <Execution id="a51b7a4e-b4f2-4692-b57e-0b711b6ba6b5" />
+      <TestMethod codeBase="E:\repos\Private\BodyCam\src\BodyCam.RealTests\bin\Debug\net10.0-windows10.0.19041.0\BodyCam.RealTests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="BodyCam.RealTests.Pipeline.TranscriptDiagnosticTests" name="Orchestrator_SendText_TranscriptEventsAreFired" />
+    </UnitTest>
+    <UnitTest name="BodyCam.RealTests.Pipeline.TranscriptDiagnosticTests.SessionWithOrchestratorOptions_SendText_LogsAllMessages" storage="e:\repos\private\bodycam\src\bodycam.realtests\bin\debug\net10.0-windows10.0.19041.0\bodycam.realtests.dll" id="56d77e7f-cb9f-15fa-a24f-5bd03ce33ec9">
+      <Execution id="4e4bff01-8dc1-4714-ad7d-557f2daff7ad" />
+      <TestMethod codeBase="E:\repos\Private\BodyCam\src\BodyCam.RealTests\bin\Debug\net10.0-windows10.0.19041.0\BodyCam.RealTests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="BodyCam.RealTests.Pipeline.TranscriptDiagnosticTests" name="SessionWithOrchestratorOptions_SendText_LogsAllMessages" />
+    </UnitTest>
+    <UnitTest name="BodyCam.RealTests.Pipeline.TranscriptDiagnosticTests.SessionWithoutOutputModalities_SendText_LogsAllMessages" storage="e:\repos\private\bodycam\src\bodycam.realtests\bin\debug\net10.0-windows10.0.19041.0\bodycam.realtests.dll" id="ef62ab52-7df6-3b1f-2726-6b4b772081ef">
+      <Execution id="b1e68b1c-a121-4997-8f17-7c8673b6fe9f" />
+      <TestMethod codeBase="E:\repos\Private\BodyCam\src\BodyCam.RealTests\bin\Debug\net10.0-windows10.0.19041.0\BodyCam.RealTests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="BodyCam.RealTests.Pipeline.TranscriptDiagnosticTests" name="SessionWithoutOutputModalities_SendText_LogsAllMessages" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="321339eb-1364-fc62-b27d-fa87a7192f4c" executionId="a51b7a4e-b4f2-4692-b57e-0b711b6ba6b5" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="56d77e7f-cb9f-15fa-a24f-5bd03ce33ec9" executionId="4e4bff01-8dc1-4714-ad7d-557f2daff7ad" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="ef62ab52-7df6-3b1f-2726-6b4b772081ef" executionId="b1e68b1c-a121-4997-8f17-7c8673b6fe9f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Failed">
+    <Counters total="3" executed="3" passed="1" failed="2" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.5+1b188a7b0a (64-bit .NET 10.0.5)&#xD;
+[xUnit.net 00:00:00.06]   Discovering: BodyCam.RealTests&#xD;
+[xUnit.net 00:00:00.09]   Discovered:  BodyCam.RealTests&#xD;
+[xUnit.net 00:00:00.10]   Starting:    BodyCam.RealTests&#xD;
+     Warning:&#xD;
+     The component "Fluent Assertions" is governed by the rules defined in the Xceed License Agreement and&#xD;
+     the Xceed Fluent Assertions Community License. You may use Fluent Assertions free of charge for&#xD;
+     non-commercial use only. An active subscription is required to use Fluent Assertions for commercial use.&#xD;
+     Please contact Xceed Sales mailto:sales@xceed.com to acquire a subscription at a very low cost.&#xD;
+     A paid commercial license supports the development and continued increasing support of&#xD;
+     Fluent Assertions users under both commercial and community licenses. Help us&#xD;
+     keep Fluent Assertions at the forefront of unit testing.&#xD;
+     For more information, visit https://xceed.com/products/unit-testing/fluent-assertions/&#xD;
+[xUnit.net 00:00:02.71]       Expected textDeltas not to be empty because OutputModalities includes 'text' — should get OutputTextDelta messages.&#xD;
+[xUnit.net 00:00:02.71]       Stack Trace:&#xD;
+[xUnit.net 00:00:02.71]            at FluentAssertions.Collections.GenericCollectionAssertions`3.&lt;NotBeEmpty&gt;b__59_0(AssertionChain chain)&#xD;
+[xUnit.net 00:00:02.71]            at FluentAssertions.Collections.GenericCollectionAssertions`3.NotBeEmpty(String because, Object[] becauseArgs)&#xD;
+[xUnit.net 00:00:02.71]         E:\repos\Private\BodyCam\src\BodyCam.RealTests\Pipeline\TranscriptDiagnosticTests.cs(135,0): at BodyCam.RealTests.Pipeline.TranscriptDiagnosticTests.SessionWithOrchestratorOptions_SendText_LogsAllMessages()&#xD;
+[xUnit.net 00:00:02.71]         --- End of stack trace from previous location ---&#xD;
+[xUnit.net 00:00:02.71]       Output:&#xD;
+[xUnit.net 00:00:02.71]         Provider: Azure&#xD;
+[xUnit.net 00:00:02.71]         OutputModalities: text, audio&#xD;
+[xUnit.net 00:00:02.71]         TranscriptionModel: gpt-4o-mini-transcribe&#xD;
+[xUnit.net 00:00:02.71]         Session created&#xD;
+[xUnit.net 00:00:02.71]         Text sent, streaming...
+&#xD;
+[xUnit.net 00:00:02.71]           [1] RealtimeServerMessage Type=RawContentOnly&#xD;
+[xUnit.net 00:00:02.71]           [2] ERROR: Invalid modalities: ['text', 'audio']. Supported combinations are: ['text'] and ['audio'].&#xD;
+[xUnit.net 00:00:02.71]           [3] ResponseOutputItemRealtimeServerMessage Type=ConversationItemAdded&#xD;
+[xUnit.net 00:00:02.71]           [4] ResponseOutputItemRealtimeServerMessage Type=ConversationItemDone&#xD;
+[xUnit.net 00:00:02.71]           [5] ResponseCreatedRealtimeServerMessage Type=ResponseCreated&#xD;
+[xUnit.net 00:00:02.71]           [6] ResponseOutputItemRealtimeServerMessage Type=ResponseOutputItemAdded&#xD;
+[xUnit.net 00:00:02.71]           [7] ResponseOutputItemRealtimeServerMessage Type=ConversationItemAdded&#xD;
+[xUnit.net 00:00:02.71]           [8] RealtimeServerMessage Type=RawContentOnly&#xD;
+[xUnit.net 00:00:02.71]           [9] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta delta="Hey"&#xD;
+[xUnit.net 00:00:02.71]           [10] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta delta=" there"&#xD;
+[xUnit.net 00:00:02.71]           [11] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta delta="!"&#xD;
+[xUnit.net 00:00:02.71]           [12] OutputTextAudioRealtimeServerMessage Type=OutputAudioDelta audio=9600b&#xD;
+[xUnit.net 00:00:02.71]           [13] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta delta=" Hello"&#xD;
+[xUnit.net 00:00:02.71]           [14] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta delta="!"&#xD;
+[xUnit.net 00:00:02.71]           [15] OutputTextAudioRealtimeServerMessage Type=OutputAudioDelta audio=19200b&#xD;
+[xUnit.net 00:00:02.71]           [16] OutputTextAudioRealtimeServerMessage Type=OutputAudioDelta audio=19200b&#xD;
+[xUnit.net 00:00:02.71]           [17] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta delta=" It"&#xD;
+[xUnit.net 00:00:02.71]           [18] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta delta="’s"&#xD;
+[xUnit.net 00:00:02.71]           [19] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta delta=" great"&#xD;
+[xUnit.net 00:00:02.71]           [20] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta delta=" to"&#xD;
+[xUnit.net 00:00:02.71]           [21] OutputTextAudioRealtimeServerMessage Type=OutputAudioDelta audio=19200b&#xD;
+[xUnit.net 00:00:02.71]           [22] OutputTextAudioRealtimeServerMessage Type=OutputAudioDelta audio=19200b&#xD;
+[xUnit.net 00:00:02.71]           [23] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta delta=" connect"&#xD;
+[xUnit.net 00:00:02.71]           [24] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta delta=" with"&#xD;
+[xUnit.net 00:00:02.71]           [25] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta delta=" you"&#xD;
+[xUnit.net 00:00:02.71]           [26] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta delta="—"&#xD;
+[xUnit.net 00:00:02.71]           [27] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta delta="how"&#xD;
+[xUnit.net 00:00:02.71]           [28] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta delta="’s"&#xD;
+[xUnit.net 00:00:02.71]           [29] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta delta=" your"&#xD;
+[xUnit.net 00:00:02.71]           [30] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta delta=" day"&#xD;
+[xUnit.net 00:00:02.71]           [31] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta delta=" going"&#xD;
+[xUnit.net 00:00:02.71]           [32] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDelta delta="?"&#xD;
+[xUnit.net 00:00:02.71]           [33] OutputTextAudioRealtimeServerMessage Type=OutputAudioDelta audio=19200b&#xD;
+[xUnit.net 00:00:02.71]           [34] OutputTextAudioRealtimeServerMessage Type=OutputAudioDelta audio=19200b&#xD;
+[xUnit.net 00:00:02.71]           [35] OutputTextAudioRealtimeServerMessage Type=OutputAudioDelta audio=19200b&#xD;
+[xUnit.net 00:00:02.71]           [36] OutputTextAudioRealtimeServerMessage Type=OutputAudioDelta audio=19200b&#xD;
+[xUnit.net 00:00:02.71]           [37] OutputTextAudioRealtimeServerMessage Type=OutputAudioDelta audio=19200b&#xD;
+[xUnit.net 00:00:02.71]           [38] OutputTextAudioRealtimeServerMessage Type=OutputAudioDelta audio=19200b&#xD;
+[xUnit.net 00:00:02.71]           [39] OutputTextAudioRealtimeServerMessage Type=OutputAudioDelta audio=19200b&#xD;
+[xUnit.net 00:00:02.71]           [40] OutputTextAudioRealtimeServerMessage Type=OutputAudioDelta audio=2400b&#xD;
+[xUnit.net 00:00:02.71]           [41] OutputTextAudioRealtimeServerMessage Type=OutputAudioDone&#xD;
+[xUnit.net 00:00:02.71]           [42] OutputTextAudioRealtimeServerMessage Type=OutputAudioTranscriptionDone transcript="Hey there! Hello! It’s great to connect with you—how’s your day going?"&#xD;
+[xUnit.net 00:00:02.71]           [43] RealtimeServerMessage Type=RawContentOnly&#xD;
+[xUnit.net 00:00:02.71]           [44] ResponseOutputItemRealtimeServerMessage Type=ConversationItemDone&#xD;
+[xUnit.net 00:00:02.71]           [45] ResponseOutputItemRealtimeServerMessage Type=ResponseOutputItemDone&#xD;
+[xUnit.net 00:00:02.71]           [46] ResponseCreatedRealtimeServerMessage Type=ResponseDone&#xD;
+[xUnit.net 00:00:02.71]         
+=== Summary ===&#xD;
+[xUnit.net 00:00:02.71]         Total messages: 46&#xD;
+[xUnit.net 00:00:02.71]         Text deltas: 0 =&gt; ""&#xD;
+[xUnit.net 00:00:02.71]         Audio bytes: 223200&#xD;
+[xUnit.net 00:00:02.71]         Completed texts: [audio-transcript]Hey there! Hello! It’s great to connect with you—how’s your day going?&#xD;
+[xUnit.net 00:00:04.11]       Expected hasTextStream to be True because OutputModalities=['text','audio'] should produce OutputTextDelta events for live transcript streaming, but found False.&#xD;
+[xUnit.net 00:00:04.11]       Stack Trace:&#xD;
+[xUnit.net 00:00:04.11]            at FluentAssertions.Primitives.BooleanAssertions`1.BeTrue(String because, Object[] becauseArgs)&#xD;
+[xUnit.net 00:00:04.11]         E:\repos\Private\BodyCam\src\BodyCam.RealTests\Pipeline\TranscriptDiagnosticTests.cs(323,0): at BodyCam.RealTests.Pipeline.TranscriptDiagnosticTests.Orchestrator_SendText_TranscriptEventsAreFired()&#xD;
+[xUnit.net 00:00:04.11]         --- End of stack trace from previous location ---&#xD;
+[xUnit.net 00:00:04.11]       Output:&#xD;
+[xUnit.net 00:00:04.11]         Session.Options type: Microsoft.Extensions.AI.RealtimeSessionOptions&#xD;
+[xUnit.net 00:00:04.11]           AudioTranscriptDone: "Great question! 2 + 2 equals 4. If you need more details or another example, just let me know!"&#xD;
+[xUnit.net 00:00:04.11]           ResponseDone&#xD;
+[xUnit.net 00:00:04.11]         
+=== Results ===&#xD;
+[xUnit.net 00:00:04.11]         TextDeltas (0): ""&#xD;
+[xUnit.net 00:00:04.11]         TextDone: ""&#xD;
+[xUnit.net 00:00:04.11]         AudioTranscript: "Great question! 2 + 2 equals 4. If you need more details or another example, just let me know!"&#xD;
+[xUnit.net 00:00:04.11]         AudioBytes: 304800&#xD;
+[xUnit.net 00:00:04.11]         
+hasTextStream (for TranscriptDelta): False&#xD;
+[xUnit.net 00:00:04.11]         hasCompletion (for TranscriptCompleted): True&#xD;
+[xUnit.net 00:00:04.12]   Finished:    BodyCam.RealTests&#xD;
+</StdOut>
+    </Output>
+    <RunInfos>
+      <RunInfo computerName="LT-25-195" outcome="Error" timestamp="2026-04-19T23:18:12.1710507+02:00">
+        <Text>[xUnit.net 00:00:02.71]     BodyCam.RealTests.Pipeline.TranscriptDiagnosticTests.SessionWithOrchestratorOptions_SendText_LogsAllMessages [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="LT-25-195" outcome="Error" timestamp="2026-04-19T23:18:13.5762578+02:00">
+        <Text>[xUnit.net 00:00:04.11]     BodyCam.RealTests.Pipeline.TranscriptDiagnosticTests.Orchestrator_SendText_TranscriptEventsAreFired [FAIL]</Text>
+      </RunInfo>
+    </RunInfos>
+  </ResultSummary>
+</TestRun>

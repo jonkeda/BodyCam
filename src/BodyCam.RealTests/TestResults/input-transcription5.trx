@@ -1,0 +1,131 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="eb7e9311-c4ac-4f42-a5c7-31f685ebeec9" name="JONK435491@LT-25-195 2026-04-19 23:25:47" runUser="ecs\JONK435491" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-04-19T23:25:47.4102723+02:00" queuing="2026-04-19T23:25:47.4102725+02:00" start="2026-04-19T23:25:45.8567020+02:00" finish="2026-04-19T23:25:47.4151113+02:00" />
+  <TestSettings name="default" id="51a300a2-81b1-41d3-b048-803776ecbc67">
+    <Deployment runDeploymentRoot="JONK435491_LT-25-195_2026-04-19_23_25_47" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="a24afac9-e90c-4671-815c-83fb87e8fe47" testId="b217fdfd-d67c-3957-af49-c6891a6f5bb5" testName="BodyCam.RealTests.Pipeline.TranscriptDiagnosticTests.SendAudio_InputAudioTranscriptionCompleted_Fires" computerName="LT-25-195" duration="00:00:01.0084086" startTime="2026-04-19T23:25:46.2942621+02:00" endTime="2026-04-19T23:25:47.3116038+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a24afac9-e90c-4671-815c-83fb87e8fe47">
+      <Output>
+        <StdOut>Provider: Azure&#xD;
+Creating session with TranscriptionOptions.ModelId=gpt-4o-mini-transcribe...&#xD;
+Session created&#xD;
+Audio file: 110400 bytes (2.3s at 24kHz PCM16)&#xD;
+Sent 23 audio chunks&#xD;
+  [1] RealtimeServerMessage Type=RawContentOnly Kind=session.created SdkType=RealtimeServerUpdateSessionCreated&#xD;
+  [2] RealtimeServerMessage Type=RawContentOnly Kind=session.updated SdkType=RealtimeServerUpdateSessionUpdated&#xD;
+  [3] RealtimeServerMessage Type=RawContentOnly Kind=input_audio_buffer.speech_started SdkType=RealtimeServerUpdateInputAudioBufferSpeechStarted&#xD;
+  [4] RealtimeServerMessage Type=RawContentOnly Kind=input_audio_buffer.speech_stopped SdkType=RealtimeServerUpdateInputAudioBufferSpeechStopped&#xD;
+  [5] RealtimeServerMessage Type=RawContentOnly Kind=input_audio_buffer.committed SdkType=RealtimeServerUpdateInputAudioBufferCommitted&#xD;
+  [6] ResponseOutputItemRealtimeServerMessage Type=ConversationItemAdded Kind=conversation.item.added SdkType=RealtimeServerUpdateConversationItemAdded&#xD;
+  [7] ResponseOutputItemRealtimeServerMessage Type=ConversationItemDone Kind=conversation.item.done SdkType=RealtimeServerUpdateConversationItemDone&#xD;
+  [8] ResponseCreatedRealtimeServerMessage Type=ResponseCreated Kind=response.created SdkType=RealtimeServerUpdateResponseCreated&#xD;
+  [9] INPUT TRANSCRIPTION FAILED!&#xD;
+    EventId = event_DWTwBugYw8B63uEnnx35B&#xD;
+    ItemId = item_DWTwAxeKCpulxGlCy1J5j&#xD;
+    ContentIndex = 0&#xD;
+    Error = OpenAI.Realtime.RealtimeError&#xD;
+    Patch = []&#xD;
+    Kind = conversation.item.input_audio_transcription.failed&#xD;
+    MAF.ContentIndex = 0&#xD;
+    MAF.ItemId = item_DWTwAxeKCpulxGlCy1J5j&#xD;
+    MAF.Error = Microsoft.Extensions.AI.ErrorContent&#xD;
+    MAF.Type = InputAudioTranscriptionFailed&#xD;
+    MAF.MessageId = event_DWTwBugYw8B63uEnnx35B&#xD;
+  [10] RealtimeServerMessage Type=RawContentOnly Kind=input_audio_buffer.speech_started SdkType=RealtimeServerUpdateInputAudioBufferSpeechStarted&#xD;
+  [11] ResponseDone&#xD;
+
+=== Results ===&#xD;
+Total messages: 11&#xD;
+User transcription: ""&#xD;
+AI transcript deltas: 0 =&gt; ""&#xD;
+AI transcript done: ""&#xD;
+AI audio bytes: 0</StdOut>
+        <ErrorInfo>
+          <Message>Expected userTranscription not to be &lt;null&gt; or empty because TranscriptionOptions should cause the server to transcribe the user's audio input, but found &lt;null&gt;.</Message>
+          <StackTrace>   at FluentAssertions.Primitives.StringAssertions`1.NotBeNullOrEmpty(String because, Object[] becauseArgs)&#xD;
+   at BodyCam.RealTests.Pipeline.TranscriptDiagnosticTests.SendAudio_InputAudioTranscriptionCompleted_Fires() in E:\repos\Private\BodyCam\src\BodyCam.RealTests\Pipeline\TranscriptDiagnosticTests.cs:line 500&#xD;
+--- End of stack trace from previous location ---</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="BodyCam.RealTests.Pipeline.TranscriptDiagnosticTests.SendAudio_InputAudioTranscriptionCompleted_Fires" storage="e:\repos\private\bodycam\src\bodycam.realtests\bin\debug\net10.0-windows10.0.19041.0\bodycam.realtests.dll" id="b217fdfd-d67c-3957-af49-c6891a6f5bb5">
+      <Execution id="a24afac9-e90c-4671-815c-83fb87e8fe47" />
+      <TestMethod codeBase="E:\repos\Private\BodyCam\src\BodyCam.RealTests\bin\Debug\net10.0-windows10.0.19041.0\BodyCam.RealTests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="BodyCam.RealTests.Pipeline.TranscriptDiagnosticTests" name="SendAudio_InputAudioTranscriptionCompleted_Fires" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="b217fdfd-d67c-3957-af49-c6891a6f5bb5" executionId="a24afac9-e90c-4671-815c-83fb87e8fe47" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Failed">
+    <Counters total="1" executed="1" passed="0" failed="1" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.5+1b188a7b0a (64-bit .NET 10.0.5)&#xD;
+[xUnit.net 00:00:00.06]   Discovering: BodyCam.RealTests&#xD;
+[xUnit.net 00:00:00.09]   Discovered:  BodyCam.RealTests&#xD;
+[xUnit.net 00:00:00.10]   Starting:    BodyCam.RealTests&#xD;
+     Warning:&#xD;
+     The component "Fluent Assertions" is governed by the rules defined in the Xceed License Agreement and&#xD;
+     the Xceed Fluent Assertions Community License. You may use Fluent Assertions free of charge for&#xD;
+     non-commercial use only. An active subscription is required to use Fluent Assertions for commercial use.&#xD;
+     Please contact Xceed Sales mailto:sales@xceed.com to acquire a subscription at a very low cost.&#xD;
+     A paid commercial license supports the development and continued increasing support of&#xD;
+     Fluent Assertions users under both commercial and community licenses. Help us&#xD;
+     keep Fluent Assertions at the forefront of unit testing.&#xD;
+     For more information, visit https://xceed.com/products/unit-testing/fluent-assertions/&#xD;
+[xUnit.net 00:00:01.14]       Expected userTranscription not to be &lt;null&gt; or empty because TranscriptionOptions should cause the server to transcribe the user's audio input, but found &lt;null&gt;.&#xD;
+[xUnit.net 00:00:01.14]       Stack Trace:&#xD;
+[xUnit.net 00:00:01.14]            at FluentAssertions.Primitives.StringAssertions`1.NotBeNullOrEmpty(String because, Object[] becauseArgs)&#xD;
+[xUnit.net 00:00:01.14]         E:\repos\Private\BodyCam\src\BodyCam.RealTests\Pipeline\TranscriptDiagnosticTests.cs(500,0): at BodyCam.RealTests.Pipeline.TranscriptDiagnosticTests.SendAudio_InputAudioTranscriptionCompleted_Fires()&#xD;
+[xUnit.net 00:00:01.14]         --- End of stack trace from previous location ---&#xD;
+[xUnit.net 00:00:01.14]       Output:&#xD;
+[xUnit.net 00:00:01.14]         Provider: Azure&#xD;
+[xUnit.net 00:00:01.14]         Creating session with TranscriptionOptions.ModelId=gpt-4o-mini-transcribe...&#xD;
+[xUnit.net 00:00:01.14]         Session created&#xD;
+[xUnit.net 00:00:01.14]         Audio file: 110400 bytes (2.3s at 24kHz PCM16)&#xD;
+[xUnit.net 00:00:01.14]         Sent 23 audio chunks&#xD;
+[xUnit.net 00:00:01.14]           [1] RealtimeServerMessage Type=RawContentOnly Kind=session.created SdkType=RealtimeServerUpdateSessionCreated&#xD;
+[xUnit.net 00:00:01.14]           [2] RealtimeServerMessage Type=RawContentOnly Kind=session.updated SdkType=RealtimeServerUpdateSessionUpdated&#xD;
+[xUnit.net 00:00:01.14]           [3] RealtimeServerMessage Type=RawContentOnly Kind=input_audio_buffer.speech_started SdkType=RealtimeServerUpdateInputAudioBufferSpeechStarted&#xD;
+[xUnit.net 00:00:01.14]           [4] RealtimeServerMessage Type=RawContentOnly Kind=input_audio_buffer.speech_stopped SdkType=RealtimeServerUpdateInputAudioBufferSpeechStopped&#xD;
+[xUnit.net 00:00:01.14]           [5] RealtimeServerMessage Type=RawContentOnly Kind=input_audio_buffer.committed SdkType=RealtimeServerUpdateInputAudioBufferCommitted&#xD;
+[xUnit.net 00:00:01.14]           [6] ResponseOutputItemRealtimeServerMessage Type=ConversationItemAdded Kind=conversation.item.added SdkType=RealtimeServerUpdateConversationItemAdded&#xD;
+[xUnit.net 00:00:01.14]           [7] ResponseOutputItemRealtimeServerMessage Type=ConversationItemDone Kind=conversation.item.done SdkType=RealtimeServerUpdateConversationItemDone&#xD;
+[xUnit.net 00:00:01.14]           [8] ResponseCreatedRealtimeServerMessage Type=ResponseCreated Kind=response.created SdkType=RealtimeServerUpdateResponseCreated&#xD;
+[xUnit.net 00:00:01.14]           [9] INPUT TRANSCRIPTION FAILED!&#xD;
+[xUnit.net 00:00:01.14]             EventId = event_DWTwBugYw8B63uEnnx35B&#xD;
+[xUnit.net 00:00:01.14]             ItemId = item_DWTwAxeKCpulxGlCy1J5j&#xD;
+[xUnit.net 00:00:01.14]             ContentIndex = 0&#xD;
+[xUnit.net 00:00:01.14]             Error = OpenAI.Realtime.RealtimeError&#xD;
+[xUnit.net 00:00:01.14]             Patch = []&#xD;
+[xUnit.net 00:00:01.14]             Kind = conversation.item.input_audio_transcription.failed&#xD;
+[xUnit.net 00:00:01.14]             MAF.ContentIndex = 0&#xD;
+[xUnit.net 00:00:01.14]             MAF.ItemId = item_DWTwAxeKCpulxGlCy1J5j&#xD;
+[xUnit.net 00:00:01.14]             MAF.Error = Microsoft.Extensions.AI.ErrorContent&#xD;
+[xUnit.net 00:00:01.14]             MAF.Type = InputAudioTranscriptionFailed&#xD;
+[xUnit.net 00:00:01.14]             MAF.MessageId = event_DWTwBugYw8B63uEnnx35B&#xD;
+[xUnit.net 00:00:01.14]           [10] RealtimeServerMessage Type=RawContentOnly Kind=input_audio_buffer.speech_started SdkType=RealtimeServerUpdateInputAudioBufferSpeechStarted&#xD;
+[xUnit.net 00:00:01.14]           [11] ResponseDone&#xD;
+[xUnit.net 00:00:01.14]         
+=== Results ===&#xD;
+[xUnit.net 00:00:01.14]         Total messages: 11&#xD;
+[xUnit.net 00:00:01.14]         User transcription: ""&#xD;
+[xUnit.net 00:00:01.14]         AI transcript deltas: 0 =&gt; ""&#xD;
+[xUnit.net 00:00:01.14]         AI transcript done: ""&#xD;
+[xUnit.net 00:00:01.14]         AI audio bytes: 0&#xD;
+[xUnit.net 00:00:01.15]   Finished:    BodyCam.RealTests&#xD;
+</StdOut>
+    </Output>
+    <RunInfos>
+      <RunInfo computerName="LT-25-195" outcome="Error" timestamp="2026-04-19T23:25:47.3136201+02:00">
+        <Text>[xUnit.net 00:00:01.14]     BodyCam.RealTests.Pipeline.TranscriptDiagnosticTests.SendAudio_InputAudioTranscriptionCompleted_Fires [FAIL]</Text>
+      </RunInfo>
+    </RunInfos>
+  </ResultSummary>
+</TestRun>

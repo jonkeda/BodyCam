@@ -7,7 +7,7 @@ public class SettingsPage : PageObjectBase<SettingsPage>
     public override string Name => "SettingsPage";
 
     public override bool IsLoaded(int? timeoutMs = null)
-        => ConnectionSettingsCard.IsExists();
+        => ConnectionSettingsCard.WaitExists(true, timeoutMs);
 
     // Shell navigation
     public Button<SettingsPage> NavIcon => Button("NavIcon");

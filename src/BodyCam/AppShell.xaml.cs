@@ -10,10 +10,10 @@ public partial class AppShell : Shell
 		InitializeComponent();
 		Navigated += OnShellNavigated;
 
-		Routing.RegisterRoute(nameof(Settings.ConnectionSettingsPage), typeof(Settings.ConnectionSettingsPage));
-		Routing.RegisterRoute(nameof(Settings.VoiceSettingsPage), typeof(Settings.VoiceSettingsPage));
-		Routing.RegisterRoute(nameof(Settings.DeviceSettingsPage), typeof(Settings.DeviceSettingsPage));
-		Routing.RegisterRoute(nameof(Settings.AdvancedSettingsPage), typeof(Settings.AdvancedSettingsPage));
+		Routing.RegisterRoute(nameof(Pages.Settings.ConnectionSettingsPage), typeof(Pages.Settings.ConnectionSettingsPage));
+		Routing.RegisterRoute(nameof(Pages.Settings.VoiceSettingsPage), typeof(Pages.Settings.VoiceSettingsPage));
+		Routing.RegisterRoute(nameof(Pages.Settings.DeviceSettingsPage), typeof(Pages.Settings.DeviceSettingsPage));
+		Routing.RegisterRoute(nameof(Pages.Settings.AdvancedSettingsPage), typeof(Pages.Settings.AdvancedSettingsPage));
 
 		var buildNumber = typeof(AppShell).Assembly
 			.GetCustomAttributes(typeof(System.Reflection.AssemblyMetadataAttribute), false)

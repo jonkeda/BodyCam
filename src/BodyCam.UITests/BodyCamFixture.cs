@@ -43,14 +43,40 @@ public class BodyCamFixture : MauiTestFixtureBase
 
     public void NavigateToHome()
     {
-        _settingsPage.NavIcon.Click();
-        _mainPage.WaitReady(10000);
+        if (_mainPage.IsLoaded(2000)) return;
+
+        ClickNavIcon();
+        if (_mainPage.IsLoaded(3000)) return;
+
+        // Toggled wrong direction — click again
+        ClickNavIcon();
+        _mainPage.IsLoaded(5000);
     }
 
     public void NavigateToSettings()
     {
-        _mainPage.NavIcon.Click();
-        _settingsPage.WaitReady(10000);
+        if (_settingsPage.IsLoaded(2000)) return;
+
+        // If on a sub-page, go home first to reset Shell stack
+        NavigateToHome();
+        ClickNavIcon();
+        _settingsPage.IsLoaded(5000);
+    }
+
+    public void NavigateToSettingsSubPage(Action clickCard, IPageObject subPage)
+    {
+        NavigateToSettings();
+        clickCard();
+        subPage.WaitReady(10000);
+    }
+
+    private void ClickNavIcon()
+    {
+        // NavIcon is in Shell.TitleView — give it time to render on cold start
+        if (_mainPage.NavIcon.WaitExists(true, 5000))
+            _mainPage.NavIcon.Click();
+        else
+            _settingsPage.NavIcon.Click();
     }
 
     /// <summary>

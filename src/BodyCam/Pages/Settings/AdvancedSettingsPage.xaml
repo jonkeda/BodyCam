@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:BodyCam.ViewModels.Settings"
+             xmlns:vmbase="clr-namespace:BodyCam.ViewModels"
+             x:Class="BodyCam.Pages.Settings.AdvancedSettingsPage"
+             x:DataType="vm:AdvancedViewModel"
+             Shell.TabBarIsVisible="False"
+             Title="Advanced">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="12" MaximumWidthRequest="500">
+
+            <!-- Debug -->
+            <Label Text="Debug" FontSize="Subtitle" FontAttributes="Bold"
+                   SemanticProperties.HeadingLevel="Level1" />
+
+            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
+                <Label Text="Debug Mode" VerticalOptions="Center" Grid.Row="0" Grid.Column="0" />
+                <Switch AutomationId="DebugModeSwitch" IsToggled="{Binding DebugMode}" Grid.Row="0" Grid.Column="1"
+                        SemanticProperties.Description="Debug mode" />
+
+                <Label Text="Show Token Counts" VerticalOptions="Center" Grid.Row="1" Grid.Column="0" />
+                <Switch AutomationId="ShowTokenCountsSwitch" IsToggled="{Binding ShowTokenCounts}" Grid.Row="1" Grid.Column="1"
+                        SemanticProperties.Description="Show token counts" />
+
+                <Label Text="Show Cost Estimate" VerticalOptions="Center" Grid.Row="2" Grid.Column="0" />
+                <Switch AutomationId="ShowCostEstimateSwitch" IsToggled="{Binding ShowCostEstimate}" Grid.Row="2" Grid.Column="1"
+                        SemanticProperties.Description="Show cost estimate" />
+            </Grid>
+
+            <!-- Diagnostics & Telemetry -->
+            <Label Text="Diagnostics" FontSize="Subtitle" FontAttributes="Bold" Margin="0,12,0,0"
+                   SemanticProperties.HeadingLevel="Level1" />
+            <Label Text="All telemetry is opt-in. No transcripts or API keys are ever sent."
+                   FontSize="Caption" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+
+            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="8">
+                <Label Text="Send diagnostic data" VerticalOptions="Center" Grid.Row="0" Grid.Column="0" />
+                <Switch AutomationId="SendDiagnosticDataSwitch" IsToggled="{Binding SendDiagnosticData}" Grid.Row="0" Grid.Column="1"
+                        SemanticProperties.Description="Send diagnostic data to Azure Monitor" />
+
+                <Label Text="Azure Monitor Connection String" VerticalOptions="Center" Grid.Row="1" Grid.Column="0"
+                       FontSize="Small" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+                <Entry AutomationId="AzureMonitorConnectionStringEntry" Text="{Binding AzureMonitorConnectionString}"
+                       Placeholder="InstrumentationKey=..." Grid.Row="2" Grid.ColumnSpan="2"
+                       SemanticProperties.Description="Azure Monitor connection string" />
+
+                <Label Text="Send crash reports" VerticalOptions="Center" Grid.Row="3" Grid.Column="0" />
+                <Switch AutomationId="SendCrashReportsSwitch" IsToggled="{Binding SendCrashReports}" Grid.Row="3" Grid.Column="1"
+                        SemanticProperties.Description="Send crash reports via Sentry" />
+
+                <Label Text="Sentry DSN" VerticalOptions="Center" Grid.Row="4" Grid.Column="0"
+                       FontSize="Small" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+                <Entry AutomationId="SentryDsnEntry" Text="{Binding SentryDsn}"
+                       Placeholder="https://xxx@sentry.io/yyy" Grid.Row="5" Grid.ColumnSpan="2"
+                       SemanticProperties.Description="Sentry DSN" />
+
+                <Label Text="Send anonymous usage data" VerticalOptions="Center" Grid.Row="6" Grid.Column="0" />
+                <Switch AutomationId="SendUsageDataSwitch" IsToggled="{Binding SendUsageData}" Grid.Row="6" Grid.Column="1"
+                        SemanticProperties.Description="Send anonymous usage analytics" />
+            </Grid>
+
+            <!-- Tool Settings -->
+            <Label Text="Tool Settings" FontSize="Subtitle" FontAttributes="Bold" Margin="0,12,0,0"
+                   SemanticProperties.HeadingLevel="Level1" />
+            <Label Text="Configure individual tool behavior." FontSize="Caption" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+
+            <CollectionView ItemsSource="{Binding ToolSettingsSections}"
+                            SelectionMode="None">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="vmbase:ToolSettingsSection">
+                        <VerticalStackLayout Padding="0,12,0,0">
+                            <Label Text="{Binding DisplayName}" FontSize="Body" FontAttributes="Bold" />
+                            <Label Text="{Binding Description}" FontSize="Caption" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" Margin="0,0,0,4" />
+                            <CollectionView ItemsSource="{Binding Items}"
+                                            SelectionMode="None">
+                                <CollectionView.ItemTemplate>
+                                    <DataTemplate x:DataType="vmbase:ToolSettingItem">
+                                        <Grid ColumnDefinitions="*,Auto" Padding="0,4">
+                                            <Label Text="{Binding Label}" VerticalOptions="Center" />
+                                            <Switch IsToggled="{Binding BoolValue}"
+                                                    IsVisible="{Binding IsBoolean}"
+                                                    SemanticProperties.Description="{Binding Label}"
+                                                    Grid.Column="1" />
+                                            <Entry Text="{Binding StringValue}"
+                                                   IsVisible="{Binding IsInteger}"
+                                                   Keyboard="Numeric"
+                                                   WidthRequest="80"
+                                                   SemanticProperties.Description="{Binding Label}"
+                                                   Grid.Column="1" />
+                                            <Entry Text="{Binding StringValue}"
+                                                   IsVisible="{Binding IsText}"
+                                                   WidthRequest="200"
+                                                   SemanticProperties.Description="{Binding Label}"
+                                                   Grid.Column="1" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </CollectionView.ItemTemplate>
+                            </CollectionView>
+                        </VerticalStackLayout>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

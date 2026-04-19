@@ -13,9 +13,9 @@ public class AzureSettingsTests
     public AzureSettingsTests(BodyCamFixture fixture)
     {
         _fixture = fixture;
-        _fixture.NavigateToSettings();
-        _fixture.SettingsPage.ConnectionSettingsCard.Click();
-        _fixture.ConnectionSettingsPage.WaitReady(10000);
+        _fixture.NavigateToSettingsSubPage(
+            () => _fixture.SettingsPage.ConnectionSettingsCard.Click(),
+            _fixture.ConnectionSettingsPage);
         // Switch to Azure to make fields visible
         Page.ProviderAzureRadio.Select();
     }

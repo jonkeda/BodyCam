@@ -12,6 +12,7 @@ using BodyCam.Tools;
 using FluentAssertions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 
 namespace BodyCam.IntegrationTests.Orchestration;
@@ -55,7 +56,7 @@ public class FullPipelineTests : IClassFixture<OpenAiWireMockFixture>
         var realtimeClient = Substitute.For<Microsoft.Extensions.AI.IRealtimeClient>();
         var chatClient = Substitute.For<IChatClient>();
 
-        var voiceIn = new VoiceInputAgent(audioIn);
+        var voiceIn = new VoiceInputAgent(audioIn, NullLogger<VoiceInputAgent>.Instance);
         var conversation = new ConversationAgent(chatClient, new AppSettings());
         var voiceOut = new VoiceOutputAgent(audioOut);
         var vision = new VisionAgent(chatClient, new AppSettings());

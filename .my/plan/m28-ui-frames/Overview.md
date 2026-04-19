@@ -333,6 +333,13 @@ public static IServiceCollection AddViewModels(this IServiceCollection services)
 - Replace 4 inline Frame cards in SettingsPage.xaml
 - **One commit.**
 
+### Wave 6 — Test coverage
+
+- Unit tests for all 4 extracted settings ViewModels (Connection, Voice, Device, Advanced)
+- New UI tests: `SettingsHubTests` (card existence + navigation), `DeviceSettingsTests`
+- Augment `VoiceSettingsTests` with `SystemInstructionsEditor` test
+- **Test-only wave. No production code changes.**
+
 ---
 
 ## UI Test Impact
@@ -346,3 +353,4 @@ Each wave should keep UI tests green (or improve them):
 | 3 | Page AutomationIds unchanged — update PageObject namespaces if needed |
 | 4 | AutomationIds preserved on ContentViews — tests unchanged |
 | 5 | Card AutomationIds preserved — tests unchanged |
+| 6 | Adds ~25 new unit tests + ~12 new UI tests |

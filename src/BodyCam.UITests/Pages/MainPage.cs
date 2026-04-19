@@ -7,7 +7,7 @@ public class MainPage : PageObjectBase<MainPage>
     public override string Name => "MainPage";
 
     public override bool IsLoaded(int? timeoutMs = null)
-        => SleepButton.IsExists();
+        => TranscriptTabButton.WaitExists(true, timeoutMs);
 
     // Shell navigation
     public Button<MainPage> NavIcon => Button("NavIcon");

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:BodyCam.ViewModels"
+             xmlns:views="clr-namespace:BodyCam.Views"
+             x:Class="BodyCam.Pages.SettingsPage"
+             x:DataType="vm:SettingsViewModel"
+             Title="{Binding Title}">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="12">
+
+            <Label Text="Changes take effect on next session start."
+                   FontSize="12" TextColor="Gray" FontAttributes="Italic" />
+
+            <views:SettingsCardView CardAutomationId="ConnectionSettingsCard"
+                                    Icon="🔗" CardTitle="Connection"
+                                    Description="Provider, API key, models"
+                                    CardClicked="OnConnectionTapped" />
+
+            <views:SettingsCardView CardAutomationId="VoiceSettingsCard"
+                                    Icon="🎙" CardTitle="Voice &amp; AI"
+                                    Description="Voice, turn detection, instructions"
+                                    CardClicked="OnVoiceTapped" />
+
+            <views:SettingsCardView CardAutomationId="DeviceSettingsCard"
+                                    Icon="📱" CardTitle="Devices"
+                                    Description="Camera, microphone, speaker"
+                                    CardClicked="OnDevicesTapped" />
+
+            <views:SettingsCardView CardAutomationId="AdvancedSettingsCard"
+                                    Icon="⚙" CardTitle="Advanced"
+                                    Description="Debug, diagnostics, tools"
+                                    CardClicked="OnAdvancedTapped" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

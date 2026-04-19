@@ -2,10 +2,14 @@ using BodyCam.Agents;
 using BodyCam.Models;
 using BodyCam.Services;
 using BodyCam.Services.Audio.WebRtcApm;
-using Microsoft.Extensions.AI;
 using BodyCam.Services.Camera;
 using BodyCam.Tools;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
+
+#pragma warning disable OPENAI002
+#pragma warning disable SCME0001
+#pragma warning disable MEAI001
 
 namespace BodyCam.Orchestration;
 
@@ -15,8 +19,8 @@ public class AgentOrchestrator
     private readonly VoiceOutputAgent _voiceOut;
     private readonly ConversationAgent _conversation;
     private readonly VisionAgent _vision;
-    private readonly Microsoft.Extensions.AI.IRealtimeClient _realtimeFactory;
-    private Microsoft.Extensions.AI.IRealtimeClientSession? _session;
+    private readonly IRealtimeClient _realtimeFactory;
+    private IRealtimeClientSession? _session;
     private Task? _messageLoop;
     private readonly ISettingsService _settingsService;
     private readonly AppSettings _settings;
@@ -36,21 +40,24 @@ public class AgentOrchestrator
     public event EventHandler<string>? TranscriptUpdated;
     public event EventHandler<string>? TranscriptDelta;
     public event EventHandler<string>? TranscriptCompleted;
+    public event EventHandler<string>? DebugLog;
+
+    /// <summary>Delegate injected by UI to capture camera frames for vision.</summary>
+    public Func<CancellationToken, Task<byte[]?>>? FrameCaptureFunc { get; set; }
 
     public SessionConfig? CurrentConfig { get; private set; }
 
     public bool IsRunning => _cts is not null && !_cts.IsCancellationRequested;
 
-    // Speech events not in MAF — use extensible RealtimeServerMessageType
-    private static readonly RealtimeServerMessageType SpeechStarted =
-        new("input_audio_buffer.speech_started");
+    /// <summary>Custom message type for speech started (not in MAF abstraction).</summary>
+    private static readonly RealtimeServerMessageType SpeechStarted = new("input_audio_buffer.speech_started");
 
     public AgentOrchestrator(
         VoiceInputAgent voiceIn,
         ConversationAgent conversation,
         VoiceOutputAgent voiceOut,
         VisionAgent vision,
-        Microsoft.Extensions.AI.IRealtimeClient realtimeFactory,
+        IRealtimeClient realtimeFactory,
         ISettingsService settingsService,
         AppSettings settings,
         ToolDispatcher dispatcher,
@@ -75,17 +82,48 @@ public class AgentOrchestrator
         _logger = logger;
     }
 
+    /// <summary>
+    /// Build MAF session options from current settings.
+    /// </summary>
     private RealtimeSessionOptions BuildSessionOptions()
     {
+        var voice = _settings.Voice?.ToLowerInvariant() switch
+        {
+            "echo" => "echo",
+            "shimmer" => "shimmer",
+            "ash" => "ash",
+            "coral" => "coral",
+            "sage" => "sage",
+            _ => "alloy",
+        };
+
+        var tools = _dispatcher.GetToolDefinitions().Select(dto =>
+            (AITool)AIFunctionFactory.Create(
+                method: (string? args) => args ?? "",
+                name: dto.Name,
+                description: dto.Description))
+            .ToList();
+
+        // Azure Realtime only supports whisper-1 for input transcription;
+        // gpt-4o-mini-transcribe is only available on direct OpenAI.
+        var transcriptionModel = _settings.TranscriptionModel ?? "whisper-1";
+        if (_settings.Provider == OpenAiProvider.Azure
+            && transcriptionModel.Contains("transcribe", StringComparison.OrdinalIgnoreCase))
+        {
+            transcriptionModel = "whisper-1";
+        }
+
         return new RealtimeSessionOptions
         {
+            Model = _settings.RealtimeModel,
             Instructions = _settings.SystemInstructions,
-            Voice = _settings.Voice,
-            InputAudioFormat = new RealtimeAudioFormat("audio/pcm", _settings.SampleRate),
-            OutputAudioFormat = new RealtimeAudioFormat("audio/pcm", _settings.SampleRate),
-            OutputModalities = ["audio", "text"],
-            TranscriptionOptions = new TranscriptionOptions { ModelId = _settings.TranscriptionModel },
-            VoiceActivityDetection = new VoiceActivityDetectionOptions
+            Voice = voice,
+            Tools = tools,
+            TranscriptionOptions = new()
+            {
+                ModelId = transcriptionModel,
+            },
+            VoiceActivityDetection = new()
             {
                 Enabled = true,
                 AllowInterruption = true,
@@ -134,14 +172,14 @@ public class AgentOrchestrator
         var options = BuildSessionOptions();
         _session = await _realtimeFactory.CreateSessionAsync(options, _cts.Token);
         _messageLoop = Task.Run(() => RunMessageLoopAsync(_session, _cts.Token));
-        _logger.LogInformation("Realtime session created");
+        _logger.LogInformation("Realtime connected");
 
-        // Wire audio sink for VoiceInputAgent
+        // Wire audio sink for VoiceInputAgent — send PCM chunks via MAF
         _voiceIn.SetAudioSink(async (pcm, ct) =>
         {
-            var audioMsg = new InputAudioBufferAppendRealtimeClientMessage(
-                new DataContent(pcm, "audio/pcm"));
-            await _session.SendAsync(audioMsg, ct);
+            await _session!.SendAsync(
+                new InputAudioBufferAppendRealtimeClientMessage(
+                    new DataContent(pcm, "audio/pcm")), ct);
         });
         _voiceIn.SetConnected(true);
 
@@ -187,11 +225,11 @@ public class AgentOrchestrator
         await _voiceIn.StopAsync();
         await _voiceOut.StopAsync();
 
-        if (_session is not null)
-        {
-            await _session.DisposeAsync();
-            _session = null;
-        }
+        if (_session is IAsyncDisposable asyncDisposable)
+            await asyncDisposable.DisposeAsync();
+        else if (_session is IDisposable disposable)
+            disposable.Dispose();
+        _session = null;
 
         Session.IsActive = false;
         CurrentConfig = null;
@@ -200,74 +238,96 @@ public class AgentOrchestrator
         _logger.LogInformation("Orchestrator stopped");
     }
 
+    /// <summary>
+    /// Receive typed server updates from the MAF event stream.
+    /// </summary>
     private async Task RunMessageLoopAsync(
-        Microsoft.Extensions.AI.IRealtimeClientSession session,
+        IRealtimeClientSession session,
         CancellationToken ct)
     {
         try
         {
-            await foreach (var message in session.GetStreamingResponseAsync(ct))
+            await foreach (var msg in session.GetStreamingResponseAsync(ct))
             {
-                var type = message.Type;
+                var type = msg.Type;
 
                 if (type == RealtimeServerMessageType.OutputAudioDelta)
                 {
-                    var audioMsg = (OutputTextAudioRealtimeServerMessage)message;
-                    if (audioMsg.Audio is { } audio)
+                    try
                     {
-                        try { await _voiceOut.PlayAudioDeltaAsync(Convert.FromBase64String(audio)); }
-                        catch (Exception ex) { _logger.LogError(ex, "Playback error"); }
+                        var audioMsg = (OutputTextAudioRealtimeServerMessage)msg;
+                        if (audioMsg.Audio is not null)
+                        {
+                            var audioBytes = Convert.FromBase64String(audioMsg.Audio);
+                            await _voiceOut.PlayAudioDeltaAsync(audioBytes);
+                        }
                     }
+                    catch (Exception ex) { _logger.LogError(ex, "Playback error"); }
+                }
+                else if (type == RealtimeServerMessageType.OutputAudioTranscriptionDelta)
+                {
+                    // Streaming transcript of AI audio — drives live UI text
+                    var transcriptMsg = (OutputTextAudioRealtimeServerMessage)msg;
+                    var delta = transcriptMsg.Text ?? "";
+                    TranscriptUpdated?.Invoke(this, $"AI: {delta}");
+                    TranscriptDelta?.Invoke(this, delta);
                 }
                 else if (type == RealtimeServerMessageType.OutputTextDelta)
                 {
-                    var textMsg = (OutputTextAudioRealtimeServerMessage)message;
-                    if (textMsg.Text is { } delta)
-                    {
-                        TranscriptUpdated?.Invoke(this, $"AI: {delta}");
-                        TranscriptDelta?.Invoke(this, delta);
-                    }
+                    // Text-only mode fallback (not used with audio output)
+                    var textMsg = (OutputTextAudioRealtimeServerMessage)msg;
+                    var delta = textMsg.Text ?? "";
+                    TranscriptUpdated?.Invoke(this, $"AI: {delta}");
+                    TranscriptDelta?.Invoke(this, delta);
                 }
-                else if (type == RealtimeServerMessageType.OutputTextDone
-                      || type == RealtimeServerMessageType.OutputAudioTranscriptionDone)
+                else if (type == RealtimeServerMessageType.OutputAudioTranscriptionDone)
                 {
-                    var textMsg = (OutputTextAudioRealtimeServerMessage)message;
-                    if (textMsg.Text is { } transcript)
-                    {
-                        TranscriptCompleted?.Invoke(this, $"AI:{transcript}");
-                        _logger.LogDebug("AI transcript: {Length} chars", transcript.Length);
-                    }
+                    var transcriptMsg = (OutputTextAudioRealtimeServerMessage)msg;
+                    var transcript = transcriptMsg.Text ?? "";
+                    TranscriptCompleted?.Invoke(this, $"AI:{transcript}");
+                    _logger.LogDebug("AI audio transcript: {Length} chars", transcript.Length);
+                }
+                else if (type == RealtimeServerMessageType.OutputTextDone)
+                {
+                    var textMsg = (OutputTextAudioRealtimeServerMessage)msg;
+                    var text = textMsg.Text ?? "";
+                    TranscriptCompleted?.Invoke(this, $"AI:{text}");
+                    _logger.LogDebug("AI text: {Length} chars", text.Length);
                 }
                 else if (type == RealtimeServerMessageType.InputAudioTranscriptionCompleted)
                 {
-                    var transcriptMsg = (InputAudioTranscriptionRealtimeServerMessage)message;
-                    if (transcriptMsg.Transcription is { } transcript)
-                    {
-                        TranscriptUpdated?.Invoke(this, $"You: {transcript}");
-                        TranscriptCompleted?.Invoke(this, $"You:{transcript}");
-                        _logger.LogDebug("User transcript received");
-                    }
+                    var userMsg = (InputAudioTranscriptionRealtimeServerMessage)msg;
+                    var transcript = userMsg.Transcription ?? "";
+                    TranscriptUpdated?.Invoke(this, $"You: {transcript}");
+                    TranscriptCompleted?.Invoke(this, $"You:{transcript}");
+                    _logger.LogDebug("User transcript received");
                 }
                 else if (type == RealtimeServerMessageType.ResponseOutputItemAdded)
                 {
-                    var itemMsg = (ResponseOutputItemRealtimeServerMessage)message;
-                    if (itemMsg.Item?.Id is { } itemId)
-                        _voiceOut.SetCurrentItem(itemId);
+                    var itemMsg = (ResponseOutputItemRealtimeServerMessage)msg;
+                    if (itemMsg.Item?.Id is not null)
+                    {
+                        _voiceOut.SetCurrentItem(itemMsg.Item.Id);
+                    }
                 }
                 else if (type == RealtimeServerMessageType.ResponseDone)
                 {
                     _voiceOut.ResetTracker();
-                    var respMsg = (ResponseCreatedRealtimeServerMessage)message;
-                    _logger.LogDebug("Response complete: {ResponseId}", respMsg.ResponseId);
-                }
-                else if (type == RealtimeServerMessageType.Error)
-                {
-                    var errorMsg = (ErrorRealtimeServerMessage)message;
-                    _logger.LogError("Realtime error: {Error}", errorMsg.Error);
+                    await HandleResponseDoneAsync(session, msg, ct);
+                    _logger.LogDebug("Response complete");
                 }
                 else if (type == SpeechStarted)
                 {
                     await HandleSpeechStartedAsync(session, ct);
+                }
+                else if (type == RealtimeServerMessageType.Error)
+                {
+                    var errorMsg = (ErrorRealtimeServerMessage)msg;
+                    _logger.LogError("Realtime error: {Error}", errorMsg.Error?.Message ?? "unknown");
+                }
+                else
+                {
+                    _logger.LogDebug("Unhandled message type: {Type} CLR={ClrType}", type, msg.GetType().Name);
                 }
             }
         }
@@ -288,8 +348,81 @@ public class AgentOrchestrator
         }
     }
 
+    /// <summary>
+    /// Handle response done: extract function call items via RawRepresentation and dispatch.
+    /// MAF doesn't expose function call items as first-class types, so we access the
+    /// underlying SDK types via RawRepresentation.
+    /// </summary>
+    private async Task HandleResponseDoneAsync(
+        IRealtimeClientSession session,
+        RealtimeServerMessage msg,
+        CancellationToken ct)
+    {
+        // Access function calls via the underlying SDK type
+        if (msg.RawRepresentation is not OpenAI.Realtime.RealtimeServerUpdateResponseDone sdkResponseDone)
+            return;
+
+        var response = sdkResponseDone.Response;
+        bool hadFunctionCalls = false;
+
+        foreach (var item in response.OutputItems)
+        {
+            if (item is not OpenAI.Realtime.RealtimeFunctionCallItem functionCall) continue;
+            hadFunctionCalls = true;
+
+            var callId = functionCall.CallId;
+            var name = functionCall.FunctionName;
+            var args = functionCall.FunctionArguments?.ToString();
+
+            _logger.LogDebug("Tool call: {Name}({CallId})", name, callId);
+            DebugLog?.Invoke(this, $"Tool: {name}");
+
+            try
+            {
+                var context = CreateToolContext();
+                var result = await _dispatcher.ExecuteAsync(name, args, context, ct);
+
+                // Send tool result back via raw SDK command
+                var outputItem = OpenAI.Realtime.RealtimeItem.CreateFunctionCallOutputItem(
+                    callId: callId, functionOutput: result);
+                var createCmd = new OpenAI.Realtime.RealtimeClientCommandConversationItemCreate(outputItem);
+                var sdkSession = GetSdkSession(session);
+                await sdkSession.SendCommandAsync(createCmd, ct);
+                _logger.LogDebug("Tool result sent: {Name}", name);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Tool {Name} failed", name);
+                var errorOutput = OpenAI.Realtime.RealtimeItem.CreateFunctionCallOutputItem(
+                    callId: callId,
+                    functionOutput: $"{{\"error\": \"{ex.Message}\"}}");
+                var createCmd = new OpenAI.Realtime.RealtimeClientCommandConversationItemCreate(errorOutput);
+                var sdkSession = GetSdkSession(session);
+                await sdkSession.SendCommandAsync(createCmd, ct);
+            }
+        }
+
+        if (hadFunctionCalls)
+        {
+            // Trigger a new response after sending all tool results
+            await session.SendAsync(new CreateResponseRealtimeClientMessage(), ct);
+        }
+    }
+
+    /// <summary>Get the underlying SDK session client for operations not exposed by MAF.</summary>
+    private static OpenAI.Realtime.RealtimeSessionClient GetSdkSession(IRealtimeClientSession session)
+    {
+        if (session is OpenAIRealtimeClientSession openAiSession)
+        {
+            // The session wraps a RealtimeSessionClient — access via GetService
+            var sdkSession = openAiSession.GetService<OpenAI.Realtime.RealtimeSessionClient>();
+            if (sdkSession is not null) return sdkSession;
+        }
+        throw new InvalidOperationException("Cannot access SDK session for tool result dispatch.");
+    }
+
     private async Task HandleSpeechStartedAsync(
-        Microsoft.Extensions.AI.IRealtimeClientSession session,
+        IRealtimeClientSession session,
         CancellationToken ct)
     {
         try
@@ -303,15 +436,9 @@ public class AgentOrchestrator
 
                 try
                 {
-                    var truncateJson = BinaryData.FromObjectAsJson(new
-                    {
-                        type = "conversation.item.truncate",
-                        item_id = itemId,
-                        content_index = 0,
-                        audio_end_ms = playedMs,
-                    });
-                    var msg = new RealtimeClientMessage { RawRepresentation = truncateJson };
-                    await session.SendAsync(msg, ct);
+                    // Truncation requires SDK access — not in MAF abstraction
+                    var sdkSession = GetSdkSession(session);
+                    await sdkSession.TruncateItemAsync(itemId, 0, TimeSpan.FromMilliseconds(playedMs), ct);
                     _logger.LogDebug("Interrupted at {PlayedMs}ms", playedMs);
                 }
                 catch (Exception ex)
@@ -336,18 +463,20 @@ public class AgentOrchestrator
             _logger.LogInformation("Reconnecting ({Attempt}/{MaxRetries})", i + 1, maxRetries);
             try
             {
-                if (_session is not null)
-                    await _session.DisposeAsync();
+                if (_session is IAsyncDisposable asyncDisposable)
+                    await asyncDisposable.DisposeAsync();
+                else if (_session is IDisposable disposable)
+                    disposable.Dispose();
 
-                var options = BuildSessionOptions();
                 var ct = _cts?.Token ?? CancellationToken.None;
+                var options = BuildSessionOptions();
                 _session = await _realtimeFactory.CreateSessionAsync(options, ct);
                 _messageLoop = Task.Run(() => RunMessageLoopAsync(_session, ct));
                 _voiceIn.SetAudioSink(async (pcm, innerCt) =>
                 {
-                    var audioMsg = new InputAudioBufferAppendRealtimeClientMessage(
-                        new DataContent(pcm, "audio/pcm"));
-                    await _session.SendAsync(audioMsg, innerCt);
+                    await _session!.SendAsync(
+                        new InputAudioBufferAppendRealtimeClientMessage(
+                            new DataContent(pcm, "audio/pcm")), innerCt);
                 });
                 _voiceIn.SetConnected(true);
                 await _voiceIn.StartAsync(ct);
@@ -358,7 +487,7 @@ public class AgentOrchestrator
             {
                 _logger.LogWarning(ex, "Reconnect failed");
                 await Task.Delay(delay);
-                delay *= 2; // exponential backoff: 1s, 2s, 4s, 8s, 16s
+                delay *= 2;
             }
         }
 
@@ -423,9 +552,9 @@ public class AgentOrchestrator
 
     private ToolContext CreateToolContext() => new()
     {
-        CaptureFrame = _cameraManager.CaptureFrameAsync,
+        CaptureFrame = FrameCaptureFunc ?? _cameraManager.CaptureFrameAsync,
         Session = Session,
-        Log = msg => _logger.LogInformation("{ToolMessage}", msg),
+        Log = msg => DebugLog?.Invoke(this, msg),
     };
 
     public async Task SendTextInputAsync(string text, CancellationToken ct = default)
@@ -433,8 +562,8 @@ public class AgentOrchestrator
         if (_session is null)
             throw new InvalidOperationException("Session is not active.");
 
-        var item = new RealtimeConversationItem([new TextContent(text)], null, ChatRole.User);
-        await _session.SendAsync(new CreateConversationItemRealtimeClientMessage(item), ct);
+        await _session.SendAsync(new CreateConversationItemRealtimeClientMessage(
+            new RealtimeConversationItem([new TextContent(text)], role: ChatRole.User)), ct);
         await _session.SendAsync(new CreateResponseRealtimeClientMessage(), ct);
     }
 

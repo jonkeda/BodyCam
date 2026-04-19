@@ -1,6 +1,7 @@
 using BodyCam.Agents;
 using BodyCam.Services;
 using FluentAssertions;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 
 namespace BodyCam.Tests.Agents;
@@ -11,7 +12,7 @@ public class VoiceInputAgentTests
     public async Task StartAsync_StartsAudioInput()
     {
         var audioInput = Substitute.For<IAudioInputService>();
-        var agent = new VoiceInputAgent(audioInput);
+        var agent = new VoiceInputAgent(audioInput, NullLogger<VoiceInputAgent>.Instance);
 
         await agent.StartAsync();
 
@@ -22,7 +23,7 @@ public class VoiceInputAgentTests
     public async Task StopAsync_StopsAudioInput()
     {
         var audioInput = Substitute.For<IAudioInputService>();
-        var agent = new VoiceInputAgent(audioInput);
+        var agent = new VoiceInputAgent(audioInput, NullLogger<VoiceInputAgent>.Instance);
 
         await agent.StopAsync();
 
@@ -34,7 +35,7 @@ public class VoiceInputAgentTests
     {
         var audioInput = Substitute.For<IAudioInputService>();
         byte[]? received = null;
-        var agent = new VoiceInputAgent(audioInput);
+        var agent = new VoiceInputAgent(audioInput, NullLogger<VoiceInputAgent>.Instance);
         agent.SetAudioSink(async (data, ct) => received = data);
         agent.SetConnected(true);
 
@@ -55,7 +56,7 @@ public class VoiceInputAgentTests
     {
         var audioInput = Substitute.For<IAudioInputService>();
         byte[]? received = null;
-        var agent = new VoiceInputAgent(audioInput);
+        var agent = new VoiceInputAgent(audioInput, NullLogger<VoiceInputAgent>.Instance);
         agent.SetAudioSink(async (data, ct) => received = data);
         agent.SetConnected(true);
 
@@ -74,7 +75,7 @@ public class VoiceInputAgentTests
     {
         var audioInput = Substitute.For<IAudioInputService>();
         byte[]? received = null;
-        var agent = new VoiceInputAgent(audioInput);
+        var agent = new VoiceInputAgent(audioInput, NullLogger<VoiceInputAgent>.Instance);
         agent.SetAudioSink(async (data, ct) => received = data);
         agent.SetConnected(false);
 

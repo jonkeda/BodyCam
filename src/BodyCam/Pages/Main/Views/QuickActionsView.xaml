@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:BodyCam.ViewModels"
+             x:Class="BodyCam.Pages.Main.Views.QuickActionsView"
+             x:DataType="vm:MainViewModel">
+
+    <ContentView.Resources>
+        <Style x:Key="ActionButton" TargetType="Button">
+            <Setter Property="HeightRequest" Value="48" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="BackgroundColor"
+                    Value="{AppThemeBinding Light=#EEEEEE, Dark=#2A2A2A}" />
+            <Setter Property="TextColor"
+                    Value="{AppThemeBinding Light=#333333, Dark=#E0E0E0}" />
+        </Style>
+    </ContentView.Resources>
+
+    <Grid ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto"
+          ColumnSpacing="8" RowSpacing="8" Padding="12">
+        <Button AutomationId="LookButton"
+                Text="👁 Look"
+                Command="{Binding LookCommand}"
+                Style="{StaticResource ActionButton}" />
+        <Button Grid.Column="1" AutomationId="ReadButton"
+                Text="📖 Read"
+                Command="{Binding ReadCommand}"
+                Style="{StaticResource ActionButton}" />
+        <Button Grid.Column="2" AutomationId="FindButton"
+                Text="🔍 Find"
+                Command="{Binding FindCommand}"
+                Style="{StaticResource ActionButton}" />
+        <Button Grid.Row="1" AutomationId="AskButton"
+                Text="💬 Ask"
+                Command="{Binding AskCommand}"
+                Style="{StaticResource ActionButton}" />
+        <Button Grid.Row="1" Grid.Column="1" AutomationId="PhotoButton"
+                Text="📸 Photo"
+                Command="{Binding PhotoCommand}"
+                Style="{StaticResource ActionButton}" />
+    </Grid>
+</ContentView>

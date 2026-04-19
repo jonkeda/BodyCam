@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:BodyCam.ViewModels"
+             x:Class="BodyCam.Pages.SetupPage"
+             x:DataType="vm:SetupViewModel"
+             Shell.TabBarIsVisible="False"
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#1A1A1A}">
+
+    <ScrollView VerticalOptions="Center">
+        <VerticalStackLayout Padding="24" Spacing="16" MaximumWidthRequest="480" HorizontalOptions="Center">
+
+            <!-- Header -->
+            <Label Text="BodyCam Setup"
+                   FontSize="28" FontAttributes="Bold"
+                   HorizontalOptions="Center"
+                   SemanticProperties.HeadingLevel="Level1" />
+
+            <Label AutomationId="SetupProgressLabel"
+                   Text="{Binding ProgressText}"
+                   FontSize="Caption"
+                   HorizontalOptions="Center"
+                   TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray400}}" />
+
+            <!-- Step Card -->
+            <Border Stroke="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}"
+                    StrokeThickness="1"
+                    StrokeShape="RoundRectangle 12"
+                    BackgroundColor="{AppThemeBinding Light=White, Dark=#2A2A2A}"
+                    Padding="24"
+                    Margin="0,8">
+                <VerticalStackLayout Spacing="16">
+
+                    <Label AutomationId="SetupStepIcon"
+                           Text="{Binding CurrentIcon}"
+                           FontSize="48"
+                           HorizontalOptions="Center" />
+
+                    <Label AutomationId="SetupStepTitle"
+                           Text="{Binding CurrentTitle}"
+                           FontSize="Title" FontAttributes="Bold"
+                           HorizontalOptions="Center"
+                           SemanticProperties.HeadingLevel="Level2" />
+
+                    <Label AutomationId="SetupStepDescription"
+                           Text="{Binding CurrentDescription}"
+                           FontSize="Body"
+                           HorizontalTextAlignment="Center"
+                           LineBreakMode="WordWrap"
+                           TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+
+                    <Label AutomationId="SetupStatusLabel" FontSize="Body" HorizontalOptions="Center" FontAttributes="Bold">
+                        <Label.Triggers>
+                            <DataTrigger TargetType="Label" Binding="{Binding CurrentStepStatus}" Value="granted">
+                                <Setter Property="Text" Value="✓ Granted" />
+                                <Setter Property="TextColor" Value="Green" />
+                            </DataTrigger>
+                            <DataTrigger TargetType="Label" Binding="{Binding CurrentStepStatus}" Value="denied">
+                                <Setter Property="Text" Value="✕ Denied" />
+                                <Setter Property="TextColor" Value="Red" />
+                            </DataTrigger>
+                            <DataTrigger TargetType="Label" Binding="{Binding CurrentStepStatus}" Value="skipped">
+                                <Setter Property="Text" Value="— Skipped" />
+                                <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray400}}" />
+                            </DataTrigger>
+                        </Label.Triggers>
+                    </Label>
+
+                    <!-- Permission step UI -->
+                    <VerticalStackLayout Spacing="12" IsVisible="{Binding IsPermissionStep}">
+                        <Button AutomationId="GrantPermissionButton"
+                                Text="Grant Permission"
+                                Command="{Binding RequestPermissionCommand}"
+                                BackgroundColor="{StaticResource Primary}"
+                                TextColor="White"
+                                CornerRadius="8"
+                                HorizontalOptions="Center"
+                                MinimumWidthRequest="200"
+                                SemanticProperties.Description="Grant the requested permission" />
+
+                        <!-- Denied help -->
+                        <VerticalStackLayout Spacing="8" IsVisible="{Binding ShowDeniedHelp}">
+                            <Label Text="Permission was denied. You can grant it in your device settings."
+                                   FontSize="Small"
+                                   HorizontalTextAlignment="Center"
+                                   TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+                            <Button AutomationId="OpenSettingsButton"
+                                    Text="Open Settings"
+                                    Command="{Binding OpenSettingsCommand}"
+                                    BackgroundColor="Transparent"
+                                    TextColor="{StaticResource Primary}"
+                                    BorderColor="{StaticResource Primary}"
+                                    BorderWidth="1"
+                                    CornerRadius="8"
+                                    HorizontalOptions="Center"
+                                    SemanticProperties.Description="Open device settings to grant permission" />
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+
+                    <!-- API Key step UI -->
+                    <VerticalStackLayout Spacing="12" IsVisible="{Binding IsApiKeyStep}">
+
+                        <!-- Provider picker -->
+                        <HorizontalStackLayout Spacing="16" HorizontalOptions="Center">
+                            <RadioButton AutomationId="SetupOpenAiRadio" Content="OpenAI" IsChecked="{Binding IsOpenAi}"
+                                         SemanticProperties.Description="Use OpenAI provider" />
+                            <RadioButton AutomationId="SetupAzureRadio" Content="Azure" IsChecked="{Binding IsAzure}"
+                                         SemanticProperties.Description="Use Azure OpenAI provider" />
+                        </HorizontalStackLayout>
+
+                        <Entry AutomationId="SetupApiKeyEntry"
+                               Placeholder="sk-..."
+                               Text="{Binding ApiKey}"
+                               IsPassword="True"
+                               Keyboard="Plain"
+                               ClearButtonVisibility="WhileEditing"
+                               SemanticProperties.Description="API key entry" />
+
+                        <Button AutomationId="ValidateKeyButton"
+                                Text="Validate Key"
+                                Command="{Binding ValidateKeyCommand}"
+                                BackgroundColor="{StaticResource Primary}"
+                                TextColor="White"
+                                CornerRadius="8"
+                                HorizontalOptions="Center"
+                                MinimumWidthRequest="200"
+                                SemanticProperties.Description="Validate the entered API key" />
+
+                        <ActivityIndicator AutomationId="SetupValidatingIndicator"
+                                           IsRunning="{Binding IsValidating}"
+                                           IsVisible="{Binding IsValidating}"
+                                           HorizontalOptions="Center" />
+
+                        <Label AutomationId="SetupStatusMessage"
+                               Text="{Binding StatusMessage}"
+                               FontSize="Small"
+                               HorizontalTextAlignment="Center" />
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Navigation buttons -->
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="12" Margin="0,8,0,0">
+                <Button AutomationId="SetupSkipButton"
+                        Text="Skip"
+                        Command="{Binding SkipCommand}"
+                        BackgroundColor="Transparent"
+                        TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}"
+                        BorderColor="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}"
+                        BorderWidth="1"
+                        CornerRadius="8"
+                        Grid.Column="0"
+                        SemanticProperties.Description="Skip this setup step" />
+                <Button AutomationId="SetupNextButton"
+                        Text="{Binding NextButtonText}"
+                        Command="{Binding NextCommand}"
+                        BackgroundColor="{StaticResource Primary}"
+                        TextColor="White"
+                        CornerRadius="8"
+                        Grid.Column="1"
+                        SemanticProperties.Description="Continue to next step" />
+            </Grid>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

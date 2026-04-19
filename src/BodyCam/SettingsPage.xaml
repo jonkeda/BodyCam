@@ -9,237 +9,53 @@
     <ScrollView>
         <VerticalStackLayout Padding="16" Spacing="12">
 
-            <!-- Note -->
             <Label Text="Changes take effect on next session start."
                    FontSize="12" TextColor="Gray" FontAttributes="Italic" />
 
-            <!-- SECTION: Provider -->
-            <Label Text="Provider" FontSize="18" FontAttributes="Bold" Margin="0,8,0,0" />
+            <Button AutomationId="ConnectionSettingsCard"
+                    Text="🔗  Connection — Provider, API key, models"
+                    Clicked="OnConnectionTapped"
+                    BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#2A2A2A}"
+                    TextColor="{AppThemeBinding Light=#333333, Dark=#E0E0E0}"
+                    FontSize="14"
+                    Padding="16"
+                    CornerRadius="8"
+                    HorizontalOptions="Fill"
+                    HeightRequest="56" />
 
-            <HorizontalStackLayout Spacing="16">
-                <RadioButton AutomationId="ProviderOpenAiRadio"
-                             Content="OpenAI"
-                             IsChecked="{Binding IsOpenAi}"
-                             CheckedChanged="OnOpenAiChecked" />
-                <RadioButton AutomationId="ProviderAzureRadio"
-                             Content="Azure"
-                             IsChecked="{Binding IsAzure}"
-                             CheckedChanged="OnAzureChecked" />
-            </HorizontalStackLayout>
+            <Button AutomationId="VoiceSettingsCard"
+                    Text="🎙  Voice &amp; AI — Voice, turn detection, instructions"
+                    Clicked="OnVoiceTapped"
+                    BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#2A2A2A}"
+                    TextColor="{AppThemeBinding Light=#333333, Dark=#E0E0E0}"
+                    FontSize="14"
+                    Padding="16"
+                    CornerRadius="8"
+                    HorizontalOptions="Fill"
+                    HeightRequest="56" />
 
-            <!-- SECTION: Models (OpenAI only) -->
-            <VerticalStackLayout Spacing="12" IsVisible="{Binding IsOpenAi}">
-                <Label Text="Models" FontSize="18" FontAttributes="Bold" Margin="0,8,0,0" />
+            <Button AutomationId="DeviceSettingsCard"
+                    Text="📱  Devices — Camera, microphone, speaker"
+                    Clicked="OnDevicesTapped"
+                    BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#2A2A2A}"
+                    TextColor="{AppThemeBinding Light=#333333, Dark=#E0E0E0}"
+                    FontSize="14"
+                    Padding="16"
+                    CornerRadius="8"
+                    HorizontalOptions="Fill"
+                    HeightRequest="56" />
 
-                <Label Text="Voice Model" FontSize="13" TextColor="Gray" />
-                <HorizontalStackLayout Spacing="8">
-                    <Picker AutomationId="VoiceModelPicker"
-                            ItemsSource="{Binding RealtimeModelOptions}"
-                            SelectedItem="{Binding SelectedRealtimeModel}"
-                            HorizontalOptions="FillAndExpand" />
-                    <Label AutomationId="RealtimeStatusLabel"
-                           Text="{Binding RealtimeStatus}"
-                           VerticalOptions="Center" FontSize="13" />
-                </HorizontalStackLayout>
-
-                <Label Text="Chat Model" FontSize="13" TextColor="Gray" />
-                <HorizontalStackLayout Spacing="8">
-                    <Picker AutomationId="ChatModelPicker"
-                            ItemsSource="{Binding ChatModelOptions}"
-                            SelectedItem="{Binding SelectedChatModel}"
-                            HorizontalOptions="FillAndExpand" />
-                    <Label AutomationId="ChatStatusLabel"
-                           Text="{Binding ChatStatus}"
-                           VerticalOptions="Center" FontSize="13" />
-                </HorizontalStackLayout>
-
-                <Label Text="Vision Model" FontSize="13" TextColor="Gray" />
-                <HorizontalStackLayout Spacing="8">
-                    <Picker AutomationId="VisionModelPicker"
-                            ItemsSource="{Binding VisionModelOptions}"
-                            SelectedItem="{Binding SelectedVisionModel}"
-                            HorizontalOptions="FillAndExpand" />
-                    <Label AutomationId="VisionStatusLabel"
-                           Text="{Binding VisionStatus}"
-                           VerticalOptions="Center" FontSize="13" />
-                </HorizontalStackLayout>
-
-                <Label Text="Transcription Model" FontSize="13" TextColor="Gray" />
-                <HorizontalStackLayout Spacing="8">
-                    <Picker AutomationId="TranscriptionModelPicker"
-                            ItemsSource="{Binding TranscriptionModelOptions}"
-                            SelectedItem="{Binding SelectedTranscriptionModel}"
-                            HorizontalOptions="FillAndExpand" />
-                    <Label AutomationId="TranscriptionStatusLabel"
-                           Text="{Binding TranscriptionStatus}"
-                           VerticalOptions="Center" FontSize="13" />
-                </HorizontalStackLayout>
-            </VerticalStackLayout>
-
-            <!-- SECTION: Azure Deployments (Azure only) -->
-            <VerticalStackLayout Spacing="12" IsVisible="{Binding IsAzure}">
-                <Label Text="Azure Deployments" FontSize="18" FontAttributes="Bold" Margin="0,8,0,0" />
-
-                <Label Text="Endpoint" FontSize="13" TextColor="Gray" />
-                <Entry AutomationId="AzureEndpointEntry"
-                       Text="{Binding AzureEndpoint}"
-                       Placeholder="https://your-resource.cognitiveservices.azure.com" />
-
-                <Label Text="API Version" FontSize="13" TextColor="Gray" />
-                <Entry AutomationId="AzureApiVersionEntry"
-                       Text="{Binding AzureApiVersion}"
-                       Placeholder="2025-04-01-preview" />
-
-                <Label Text="Realtime Deployment" FontSize="13" TextColor="Gray" />
-                <HorizontalStackLayout Spacing="8">
-                    <Entry AutomationId="AzureRealtimeDeploymentEntry"
-                           Text="{Binding AzureRealtimeDeployment}"
-                           Placeholder="my-realtime-deployment"
-                           HorizontalOptions="FillAndExpand" />
-                    <Label Text="{Binding RealtimeStatus}"
-                           VerticalOptions="Center" FontSize="13" />
-                </HorizontalStackLayout>
-
-                <Label Text="Chat Deployment" FontSize="13" TextColor="Gray" />
-                <HorizontalStackLayout Spacing="8">
-                    <Entry AutomationId="AzureChatDeploymentEntry"
-                           Text="{Binding AzureChatDeployment}"
-                           Placeholder="my-chat-deployment"
-                           HorizontalOptions="FillAndExpand" />
-                    <Label Text="{Binding ChatStatus}"
-                           VerticalOptions="Center" FontSize="13" />
-                </HorizontalStackLayout>
-
-                <Label Text="Vision Deployment" FontSize="13" TextColor="Gray" />
-                <HorizontalStackLayout Spacing="8">
-                    <Entry AutomationId="AzureVisionDeploymentEntry"
-                           Text="{Binding AzureVisionDeployment}"
-                           Placeholder="my-vision-deployment"
-                           HorizontalOptions="FillAndExpand" />
-                    <Label Text="{Binding VisionStatus}"
-                           VerticalOptions="Center" FontSize="13" />
-                </HorizontalStackLayout>
-
-
-            </VerticalStackLayout>
-
-            <!-- SECTION: Voice -->
-            <Label Text="Voice Settings" FontSize="18" FontAttributes="Bold" Margin="0,8,0,0" />
-
-            <Label Text="Voice" FontSize="13" TextColor="Gray" />
-            <Picker AutomationId="VoicePicker"
-                    ItemsSource="{Binding VoiceOptions}"
-                    SelectedItem="{Binding SelectedVoice}" />
-
-            <Label Text="Turn Detection" FontSize="13" TextColor="Gray" />
-            <Picker AutomationId="TurnDetectionPicker"
-                    ItemsSource="{Binding TurnDetectionOptions}"
-                    SelectedItem="{Binding SelectedTurnDetection}" />
-
-            <Label Text="Noise Reduction" FontSize="13" TextColor="Gray" />
-            <Picker AutomationId="NoiseReductionPicker"
-                    ItemsSource="{Binding NoiseReductionOptions}"
-                    SelectedItem="{Binding SelectedNoiseReduction}" />
-
-            <!-- SECTION: System Prompt -->
-            <Label Text="System Instructions" FontSize="18" FontAttributes="Bold" Margin="0,8,0,0" />
-            <Editor AutomationId="SystemInstructionsEditor"
-                    Text="{Binding SystemInstructions}"
-                    HeightRequest="100"
-                    Placeholder="You are a helpful assistant." />
-
-            <!-- SECTION: API Key -->
-            <Label Text="API Key" FontSize="18" FontAttributes="Bold" Margin="0,8,0,0" />
-            <HorizontalStackLayout Spacing="8">
-                <Entry AutomationId="ApiKeyDisplay"
-                       Text="{Binding ApiKeyDisplay}"
-                       IsPassword="{Binding IsKeyVisible, Converter={StaticResource InvertBoolConverter}}"
-                       IsReadOnly="True"
-                       HorizontalOptions="FillAndExpand"
-                       WidthRequest="200" />
-                <Button AutomationId="ToggleKeyVisibilityButton"
-                        Text="{Binding KeyToggleText}"
-                        Command="{Binding ToggleKeyVisibilityCommand}"
-                        WidthRequest="60" Padding="4"
-                        BackgroundColor="{AppThemeBinding Light=#E0E0E0, Dark=#333}"
-                        TextColor="{AppThemeBinding Light=#333, Dark=#E0E0E0}" />
-                <Button AutomationId="ChangeApiKeyButton"
-                        Text="Change" Command="{Binding ChangeApiKeyCommand}"
-                        BackgroundColor="{AppThemeBinding Light=#512BD4, Dark=#7C4DFF}"
-                        TextColor="White" />
-                <Button AutomationId="ClearApiKeyButton"
-                        Text="Clear" Command="{Binding ClearApiKeyCommand}"
-                        BackgroundColor="{AppThemeBinding Light=#E0E0E0, Dark=#333}"
-                        TextColor="{AppThemeBinding Light=#333, Dark=#E0E0E0}" />
-            </HorizontalStackLayout>
-
-            <!-- SECTION: Test Connection -->
-            <HorizontalStackLayout Spacing="8" Margin="0,4,0,0">
-                <Button AutomationId="TestConnectionButton"
-                        Text="Test Connection"
-                        Command="{Binding TestConnectionCommand}"
-                        IsEnabled="{Binding IsTesting, Converter={StaticResource InvertBoolConverter}}"
-                        BackgroundColor="{AppThemeBinding Light=#512BD4, Dark=#7C4DFF}"
-                        TextColor="White" />
-                <Label AutomationId="ConnectionStatusLabel"
-                       Text="{Binding ConnectionStatus}"
-                       VerticalOptions="Center"
-                       FontSize="13" />
-            </HorizontalStackLayout>
-
-            <!-- SECTION: Debug -->
-            <Label Text="Debug" FontSize="18" FontAttributes="Bold" Margin="0,8,0,0" />
-
-            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
-                <Label Text="Debug Mode" VerticalOptions="Center" Grid.Row="0" Grid.Column="0" />
-                <Switch AutomationId="DebugModeSwitch" IsToggled="{Binding DebugMode}" Grid.Row="0" Grid.Column="1" />
-
-                <Label Text="Show Token Counts" VerticalOptions="Center" Grid.Row="1" Grid.Column="0" />
-                <Switch AutomationId="ShowTokenCountsSwitch" IsToggled="{Binding ShowTokenCounts}" Grid.Row="1" Grid.Column="1" />
-
-                <Label Text="Show Cost Estimate" VerticalOptions="Center" Grid.Row="2" Grid.Column="0" />
-                <Switch AutomationId="ShowCostEstimateSwitch" IsToggled="{Binding ShowCostEstimate}" Grid.Row="2" Grid.Column="1" />
-            </Grid>
-
-            <!-- SECTION: Tool Settings -->
-            <Label Text="Tool Settings" FontSize="18" FontAttributes="Bold" Margin="0,16,0,0" />
-            <Label Text="Configure individual tool behavior." FontSize="12" TextColor="Gray" />
-
-            <CollectionView ItemsSource="{Binding ToolSettingsSections}"
-                            SelectionMode="None">
-                <CollectionView.ItemTemplate>
-                    <DataTemplate x:DataType="vm:ToolSettingsSection">
-                        <VerticalStackLayout Padding="0,12,0,0">
-                            <Label Text="{Binding DisplayName}" FontSize="15" FontAttributes="Bold" />
-                            <Label Text="{Binding Description}" FontSize="12" TextColor="Gray" Margin="0,0,0,4" />
-                            <CollectionView ItemsSource="{Binding Items}"
-                                            SelectionMode="None">
-                                <CollectionView.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:ToolSettingItem">
-                                        <Grid ColumnDefinitions="*,Auto" Padding="0,4">
-                                            <Label Text="{Binding Label}" VerticalOptions="Center" />
-                                            <Switch IsToggled="{Binding BoolValue}"
-                                                    IsVisible="{Binding IsBoolean}"
-                                                    Grid.Column="1" />
-                                            <Entry Text="{Binding StringValue}"
-                                                   IsVisible="{Binding IsInteger}"
-                                                   Keyboard="Numeric"
-                                                   WidthRequest="80"
-                                                   Grid.Column="1" />
-                                            <Entry Text="{Binding StringValue}"
-                                                   IsVisible="{Binding IsText}"
-                                                   WidthRequest="200"
-                                                   Grid.Column="1" />
-                                        </Grid>
-                                    </DataTemplate>
-                                </CollectionView.ItemTemplate>
-                            </CollectionView>
-                        </VerticalStackLayout>
-                    </DataTemplate>
-                </CollectionView.ItemTemplate>
-            </CollectionView>
+            <Button AutomationId="AdvancedSettingsCard"
+                    Text="⚙  Advanced — Debug, diagnostics, tools"
+                    Clicked="OnAdvancedTapped"
+                    BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#2A2A2A}"
+                    TextColor="{AppThemeBinding Light=#333333, Dark=#E0E0E0}"
+                    FontSize="14"
+                    Padding="16"
+                    CornerRadius="8"
+                    HorizontalOptions="Fill"
+                    HeightRequest="56" />
 
         </VerticalStackLayout>
     </ScrollView>
-
 </ContentPage>

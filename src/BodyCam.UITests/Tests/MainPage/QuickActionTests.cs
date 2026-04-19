@@ -52,4 +52,22 @@ public class QuickActionTests
         // Ask button has no CanAct binding, should always be enabled
         Page.AskButton.AssertEnabled(true);
     }
+
+    [Fact]
+    public void LookButton_Click_DoesNotThrow()
+    {
+        Page.LookButton.Click();
+    }
+
+    [Fact]
+    public void ReadButton_Click_DoesNotThrow()
+    {
+        Page.ReadButton.Click();
+    }
+
+    [Fact]
+    public void PhotoButton_Click_DoesNotThrow()
+    {
+        Page.PhotoButton.Click();
+    }
 }

@@ -1,3 +1,4 @@
+using BodyCam.Tests.TestInfrastructure;
 using BodyCam.Agents;
 using BodyCam.Models;
 using BodyCam.Orchestration;
@@ -11,6 +12,7 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
+using OpenAI.Realtime;
 
 namespace BodyCam.Tests.Orchestration;
 
@@ -23,7 +25,7 @@ public class OrchestratorWakeWordTests
         var audioOut = Substitute.For<IAudioOutputService>();
         wakeWord = Substitute.For<IWakeWordService>();
 
-        var voiceIn = new VoiceInputAgent(audioIn);
+        var voiceIn = new VoiceInputAgent(audioIn, NullLogger<VoiceInputAgent>.Instance);
         var chatClient = Substitute.For<IChatClient>();
         var conversation = new ConversationAgent(chatClient, new AppSettings());
         var voiceOut = new VoiceOutputAgent(audioOut);
@@ -52,14 +54,9 @@ public class OrchestratorWakeWordTests
         var loggerProvider = new InAppLoggerProvider(sink, LogLevel.Debug);
         var loggerFactory = new LoggerFactory([loggerProvider]);
         var logger = loggerFactory.CreateLogger<AgentOrchestrator>();
-        var mafRealtimeClient = Substitute.For<Microsoft.Extensions.AI.IRealtimeClient>();
-        var mockSession = Substitute.For<Microsoft.Extensions.AI.IRealtimeClientSession>();
-        mafRealtimeClient.CreateSessionAsync(
-            Arg.Any<Microsoft.Extensions.AI.RealtimeSessionOptions>(),
-            Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult(mockSession));
+        var realtimeClient = new StubRealtimeClient();
 
-        return new AgentOrchestrator(voiceIn, conversation, voiceOut, vision, mafRealtimeClient, settingsService, new AppSettings(), dispatcher, wakeWordInstance, micCoordinator, cameraManager, aec, logger);
+        return new AgentOrchestrator(voiceIn, conversation, voiceOut, vision, realtimeClient, settingsService, new AppSettings(), dispatcher, wakeWordInstance, micCoordinator, cameraManager, aec, logger);
     }
 
     [Fact]

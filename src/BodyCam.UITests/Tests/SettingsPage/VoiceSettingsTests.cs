@@ -13,9 +13,9 @@ public class VoiceSettingsTests
     public VoiceSettingsTests(BodyCamFixture fixture)
     {
         _fixture = fixture;
-        _fixture.NavigateToSettings();
-        _fixture.SettingsPage.VoiceSettingsCard.Click();
-        _fixture.VoiceSettingsPage.WaitReady(10000);
+        _fixture.NavigateToSettingsSubPage(
+            () => _fixture.SettingsPage.VoiceSettingsCard.Click(),
+            _fixture.VoiceSettingsPage);
     }
 
     [Fact]
@@ -41,5 +41,11 @@ public class VoiceSettingsTests
     {
         var selected = Page.VoicePicker.GetSelectedText();
         Assert.False(string.IsNullOrEmpty(selected));
+    }
+
+    [Fact]
+    public void SystemInstructionsEditor_Exists()
+    {
+        Page.SystemInstructionsEditor.AssertExists();
     }
 }

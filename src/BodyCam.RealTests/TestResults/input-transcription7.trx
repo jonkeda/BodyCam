@@ -1,0 +1,298 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="32e6f61c-7a50-4af6-9c26-6412b0c5fd3e" name="JONK435491@LT-25-195 2026-04-19 23:27:12" runUser="ecs\JONK435491" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-04-19T23:27:12.5141770+02:00" queuing="2026-04-19T23:27:12.5141772+02:00" start="2026-04-19T23:27:09.2102214+02:00" finish="2026-04-19T23:27:13.4342875+02:00" />
+  <TestSettings name="default" id="f73d5a1a-0c3e-4774-850c-8313626a6f8c">
+    <Deployment runDeploymentRoot="JONK435491_LT-25-195_2026-04-19_23_27_12" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="165e82df-bfb2-45c2-b69d-4e4abbdbf1f3" testId="8a994139-aa5a-d331-a81d-0c759147da6a" testName="BodyCam.RealTests.Pipeline.TranscriptDiagnosticTests.SendAudio_InputAudioTranscriptionCompleted_Fires(transcriptionModel: &quot;whisper-1&quot;)" computerName="LT-25-195" duration="00:00:01.3039627" startTime="2026-04-19T23:27:11.0396833+02:00" endTime="2026-04-19T23:27:12.3353907+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="165e82df-bfb2-45c2-b69d-4e4abbdbf1f3">
+      <Output>
+        <StdOut>Provider: Azure&#xD;
+TranscriptionModel: whisper-1&#xD;
+AllowInterruption: false&#xD;
+Session created&#xD;
+Audio file: 110400 bytes (2.3s at 24kHz PCM16)&#xD;
+Sent 23 audio chunks&#xD;
+  [1] RealtimeServerMessage Type=RawContentOnly Kind=session.created SdkType=RealtimeServerUpdateSessionCreated&#xD;
+  [2] RealtimeServerMessage Type=RawContentOnly Kind=session.updated SdkType=RealtimeServerUpdateSessionUpdated&#xD;
+  [3] RealtimeServerMessage Type=RawContentOnly Kind=input_audio_buffer.speech_started SdkType=RealtimeServerUpdateInputAudioBufferSpeechStarted&#xD;
+  [4] RealtimeServerMessage Type=RawContentOnly Kind=input_audio_buffer.speech_stopped SdkType=RealtimeServerUpdateInputAudioBufferSpeechStopped&#xD;
+  [5] RealtimeServerMessage Type=RawContentOnly Kind=input_audio_buffer.committed SdkType=RealtimeServerUpdateInputAudioBufferCommitted&#xD;
+  [6] ResponseOutputItemRealtimeServerMessage Type=ConversationItemAdded Kind=conversation.item.added SdkType=RealtimeServerUpdateConversationItemAdded&#xD;
+  [7] ResponseOutputItemRealtimeServerMessage Type=ConversationItemDone Kind=conversation.item.done SdkType=RealtimeServerUpdateConversationItemDone&#xD;
+  [8] ResponseCreatedRealtimeServerMessage Type=ResponseCreated Kind=response.created SdkType=RealtimeServerUpdateResponseCreated&#xD;
+  [9] RealtimeServerMessage Type=RawContentOnly Kind=input_audio_buffer.speech_started SdkType=RealtimeServerUpdateInputAudioBufferSpeechStarted&#xD;
+  [10] ResponseOutputItemRealtimeServerMessage Type=ResponseOutputItemAdded Kind=response.output_item.added SdkType=RealtimeServerUpdateResponseOutputItemAdded&#xD;
+  [11] ResponseOutputItemRealtimeServerMessage Type=ConversationItemAdded Kind=conversation.item.added SdkType=RealtimeServerUpdateConversationItemAdded&#xD;
+  [12] RealtimeServerMessage Type=RawContentOnly Kind=response.content_part.added SdkType=RealtimeServerUpdateResponseContentPartAdded&#xD;
+  [13] AI TranscriptDelta: "Hi"&#xD;
+  [14] AI TranscriptDelta: " there"&#xD;
+  [15] AI TranscriptDelta: "!"&#xD;
+  [16] RealtimeServerMessage Type=RawContentOnly Kind=input_audio_buffer.speech_stopped SdkType=RealtimeServerUpdateInputAudioBufferSpeechStopped&#xD;
+  [17] RealtimeServerMessage Type=RawContentOnly Kind=input_audio_buffer.committed SdkType=RealtimeServerUpdateInputAudioBufferCommitted&#xD;
+  [18] ResponseOutputItemRealtimeServerMessage Type=ConversationItemAdded Kind=conversation.item.added SdkType=RealtimeServerUpdateConversationItemAdded&#xD;
+  [19] ResponseOutputItemRealtimeServerMessage Type=ConversationItemDone Kind=conversation.item.done SdkType=RealtimeServerUpdateConversationItemDone&#xD;
+  [21] AI TranscriptDelta: " How"&#xD;
+  [22] AI TranscriptDelta: " can"&#xD;
+  [23] AI TranscriptDelta: " I"&#xD;
+  [24] AI TranscriptDelta: " help"&#xD;
+  [25] AI TranscriptDelta: " you"&#xD;
+  [27] InputAudioTranscriptionRealtimeServerMessage Type=InputAudioTranscriptionDelta Kind=conversation.item.input_audio_transcription.delta SdkType=RealtimeServerUpdateConversationItemInputAudioTranscriptionDelta&#xD;
+  [28] ERROR: Conversation already has an active response in progress: resp_DWTxXrqQ72hMbRtd2CCHx. Wait until the response is finished before creating a new one.&#xD;
+  [29] INPUT TRANSCRIPTION: "Hello."&#xD;
+  [31] AI TranscriptDelta: " today"&#xD;
+  [32] AI TranscriptDelta: "?"&#xD;
+  [36] OutputTextAudioRealtimeServerMessage Type=OutputAudioDone Kind=response.output_audio.done SdkType=RealtimeServerUpdateResponseOutputAudioDone&#xD;
+  [37] AI TranscriptDone: "Hi there! How can I help you today?"&#xD;
+  [38] RealtimeServerMessage Type=RawContentOnly Kind=response.content_part.done SdkType=RealtimeServerUpdateResponseContentPartDone&#xD;
+  [39] ResponseOutputItemRealtimeServerMessage Type=ConversationItemDone Kind=conversation.item.done SdkType=RealtimeServerUpdateConversationItemDone&#xD;
+  [40] ResponseOutputItemRealtimeServerMessage Type=ResponseOutputItemDone Kind=response.output_item.done SdkType=RealtimeServerUpdateResponseOutputItemDone&#xD;
+  [41] ResponseDone&#xD;
+
+=== Results ===&#xD;
+Total messages: 41&#xD;
+User transcription: "Hello."&#xD;
+AI transcript deltas: 10 =&gt; "Hi there! How can I help you today?"&#xD;
+AI transcript done: "Hi there! How can I help you today?"&#xD;
+AI audio bytes: 103200</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="965e21a5-3ead-4118-83b1-4a190c9b2dc1" testId="4bc89237-b3b2-10e7-38a2-12c66808b0d8" testName="BodyCam.RealTests.Pipeline.TranscriptDiagnosticTests.SendAudio_InputAudioTranscriptionCompleted_Fires(transcriptionModel: null)" computerName="LT-25-195" duration="00:00:01.0470603" startTime="2026-04-19T23:27:12.3362214+02:00" endTime="2026-04-19T23:27:13.3827661+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="965e21a5-3ead-4118-83b1-4a190c9b2dc1">
+      <Output>
+        <StdOut>Provider: Azure&#xD;
+TranscriptionModel: (default)&#xD;
+AllowInterruption: false&#xD;
+Session created&#xD;
+Audio file: 110400 bytes (2.3s at 24kHz PCM16)&#xD;
+Sent 23 audio chunks&#xD;
+  [1] RealtimeServerMessage Type=RawContentOnly Kind=session.created SdkType=RealtimeServerUpdateSessionCreated&#xD;
+  [2] ERROR: Missing required parameter: 'session.audio.input.transcription.model'.&#xD;
+  [3] RealtimeServerMessage Type=RawContentOnly Kind=input_audio_buffer.speech_started SdkType=RealtimeServerUpdateInputAudioBufferSpeechStarted&#xD;
+  [4] RealtimeServerMessage Type=RawContentOnly Kind=input_audio_buffer.speech_stopped SdkType=RealtimeServerUpdateInputAudioBufferSpeechStopped&#xD;
+  [5] RealtimeServerMessage Type=RawContentOnly Kind=input_audio_buffer.committed SdkType=RealtimeServerUpdateInputAudioBufferCommitted&#xD;
+  [6] ResponseOutputItemRealtimeServerMessage Type=ConversationItemAdded Kind=conversation.item.added SdkType=RealtimeServerUpdateConversationItemAdded&#xD;
+  [7] ResponseOutputItemRealtimeServerMessage Type=ConversationItemDone Kind=conversation.item.done SdkType=RealtimeServerUpdateConversationItemDone&#xD;
+  [8] ResponseCreatedRealtimeServerMessage Type=ResponseCreated Kind=response.created SdkType=RealtimeServerUpdateResponseCreated&#xD;
+  [9] RealtimeServerMessage Type=RawContentOnly Kind=input_audio_buffer.speech_started SdkType=RealtimeServerUpdateInputAudioBufferSpeechStarted&#xD;
+  [10] ResponseDone&#xD;
+
+=== Results ===&#xD;
+Total messages: 10&#xD;
+User transcription: ""&#xD;
+AI transcript deltas: 0 =&gt; ""&#xD;
+AI transcript done: ""&#xD;
+AI audio bytes: 0</StdOut>
+        <ErrorInfo>
+          <Message>Expected userTranscription not to be &lt;null&gt; or empty because TranscriptionOptions should cause the server to transcribe the user's audio input, but found &lt;null&gt;.</Message>
+          <StackTrace>   at FluentAssertions.Primitives.StringAssertions`1.NotBeNullOrEmpty(String because, Object[] becauseArgs)&#xD;
+   at BodyCam.RealTests.Pipeline.TranscriptDiagnosticTests.SendAudio_InputAudioTranscriptionCompleted_Fires(String transcriptionModel) in E:\repos\Private\BodyCam\src\BodyCam.RealTests\Pipeline\TranscriptDiagnosticTests.cs:line 485&#xD;
+--- End of stack trace from previous location ---</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="5dd24fe2-7c57-4b25-970a-4396c29938da" testId="1379bab3-af64-f7a7-5556-68367c82d9b1" testName="BodyCam.RealTests.Pipeline.TranscriptDiagnosticTests.SendAudio_InputAudioTranscriptionCompleted_Fires(transcriptionModel: &quot;gpt-4o-mini-transcribe&quot;)" computerName="LT-25-195" duration="00:00:01.3719219" startTime="2026-04-19T23:27:09.6472508+02:00" endTime="2026-04-19T23:27:11.0294170+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="5dd24fe2-7c57-4b25-970a-4396c29938da">
+      <Output>
+        <StdOut>Provider: Azure&#xD;
+TranscriptionModel: gpt-4o-mini-transcribe&#xD;
+AllowInterruption: false&#xD;
+Session created&#xD;
+Audio file: 110400 bytes (2.3s at 24kHz PCM16)&#xD;
+Sent 23 audio chunks&#xD;
+  [1] RealtimeServerMessage Type=RawContentOnly Kind=session.created SdkType=RealtimeServerUpdateSessionCreated&#xD;
+  [2] RealtimeServerMessage Type=RawContentOnly Kind=session.updated SdkType=RealtimeServerUpdateSessionUpdated&#xD;
+  [3] RealtimeServerMessage Type=RawContentOnly Kind=input_audio_buffer.speech_started SdkType=RealtimeServerUpdateInputAudioBufferSpeechStarted&#xD;
+  [4] RealtimeServerMessage Type=RawContentOnly Kind=input_audio_buffer.speech_stopped SdkType=RealtimeServerUpdateInputAudioBufferSpeechStopped&#xD;
+  [5] RealtimeServerMessage Type=RawContentOnly Kind=input_audio_buffer.committed SdkType=RealtimeServerUpdateInputAudioBufferCommitted&#xD;
+  [6] ResponseOutputItemRealtimeServerMessage Type=ConversationItemAdded Kind=conversation.item.added SdkType=RealtimeServerUpdateConversationItemAdded&#xD;
+  [7] ResponseOutputItemRealtimeServerMessage Type=ConversationItemDone Kind=conversation.item.done SdkType=RealtimeServerUpdateConversationItemDone&#xD;
+  [8] ResponseCreatedRealtimeServerMessage Type=ResponseCreated Kind=response.created SdkType=RealtimeServerUpdateResponseCreated&#xD;
+  [9] RealtimeServerMessage Type=RawContentOnly Kind=input_audio_buffer.speech_started SdkType=RealtimeServerUpdateInputAudioBufferSpeechStarted&#xD;
+  [10] INPUT TRANSCRIPTION FAILED!&#xD;
+    ErrorContent.Message = Input transcription failed for item 'item_DWTxWrnlBUhYwjU3axeWi'.&#xD;
+    ErrorContent.ErrorCode = &#xD;
+    ErrorContent.Details = &#xD;
+  [11] RealtimeServerMessage Type=RawContentOnly Kind=input_audio_buffer.speech_stopped SdkType=RealtimeServerUpdateInputAudioBufferSpeechStopped&#xD;
+  [12] RealtimeServerMessage Type=RawContentOnly Kind=input_audio_buffer.committed SdkType=RealtimeServerUpdateInputAudioBufferCommitted&#xD;
+  [13] ResponseOutputItemRealtimeServerMessage Type=ConversationItemAdded Kind=conversation.item.added SdkType=RealtimeServerUpdateConversationItemAdded&#xD;
+  [14] ResponseOutputItemRealtimeServerMessage Type=ConversationItemDone Kind=conversation.item.done SdkType=RealtimeServerUpdateConversationItemDone&#xD;
+  [15] INPUT TRANSCRIPTION FAILED!&#xD;
+    ErrorContent.Message = Input transcription failed for item 'item_DWTxWYThWDPRdpgnsXURx'.&#xD;
+    ErrorContent.ErrorCode = &#xD;
+    ErrorContent.Details = &#xD;
+  [16] ERROR: Conversation already has an active response in progress: resp_DWTxWwMge3YWBlsHUPqUm. Wait until the response is finished before creating a new one.&#xD;
+  [17] ResponseOutputItemRealtimeServerMessage Type=ResponseOutputItemAdded Kind=response.output_item.added SdkType=RealtimeServerUpdateResponseOutputItemAdded&#xD;
+  [18] ResponseOutputItemRealtimeServerMessage Type=ConversationItemAdded Kind=conversation.item.added SdkType=RealtimeServerUpdateConversationItemAdded&#xD;
+  [19] RealtimeServerMessage Type=RawContentOnly Kind=response.content_part.added SdkType=RealtimeServerUpdateResponseContentPartAdded&#xD;
+  [20] AI TranscriptDelta: "Hi"&#xD;
+  [21] AI TranscriptDelta: " there"&#xD;
+  [22] AI TranscriptDelta: "!"&#xD;
+  [24] AI TranscriptDelta: " How"&#xD;
+  [25] AI TranscriptDelta: " can"&#xD;
+  [26] AI TranscriptDelta: " I"&#xD;
+  [27] AI TranscriptDelta: " assist"&#xD;
+  [30] AI TranscriptDelta: " you"&#xD;
+  [31] AI TranscriptDelta: " today"&#xD;
+  [32] AI TranscriptDelta: "?"&#xD;
+  [38] OutputTextAudioRealtimeServerMessage Type=OutputAudioDone Kind=response.output_audio.done SdkType=RealtimeServerUpdateResponseOutputAudioDone&#xD;
+  [39] AI TranscriptDone: "Hi there! How can I assist you today?"&#xD;
+  [40] RealtimeServerMessage Type=RawContentOnly Kind=response.content_part.done SdkType=RealtimeServerUpdateResponseContentPartDone&#xD;
+  [41] ResponseOutputItemRealtimeServerMessage Type=ConversationItemDone Kind=conversation.item.done SdkType=RealtimeServerUpdateConversationItemDone&#xD;
+  [42] ResponseOutputItemRealtimeServerMessage Type=ResponseOutputItemDone Kind=response.output_item.done SdkType=RealtimeServerUpdateResponseOutputItemDone&#xD;
+  [43] ResponseDone&#xD;
+
+=== Results ===&#xD;
+Total messages: 43&#xD;
+User transcription: ""&#xD;
+AI transcript deltas: 10 =&gt; "Hi there! How can I assist you today?"&#xD;
+AI transcript done: "Hi there! How can I assist you today?"&#xD;
+AI audio bytes: 132000</StdOut>
+        <ErrorInfo>
+          <Message>Expected userTranscription not to be &lt;null&gt; or empty because TranscriptionOptions should cause the server to transcribe the user's audio input, but found &lt;null&gt;.</Message>
+          <StackTrace>   at FluentAssertions.Primitives.StringAssertions`1.NotBeNullOrEmpty(String because, Object[] becauseArgs)&#xD;
+   at BodyCam.RealTests.Pipeline.TranscriptDiagnosticTests.SendAudio_InputAudioTranscriptionCompleted_Fires(String transcriptionModel) in E:\repos\Private\BodyCam\src\BodyCam.RealTests\Pipeline\TranscriptDiagnosticTests.cs:line 485&#xD;
+--- End of stack trace from previous location ---</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="BodyCam.RealTests.Pipeline.TranscriptDiagnosticTests.SendAudio_InputAudioTranscriptionCompleted_Fires(transcriptionModel: null)" storage="e:\repos\private\bodycam\src\bodycam.realtests\bin\debug\net10.0-windows10.0.19041.0\bodycam.realtests.dll" id="4bc89237-b3b2-10e7-38a2-12c66808b0d8">
+      <Execution id="965e21a5-3ead-4118-83b1-4a190c9b2dc1" />
+      <TestMethod codeBase="E:\repos\Private\BodyCam\src\BodyCam.RealTests\bin\Debug\net10.0-windows10.0.19041.0\BodyCam.RealTests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="BodyCam.RealTests.Pipeline.TranscriptDiagnosticTests" name="SendAudio_InputAudioTranscriptionCompleted_Fires" />
+    </UnitTest>
+    <UnitTest name="BodyCam.RealTests.Pipeline.TranscriptDiagnosticTests.SendAudio_InputAudioTranscriptionCompleted_Fires(transcriptionModel: &quot;whisper-1&quot;)" storage="e:\repos\private\bodycam\src\bodycam.realtests\bin\debug\net10.0-windows10.0.19041.0\bodycam.realtests.dll" id="8a994139-aa5a-d331-a81d-0c759147da6a">
+      <Execution id="165e82df-bfb2-45c2-b69d-4e4abbdbf1f3" />
+      <TestMethod codeBase="E:\repos\Private\BodyCam\src\BodyCam.RealTests\bin\Debug\net10.0-windows10.0.19041.0\BodyCam.RealTests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="BodyCam.RealTests.Pipeline.TranscriptDiagnosticTests" name="SendAudio_InputAudioTranscriptionCompleted_Fires" />
+    </UnitTest>
+    <UnitTest name="BodyCam.RealTests.Pipeline.TranscriptDiagnosticTests.SendAudio_InputAudioTranscriptionCompleted_Fires(transcriptionModel: &quot;gpt-4o-mini-transcribe&quot;)" storage="e:\repos\private\bodycam\src\bodycam.realtests\bin\debug\net10.0-windows10.0.19041.0\bodycam.realtests.dll" id="1379bab3-af64-f7a7-5556-68367c82d9b1">
+      <Execution id="5dd24fe2-7c57-4b25-970a-4396c29938da" />
+      <TestMethod codeBase="E:\repos\Private\BodyCam\src\BodyCam.RealTests\bin\Debug\net10.0-windows10.0.19041.0\BodyCam.RealTests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="BodyCam.RealTests.Pipeline.TranscriptDiagnosticTests" name="SendAudio_InputAudioTranscriptionCompleted_Fires" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="8a994139-aa5a-d331-a81d-0c759147da6a" executionId="165e82df-bfb2-45c2-b69d-4e4abbdbf1f3" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="4bc89237-b3b2-10e7-38a2-12c66808b0d8" executionId="965e21a5-3ead-4118-83b1-4a190c9b2dc1" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="1379bab3-af64-f7a7-5556-68367c82d9b1" executionId="5dd24fe2-7c57-4b25-970a-4396c29938da" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Failed">
+    <Counters total="3" executed="3" passed="1" failed="2" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.5+1b188a7b0a (64-bit .NET 10.0.5)&#xD;
+[xUnit.net 00:00:00.06]   Discovering: BodyCam.RealTests&#xD;
+[xUnit.net 00:00:00.10]   Discovered:  BodyCam.RealTests&#xD;
+[xUnit.net 00:00:00.11]   Starting:    BodyCam.RealTests&#xD;
+     Warning:&#xD;
+     The component "Fluent Assertions" is governed by the rules defined in the Xceed License Agreement and&#xD;
+     the Xceed Fluent Assertions Community License. You may use Fluent Assertions free of charge for&#xD;
+     non-commercial use only. An active subscription is required to use Fluent Assertions for commercial use.&#xD;
+     Please contact Xceed Sales mailto:sales@xceed.com to acquire a subscription at a very low cost.&#xD;
+     A paid commercial license supports the development and continued increasing support of&#xD;
+     Fluent Assertions users under both commercial and community licenses. Help us&#xD;
+     keep Fluent Assertions at the forefront of unit testing.&#xD;
+     For more information, visit https://xceed.com/products/unit-testing/fluent-assertions/&#xD;
+[xUnit.net 00:00:01.51]       Expected userTranscription not to be &lt;null&gt; or empty because TranscriptionOptions should cause the server to transcribe the user's audio input, but found &lt;null&gt;.&#xD;
+[xUnit.net 00:00:01.51]       Stack Trace:&#xD;
+[xUnit.net 00:00:01.51]            at FluentAssertions.Primitives.StringAssertions`1.NotBeNullOrEmpty(String because, Object[] becauseArgs)&#xD;
+[xUnit.net 00:00:01.51]         E:\repos\Private\BodyCam\src\BodyCam.RealTests\Pipeline\TranscriptDiagnosticTests.cs(485,0): at BodyCam.RealTests.Pipeline.TranscriptDiagnosticTests.SendAudio_InputAudioTranscriptionCompleted_Fires(String transcriptionModel)&#xD;
+[xUnit.net 00:00:01.51]         --- End of stack trace from previous location ---&#xD;
+[xUnit.net 00:00:01.51]       Output:&#xD;
+[xUnit.net 00:00:01.51]         Provider: Azure&#xD;
+[xUnit.net 00:00:01.51]         TranscriptionModel: gpt-4o-mini-transcribe&#xD;
+[xUnit.net 00:00:01.51]         AllowInterruption: false&#xD;
+[xUnit.net 00:00:01.51]         Session created&#xD;
+[xUnit.net 00:00:01.51]         Audio file: 110400 bytes (2.3s at 24kHz PCM16)&#xD;
+[xUnit.net 00:00:01.51]         Sent 23 audio chunks&#xD;
+[xUnit.net 00:00:01.51]           [1] RealtimeServerMessage Type=RawContentOnly Kind=session.created SdkType=RealtimeServerUpdateSessionCreated&#xD;
+[xUnit.net 00:00:01.51]           [2] RealtimeServerMessage Type=RawContentOnly Kind=session.updated SdkType=RealtimeServerUpdateSessionUpdated&#xD;
+[xUnit.net 00:00:01.51]           [3] RealtimeServerMessage Type=RawContentOnly Kind=input_audio_buffer.speech_started SdkType=RealtimeServerUpdateInputAudioBufferSpeechStarted&#xD;
+[xUnit.net 00:00:01.51]           [4] RealtimeServerMessage Type=RawContentOnly Kind=input_audio_buffer.speech_stopped SdkType=RealtimeServerUpdateInputAudioBufferSpeechStopped&#xD;
+[xUnit.net 00:00:01.51]           [5] RealtimeServerMessage Type=RawContentOnly Kind=input_audio_buffer.committed SdkType=RealtimeServerUpdateInputAudioBufferCommitted&#xD;
+[xUnit.net 00:00:01.51]           [6] ResponseOutputItemRealtimeServerMessage Type=ConversationItemAdded Kind=conversation.item.added SdkType=RealtimeServerUpdateConversationItemAdded&#xD;
+[xUnit.net 00:00:01.51]           [7] ResponseOutputItemRealtimeServerMessage Type=ConversationItemDone Kind=conversation.item.done SdkType=RealtimeServerUpdateConversationItemDone&#xD;
+[xUnit.net 00:00:01.51]           [8] ResponseCreatedRealtimeServerMessage Type=ResponseCreated Kind=response.created SdkType=RealtimeServerUpdateResponseCreated&#xD;
+[xUnit.net 00:00:01.51]           [9] RealtimeServerMessage Type=RawContentOnly Kind=input_audio_buffer.speech_started SdkType=RealtimeServerUpdateInputAudioBufferSpeechStarted&#xD;
+[xUnit.net 00:00:01.51]           [10] INPUT TRANSCRIPTION FAILED!&#xD;
+[xUnit.net 00:00:01.51]             ErrorContent.Message = Input transcription failed for item 'item_DWTxWrnlBUhYwjU3axeWi'.&#xD;
+[xUnit.net 00:00:01.51]             ErrorContent.ErrorCode = &#xD;
+[xUnit.net 00:00:01.51]             ErrorContent.Details = &#xD;
+[xUnit.net 00:00:01.51]           [11] RealtimeServerMessage Type=RawContentOnly Kind=input_audio_buffer.speech_stopped SdkType=RealtimeServerUpdateInputAudioBufferSpeechStopped&#xD;
+[xUnit.net 00:00:01.51]           [12] RealtimeServerMessage Type=RawContentOnly Kind=input_audio_buffer.committed SdkType=RealtimeServerUpdateInputAudioBufferCommitted&#xD;
+[xUnit.net 00:00:01.51]           [13] ResponseOutputItemRealtimeServerMessage Type=ConversationItemAdded Kind=conversation.item.added SdkType=RealtimeServerUpdateConversationItemAdded&#xD;
+[xUnit.net 00:00:01.51]           [14] ResponseOutputItemRealtimeServerMessage Type=ConversationItemDone Kind=conversation.item.done SdkType=RealtimeServerUpdateConversationItemDone&#xD;
+[xUnit.net 00:00:01.51]           [15] INPUT TRANSCRIPTION FAILED!&#xD;
+[xUnit.net 00:00:01.51]             ErrorContent.Message = Input transcription failed for item 'item_DWTxWYThWDPRdpgnsXURx'.&#xD;
+[xUnit.net 00:00:01.51]             ErrorContent.ErrorCode = &#xD;
+[xUnit.net 00:00:01.51]             ErrorContent.Details = &#xD;
+[xUnit.net 00:00:01.51]           [16] ERROR: Conversation already has an active response in progress: resp_DWTxWwMge3YWBlsHUPqUm. Wait until the response is finished before creating a new one.&#xD;
+[xUnit.net 00:00:01.51]           [17] ResponseOutputItemRealtimeServerMessage Type=ResponseOutputItemAdded Kind=response.output_item.added SdkType=RealtimeServerUpdateResponseOutputItemAdded&#xD;
+[xUnit.net 00:00:01.51]           [18] ResponseOutputItemRealtimeServerMessage Type=ConversationItemAdded Kind=conversation.item.added SdkType=RealtimeServerUpdateConversationItemAdded&#xD;
+[xUnit.net 00:00:01.51]           [19] RealtimeServerMessage Type=RawContentOnly Kind=response.content_part.added SdkType=RealtimeServerUpdateResponseContentPartAdded&#xD;
+[xUnit.net 00:00:01.51]           [20] AI TranscriptDelta: "Hi"&#xD;
+[xUnit.net 00:00:01.51]           [21] AI TranscriptDelta: " there"&#xD;
+[xUnit.net 00:00:01.51]           [22] AI TranscriptDelta: "!"&#xD;
+[xUnit.net 00:00:01.51]           [24] AI TranscriptDelta: " How"&#xD;
+[xUnit.net 00:00:01.51]           [25] AI TranscriptDelta: " can"&#xD;
+[xUnit.net 00:00:01.51]           [26] AI TranscriptDelta: " I"&#xD;
+[xUnit.net 00:00:01.51]           [27] AI TranscriptDelta: " assist"&#xD;
+[xUnit.net 00:00:01.51]           [30] AI TranscriptDelta: " you"&#xD;
+[xUnit.net 00:00:01.51]           [31] AI TranscriptDelta: " today"&#xD;
+[xUnit.net 00:00:01.51]           [32] AI TranscriptDelta: "?"&#xD;
+[xUnit.net 00:00:01.51]           [38] OutputTextAudioRealtimeServerMessage Type=OutputAudioDone Kind=response.output_audio.done SdkType=RealtimeServerUpdateResponseOutputAudioDone&#xD;
+[xUnit.net 00:00:01.51]           [39] AI TranscriptDone: "Hi there! How can I assist you today?"&#xD;
+[xUnit.net 00:00:01.51]           [40] RealtimeServerMessage Type=RawContentOnly Kind=response.content_part.done SdkType=RealtimeServerUpdateResponseContentPartDone&#xD;
+[xUnit.net 00:00:01.51]           [41] ResponseOutputItemRealtimeServerMessage Type=ConversationItemDone Kind=conversation.item.done SdkType=RealtimeServerUpdateConversationItemDone&#xD;
+[xUnit.net 00:00:01.51]           [42] ResponseOutputItemRealtimeServerMessage Type=ResponseOutputItemDone Kind=response.output_item.done SdkType=RealtimeServerUpdateResponseOutputItemDone&#xD;
+[xUnit.net 00:00:01.51]           [43] ResponseDone&#xD;
+[xUnit.net 00:00:01.51]         
+=== Results ===&#xD;
+[xUnit.net 00:00:01.51]         Total messages: 43&#xD;
+[xUnit.net 00:00:01.51]         User transcription: ""&#xD;
+[xUnit.net 00:00:01.51]         AI transcript deltas: 10 =&gt; "Hi there! How can I assist you today?"&#xD;
+[xUnit.net 00:00:01.51]         AI transcript done: "Hi there! How can I assist you today?"&#xD;
+[xUnit.net 00:00:01.51]         AI audio bytes: 132000&#xD;
+[xUnit.net 00:00:03.86]       Expected userTranscription not to be &lt;null&gt; or empty because TranscriptionOptions should cause the server to transcribe the user's audio input, but found &lt;null&gt;.&#xD;
+[xUnit.net 00:00:03.86]       Stack Trace:&#xD;
+[xUnit.net 00:00:03.86]            at FluentAssertions.Primitives.StringAssertions`1.NotBeNullOrEmpty(String because, Object[] becauseArgs)&#xD;
+[xUnit.net 00:00:03.86]         E:\repos\Private\BodyCam\src\BodyCam.RealTests\Pipeline\TranscriptDiagnosticTests.cs(485,0): at BodyCam.RealTests.Pipeline.TranscriptDiagnosticTests.SendAudio_InputAudioTranscriptionCompleted_Fires(String transcriptionModel)&#xD;
+[xUnit.net 00:00:03.86]         --- End of stack trace from previous location ---&#xD;
+[xUnit.net 00:00:03.86]       Output:&#xD;
+[xUnit.net 00:00:03.86]         Provider: Azure&#xD;
+[xUnit.net 00:00:03.86]         TranscriptionModel: (default)&#xD;
+[xUnit.net 00:00:03.86]         AllowInterruption: false&#xD;
+[xUnit.net 00:00:03.86]         Session created&#xD;
+[xUnit.net 00:00:03.86]         Audio file: 110400 bytes (2.3s at 24kHz PCM16)&#xD;
+[xUnit.net 00:00:03.86]         Sent 23 audio chunks&#xD;
+[xUnit.net 00:00:03.86]           [1] RealtimeServerMessage Type=RawContentOnly Kind=session.created SdkType=RealtimeServerUpdateSessionCreated&#xD;
+[xUnit.net 00:00:03.86]           [2] ERROR: Missing required parameter: 'session.audio.input.transcription.model'.&#xD;
+[xUnit.net 00:00:03.86]           [3] RealtimeServerMessage Type=RawContentOnly Kind=input_audio_buffer.speech_started SdkType=RealtimeServerUpdateInputAudioBufferSpeechStarted&#xD;
+[xUnit.net 00:00:03.86]           [4] RealtimeServerMessage Type=RawContentOnly Kind=input_audio_buffer.speech_stopped SdkType=RealtimeServerUpdateInputAudioBufferSpeechStopped&#xD;
+[xUnit.net 00:00:03.86]           [5] RealtimeServerMessage Type=RawContentOnly Kind=input_audio_buffer.committed SdkType=RealtimeServerUpdateInputAudioBufferCommitted&#xD;
+[xUnit.net 00:00:03.86]           [6] ResponseOutputItemRealtimeServerMessage Type=ConversationItemAdded Kind=conversation.item.added SdkType=RealtimeServerUpdateConversationItemAdded&#xD;
+[xUnit.net 00:00:03.86]           [7] ResponseOutputItemRealtimeServerMessage Type=ConversationItemDone Kind=conversation.item.done SdkType=RealtimeServerUpdateConversationItemDone&#xD;
+[xUnit.net 00:00:03.86]           [8] ResponseCreatedRealtimeServerMessage Type=ResponseCreated Kind=response.created SdkType=RealtimeServerUpdateResponseCreated&#xD;
+[xUnit.net 00:00:03.86]           [9] RealtimeServerMessage Type=RawContentOnly Kind=input_audio_buffer.speech_started SdkType=RealtimeServerUpdateInputAudioBufferSpeechStarted&#xD;
+[xUnit.net 00:00:03.86]           [10] ResponseDone&#xD;
+[xUnit.net 00:00:03.86]         
+=== Results ===&#xD;
+[xUnit.net 00:00:03.86]         Total messages: 10&#xD;
+[xUnit.net 00:00:03.86]         User transcription: ""&#xD;
+[xUnit.net 00:00:03.86]         AI transcript deltas: 0 =&gt; ""&#xD;
+[xUnit.net 00:00:03.86]         AI transcript done: ""&#xD;
+[xUnit.net 00:00:03.86]         AI audio bytes: 0&#xD;
+[xUnit.net 00:00:03.87]   Finished:    BodyCam.RealTests&#xD;
+</StdOut>
+    </Output>
+    <RunInfos>
+      <RunInfo computerName="LT-25-195" outcome="Error" timestamp="2026-04-19T23:27:11.0321433+02:00">
+        <Text>[xUnit.net 00:00:01.51]     BodyCam.RealTests.Pipeline.TranscriptDiagnosticTests.SendAudio_InputAudioTranscriptionCompleted_Fires(transcriptionModel: "gpt-4o-mini-transcribe") [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="LT-25-195" outcome="Error" timestamp="2026-04-19T23:27:13.3834478+02:00">
+        <Text>[xUnit.net 00:00:03.86]     BodyCam.RealTests.Pipeline.TranscriptDiagnosticTests.SendAudio_InputAudioTranscriptionCompleted_Fires(transcriptionModel: null) [FAIL]</Text>
+      </RunInfo>
+    </RunInfos>
+  </ResultSummary>
+</TestRun>

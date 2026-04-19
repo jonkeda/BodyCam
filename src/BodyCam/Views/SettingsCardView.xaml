@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="BodyCam.Views.SettingsCardView">
+
+    <Grid>
+        <!-- Visual card -->
+        <Border StrokeShape="RoundRectangle 12"
+                Stroke="{AppThemeBinding Light=#E0E0E0, Dark=#333333}"
+                BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#2A2A2A}"
+                Padding="16,0"
+                HeightRequest="72">
+            <Grid ColumnDefinitions="48,*">
+                <Label x:Name="IconLabel"
+                       FontSize="24"
+                       VerticalOptions="Center"
+                       HorizontalOptions="Center" />
+                <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="2">
+                    <Label x:Name="TitleLabel"
+                           FontSize="16" FontAttributes="Bold"
+                           TextColor="{AppThemeBinding Light=#333333, Dark=#E0E0E0}" />
+                    <Label x:Name="DescriptionLabel"
+                           FontSize="12"
+                           TextColor="{AppThemeBinding Light=#666666, Dark=#999999}" />
+                </VerticalStackLayout>
+            </Grid>
+        </Border>
+
+        <!-- Transparent overlay Button for FlaUI Invoke pattern -->
+        <Button x:Name="CardButton"
+                Clicked="OnCardClicked"
+                BackgroundColor="Transparent"
+                Opacity="0.01"
+                HeightRequest="72" />
+    </Grid>
+</ContentView>

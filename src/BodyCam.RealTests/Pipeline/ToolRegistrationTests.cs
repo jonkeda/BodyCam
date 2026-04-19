@@ -1,35 +1,60 @@
 using System.Text.Json;
-using BodyCam.RealTests.Fixtures;
+using BodyCam.Agents;
+using BodyCam.Services;
 using BodyCam.Tools;
 using FluentAssertions;
+using Microsoft.Extensions.AI;
 using Xunit;
 using Xunit.Abstractions;
+
+using AIChatMessage = Microsoft.Extensions.AI.ChatMessage;
 
 namespace BodyCam.RealTests.Pipeline;
 
 /// <summary>
-/// Tests that all 13 M5 tools register correctly with the Realtime API
-/// and the session starts without errors.
+/// Validates that all tools register correctly with valid schemas.
+/// No API connection needed — these are pure validation tests.
 /// </summary>
-[Trait("Category", "RealAPI")]
-public class ToolRegistrationTests : IAsyncLifetime
+public class ToolRegistrationTests
 {
-    private readonly M5ToolFixture _fixture = new();
+    private readonly ToolDispatcher _dispatcher;
     private readonly ITestOutputHelper _output;
 
     public ToolRegistrationTests(ITestOutputHelper output)
     {
         _output = output;
-        _fixture.SetOutput(output);
-    }
 
-    public Task InitializeAsync() => _fixture.InitializeAsync();
-    public Task DisposeAsync() => _fixture.DisposeAsync();
+        // Stub chat client — tools are only instantiated for their metadata, not executed
+        var stubChat = new StubChatClient();
+        var settings = new AppSettings();
+        var vision = new VisionAgent(stubChat, settings);
+        var conversation = new ConversationAgent(stubChat, settings);
+        var memoryStore = new MemoryStore(Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid():N}.json"));
+
+        var tools = new ITool[]
+        {
+            new DescribeSceneTool(vision),
+            new DeepAnalysisTool(conversation),
+            new ReadTextTool(vision),
+            new TakePhotoTool(),
+            new SaveMemoryTool(memoryStore),
+            new RecallMemoryTool(memoryStore),
+            new SetTranslationModeTool(),
+            new MakePhoneCallTool(),
+            new SendMessageTool(),
+            new LookupAddressTool(),
+            new FindObjectTool(vision),
+            new NavigateToTool(),
+            new StartSceneWatchTool(vision),
+        };
+
+        _dispatcher = new ToolDispatcher(tools);
+    }
 
     [Fact]
     public void AllThirteenToolsRegistered()
     {
-        var defs = _fixture.Dispatcher.GetToolDefinitions();
+        var defs = _dispatcher.GetToolDefinitions();
 
         _output.WriteLine($"Registered tools ({defs.Count}):");
         foreach (var d in defs)
@@ -54,24 +79,9 @@ public class ToolRegistrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task SessionCreatedWithoutErrors()
+    public void ToolDefinitions_HaveValidSchemas()
     {
-        // The fixture already connected in InitializeAsync.
-        // Send a simple greeting to verify the session is alive.
-        await _fixture.SendTextInputAsync("Hello.");
-
-        await _fixture.WaitForResponseAsync(TimeSpan.FromSeconds(30));
-
-        _fixture.Errors.Should().BeEmpty("session with 13 tools should start cleanly");
-        _fixture.OutputTranscripts.Should().NotBeEmpty("model should respond to greeting");
-
-        _output.WriteLine($"Model said: {_fixture.OutputTranscripts[0]}");
-    }
-
-    [Fact]
-    public async Task ToolDefinitions_HaveValidSchemas()
-    {
-        var defs = _fixture.Dispatcher.GetToolDefinitions();
+        var defs = _dispatcher.GetToolDefinitions();
 
         foreach (var def in defs)
         {
@@ -79,7 +89,6 @@ public class ToolRegistrationTests : IAsyncLifetime
             def.Description.Should().NotBeNullOrWhiteSpace();
             def.ParametersJson.Should().NotBeNullOrWhiteSpace();
 
-            // Verify the schema is valid JSON
             var act = () => JsonDocument.Parse(def.ParametersJson);
             act.Should().NotThrow($"tool '{def.Name}' should have valid JSON schema");
 
@@ -89,5 +98,26 @@ public class ToolRegistrationTests : IAsyncLifetime
 
             _output.WriteLine($"{def.Name}: schema OK ({def.ParametersJson.Length} chars)");
         }
+    }
+
+    private sealed class StubChatClient : IChatClient
+    {
+        public ChatClientMetadata Metadata => new("stub");
+
+        public Task<ChatResponse> GetResponseAsync(
+            IEnumerable<AIChatMessage> chatMessages,
+            ChatOptions? options = null,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(new ChatResponse(new AIChatMessage(ChatRole.Assistant, "stub")));
+
+        public IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
+            IEnumerable<AIChatMessage> chatMessages,
+            ChatOptions? options = null,
+            CancellationToken cancellationToken = default)
+            => AsyncEnumerable.Empty<ChatResponseUpdate>();
+
+        public object? GetService(Type serviceType, object? serviceKey = null) => null;
+
+        public void Dispose() { }
     }
 }

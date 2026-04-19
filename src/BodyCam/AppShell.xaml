@@ -4,6 +4,7 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:local="clr-namespace:BodyCam"
+    xmlns:pages="clr-namespace:BodyCam.Pages"
     Title="BodyCam">
 
     <Shell.TitleView>
@@ -12,13 +13,13 @@
             <Label x:Name="BuildLabel" AutomationId="BuildLabel" Grid.Column="1" FontSize="12"
                    VerticalOptions="Center" Margin="6,0,0,0"
                    TextColor="{AppThemeBinding Light=#999999, Dark=#777777}" />
-            <Label x:Name="NavIcon" AutomationId="NavIcon" Grid.Column="3" Text="⚙" FontSize="20"
-                   VerticalOptions="Center"
-                   TextColor="{AppThemeBinding Light=#333333, Dark=#E0E0E0}">
-                <Label.GestureRecognizers>
-                    <TapGestureRecognizer Tapped="OnNavIconTapped" />
-                </Label.GestureRecognizers>
-            </Label>
+            <Button x:Name="NavIcon" AutomationId="NavIcon" Grid.Column="3" Text="⚙" FontSize="20"
+                    Clicked="OnNavIconTapped"
+                    VerticalOptions="Center"
+                    BackgroundColor="Transparent"
+                    TextColor="{AppThemeBinding Light=#333333, Dark=#E0E0E0}"
+                    Padding="8,0"
+                    MinimumHeightRequest="36" MinimumWidthRequest="36" />
         </Grid>
     </Shell.TitleView>
 
@@ -27,21 +28,21 @@
             <ShellContent
                 AutomationId="SetupTab"
                 Title="Setup"
-                ContentTemplate="{DataTemplate local:SetupPage}"
+                ContentTemplate="{DataTemplate pages:SetupPage}"
                 Route="SetupPage" />
         </Tab>
         <Tab>
             <ShellContent
                 AutomationId="HomeTab"
                 Title="Home"
-                ContentTemplate="{DataTemplate local:MainPage}"
+                ContentTemplate="{DataTemplate pages:MainPage}"
                 Route="MainPage" />
         </Tab>
         <Tab>
             <ShellContent
                 AutomationId="SettingsTab"
                 Title="Settings"
-                ContentTemplate="{DataTemplate local:SettingsPage}"
+                ContentTemplate="{DataTemplate pages:SettingsPage}"
                 Route="SettingsPage" />
         </Tab>
     </TabBar>

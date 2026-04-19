@@ -105,39 +105,33 @@ public static class ServiceExtensions
 		services.AddSingleton<IMicrophoneCoordinator, MicrophoneCoordinator>();
 		services.AddSingleton<IApiKeyService, ApiKeyService>();
 
-		// MAF Realtime client with function-invocation middleware
+		// MAF Realtime client — wraps the SDK's RealtimeClient with IRealtimeClient
+#pragma warning disable OPENAI002
 		services.AddSingleton<Microsoft.Extensions.AI.IRealtimeClient>(sp =>
 		{
 			var settings = sp.GetRequiredService<AppSettings>();
 			var apiKeyService = sp.GetRequiredService<IApiKeyService>();
-			var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
 
 			var apiKey = apiKeyService.GetApiKeyAsync().GetAwaiter().GetResult()
 				?? throw new InvalidOperationException("API key not configured.");
 
-			OpenAIRealtimeClient baseClient;
 			if (settings.Provider == OpenAiProvider.Azure)
 			{
 				var rtOptions = new OpenAI.Realtime.RealtimeClientOptions
 				{
-					Endpoint = new Uri($"{settings.AzureEndpoint!.TrimEnd('/')}/openai/realtime")
+					Endpoint = new Uri($"{settings.AzureEndpoint!.TrimEnd('/')}/openai/v1/realtime")
 				};
-				var sdkRtClient = new Services.AzureRealtimeClient(
-					apiKey, rtOptions,
-					settings.AzureRealtimeDeploymentName!,
-					settings.AzureApiVersion);
-				baseClient = new OpenAIRealtimeClient(sdkRtClient, settings.AzureRealtimeDeploymentName!);
+				var sdkClient = new Services.AzureRealtimeClient(apiKey, rtOptions);
+				return new Microsoft.Extensions.AI.OpenAIRealtimeClient(
+					sdkClient, settings.AzureRealtimeDeploymentName!);
 			}
 			else
 			{
-				baseClient = new OpenAIRealtimeClient(apiKey, settings.RealtimeModel);
+				return new Microsoft.Extensions.AI.OpenAIRealtimeClient(
+					apiKey, settings.RealtimeModel);
 			}
-
-			return baseClient.AsBuilder()
-				.UseFunctionInvocation(loggerFactory)
-				.UseLogging(loggerFactory)
-				.Build(sp);
 		});
+#pragma warning restore OPENAI002
 
 		services.AddSingleton<AgentOrchestrator>();
 
@@ -149,13 +143,17 @@ public static class ServiceExtensions
 		services.AddTransient<SetupViewModel>();
 		services.AddTransient<MainViewModel>();
 		services.AddTransient<SettingsViewModel>();
-		services.AddTransient<SetupPage>();
-		services.AddTransient<MainPage>();
-		services.AddTransient<SettingsPage>();
-		services.AddTransient<Settings.ConnectionSettingsPage>();
-		services.AddTransient<Settings.VoiceSettingsPage>();
-		services.AddTransient<Settings.DeviceSettingsPage>();
-		services.AddTransient<Settings.AdvancedSettingsPage>();
+		services.AddTransient<ViewModels.Settings.ConnectionViewModel>();
+		services.AddTransient<ViewModels.Settings.VoiceViewModel>();
+		services.AddTransient<ViewModels.Settings.DeviceViewModel>();
+		services.AddTransient<ViewModels.Settings.AdvancedViewModel>();
+		services.AddTransient<Pages.SetupPage>();
+		services.AddTransient<Pages.MainPage>();
+		services.AddTransient<Pages.SettingsPage>();
+		services.AddTransient<Pages.Settings.ConnectionSettingsPage>();
+		services.AddTransient<Pages.Settings.VoiceSettingsPage>();
+		services.AddTransient<Pages.Settings.DeviceSettingsPage>();
+		services.AddTransient<Pages.Settings.AdvancedSettingsPage>();
 
 		return services;
 	}
