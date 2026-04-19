@@ -5,7 +5,7 @@
              x:Class="BodyCam.Pages.Main.Views.StatusBarView"
              x:DataType="vm:MainViewModel">
 
-    <Grid ColumnDefinitions="Auto,*,Auto,Auto" Padding="12,8"
+    <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto" Padding="12,8"
           BackgroundColor="{AppThemeBinding Light=#FAFAFA, Dark=#1A1A1A}">
 
         <Ellipse AutomationId="StatusDot"
@@ -49,14 +49,21 @@
             </Grid>
         </Border>
 
-        <Button Grid.Column="2" AutomationId="DebugToggleButton"
+        <ActivityIndicator AutomationId="BusyIndicator" Grid.Column="2"
+                           IsRunning="{Binding IsRunning}"
+                           IsVisible="{Binding IsRunning}"
+                           WidthRequest="20" HeightRequest="20"
+                           VerticalOptions="Center" Margin="4,0,0,0"
+                           Color="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource White}}" />
+
+        <Button Grid.Column="3" AutomationId="DebugToggleButton"
                 Text="🐛"
                 Command="{Binding ToggleDebugCommand}"
                 WidthRequest="40" HeightRequest="32"
                 FontSize="16" Padding="0"
                 BackgroundColor="Transparent" />
 
-        <Button Grid.Column="3" AutomationId="ClearButton"
+        <Button Grid.Column="4" AutomationId="ClearButton"
                 Text="Clear"
                 Command="{Binding ClearCommand}"
                 WidthRequest="60" HeightRequest="32"

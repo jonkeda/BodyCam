@@ -183,13 +183,21 @@ public class SetupViewModel : ViewModelBase
         // If current step is already granted, skip ahead
         SkipGrantedSteps();
 #endif
-        // Check if API key already exists
-        if (_apiKeyService.HasKey)
+        // Check if API key already exists (must call GetApiKeyAsync to discover .env / SecureStorage)
+        var existingKey = await _apiKeyService.GetApiKeyAsync();
+        if (existingKey is not null)
         {
             var keyStep = Steps.FirstOrDefault(s => s.Kind == SetupStepKind.ApiKey);
             if (keyStep is not null)
                 keyStep.Status = "granted";
         }
+
+        // Skip past any steps that are already satisfied (permissions + API key)
+        SkipGrantedSteps();
+
+        // If everything is granted, finish setup automatically
+        if (Steps.All(s => s.Status == "granted"))
+            await FinishSetupAsync();
     }
 
     private void SkipGrantedSteps()

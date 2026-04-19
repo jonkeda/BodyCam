@@ -112,7 +112,8 @@ public static class ServiceExtensions
 			var settings = sp.GetRequiredService<AppSettings>();
 			var apiKeyService = sp.GetRequiredService<IApiKeyService>();
 
-			var apiKey = apiKeyService.GetApiKeyAsync().GetAwaiter().GetResult()
+			// Use Task.Run to avoid deadlocking Android's main thread on SecureStorage
+			var apiKey = Task.Run(() => apiKeyService.GetApiKeyAsync()).GetAwaiter().GetResult()
 				?? throw new InvalidOperationException("API key not configured.");
 
 			if (settings.Provider == OpenAiProvider.Azure)
