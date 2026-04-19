@@ -3,9 +3,11 @@ using BodyCam.Models;
 using BodyCam.Orchestration;
 using BodyCam.Services;
 using BodyCam.Services.Camera;
+using BodyCam.Services.Logging;
 using BodyCam.Tools;
 using FluentAssertions;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 
 namespace BodyCam.Tests.Orchestration;
@@ -45,8 +47,12 @@ public class OrchestratorWakeWordTests
         var micCoordinator = Substitute.For<IMicrophoneCoordinator>();
         var cameraManager = new CameraManager([], settingsService);
         var wakeWordInstance = wakeWord;
+        var sink = new InAppLogSink();
+        var loggerProvider = new InAppLoggerProvider(sink, LogLevel.Debug);
+        var loggerFactory = new LoggerFactory([loggerProvider]);
+        var logger = loggerFactory.CreateLogger<AgentOrchestrator>();
 
-        return new AgentOrchestrator(voiceIn, conversation, voiceOut, vision, realtime, settingsService, new AppSettings(), dispatcher, new Lazy<IWakeWordService>(() => wakeWordInstance), micCoordinator, cameraManager);
+        return new AgentOrchestrator(voiceIn, conversation, voiceOut, vision, realtime, settingsService, new AppSettings(), dispatcher, wakeWordInstance, micCoordinator, cameraManager, logger);
     }
 
     [Fact]

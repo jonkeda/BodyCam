@@ -43,6 +43,9 @@ internal record SessionUpdatePayload
     [JsonPropertyName("turn_detection")]
     public TurnDetectionConfig? TurnDetection { get; init; }
 
+    [JsonPropertyName("noise_reduction")]
+    public string? NoiseReduction { get; init; }
+
     [JsonPropertyName("tools")]
     public ToolDefinition[]? Tools { get; init; }
 

@@ -126,6 +126,7 @@ public class RealtimeClient : IRealtimeClient
                 OutputAudioFormat = "pcm16",
                 InputAudioTranscription = new InputAudioTranscription { Model = _settings.TranscriptionModel },
                 TurnDetection = new TurnDetectionConfig { Type = _settings.TurnDetection },
+                NoiseReduction = _settings.NoiseReduction,
                 Tools = tools.Length > 0 ? tools : null,
                 ToolChoice = tools.Length > 0 ? "auto" : null
             }

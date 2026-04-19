@@ -20,12 +20,12 @@
 
             <HorizontalStackLayout Spacing="16">
                 <RadioButton AutomationId="ProviderOpenAiRadio"
-                             Content="OpenAI" TabIndex="10"
+                             Content="OpenAI"
                              IsChecked="{Binding IsOpenAi}"
                              CheckedChanged="OnOpenAiChecked"
                              SemanticProperties.Description="Use OpenAI provider" />
                 <RadioButton AutomationId="ProviderAzureRadio"
-                             Content="Azure" TabIndex="11"
+                             Content="Azure"
                              IsChecked="{Binding IsAzure}"
                              CheckedChanged="OnAzureChecked"
                              SemanticProperties.Description="Use Azure OpenAI provider" />
@@ -38,7 +38,7 @@
 
                 <Label Text="Voice Model" FontSize="Small" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
                 <HorizontalStackLayout Spacing="8">
-                    <Picker AutomationId="VoiceModelPicker" TabIndex="20"
+                    <Picker AutomationId="VoiceModelPicker"
                             ItemsSource="{Binding RealtimeModelOptions}"
                             ItemDisplayBinding="{Binding Label}"
                             SelectedItem="{Binding SelectedRealtimeModel}"
@@ -51,7 +51,7 @@
 
                 <Label Text="Chat Model" FontSize="Small" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
                 <HorizontalStackLayout Spacing="8">
-                    <Picker AutomationId="ChatModelPicker" TabIndex="21"
+                    <Picker AutomationId="ChatModelPicker"
                             ItemsSource="{Binding ChatModelOptions}"
                             ItemDisplayBinding="{Binding Label}"
                             SelectedItem="{Binding SelectedChatModel}"
@@ -64,7 +64,7 @@
 
                 <Label Text="Vision Model" FontSize="Small" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
                 <HorizontalStackLayout Spacing="8">
-                    <Picker AutomationId="VisionModelPicker" TabIndex="22"
+                    <Picker AutomationId="VisionModelPicker"
                             ItemsSource="{Binding VisionModelOptions}"
                             ItemDisplayBinding="{Binding Label}"
                             SelectedItem="{Binding SelectedVisionModel}"
@@ -77,7 +77,7 @@
 
                 <Label Text="Transcription Model" FontSize="Small" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
                 <HorizontalStackLayout Spacing="8">
-                    <Picker AutomationId="TranscriptionModelPicker" TabIndex="23"
+                    <Picker AutomationId="TranscriptionModelPicker"
                             ItemsSource="{Binding TranscriptionModelOptions}"
                             ItemDisplayBinding="{Binding Label}"
                             SelectedItem="{Binding SelectedTranscriptionModel}"
@@ -95,20 +95,20 @@
                        SemanticProperties.HeadingLevel="Level1" />
 
                 <Label Text="Endpoint" FontSize="Small" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
-                <Entry AutomationId="AzureEndpointEntry" TabIndex="30"
+                <Entry AutomationId="AzureEndpointEntry"
                        Text="{Binding AzureEndpoint}"
                        Placeholder="https://your-resource.cognitiveservices.azure.com"
                        SemanticProperties.Description="Azure endpoint URL" />
 
                 <Label Text="API Version" FontSize="Small" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
-                <Entry AutomationId="AzureApiVersionEntry" TabIndex="31"
+                <Entry AutomationId="AzureApiVersionEntry"
                        Text="{Binding AzureApiVersion}"
                        Placeholder="2025-04-01-preview"
                        SemanticProperties.Description="Azure API version" />
 
                 <Label Text="Realtime Deployment" FontSize="Small" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
                 <HorizontalStackLayout Spacing="8">
-                    <Entry AutomationId="AzureRealtimeDeploymentEntry" TabIndex="32"
+                    <Entry AutomationId="AzureRealtimeDeploymentEntry"
                            Text="{Binding AzureRealtimeDeployment}"
                            Placeholder="my-realtime-deployment"
                            HorizontalOptions="FillAndExpand"
@@ -119,7 +119,7 @@
 
                 <Label Text="Chat Deployment" FontSize="Small" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
                 <HorizontalStackLayout Spacing="8">
-                    <Entry AutomationId="AzureChatDeploymentEntry" TabIndex="33"
+                    <Entry AutomationId="AzureChatDeploymentEntry"
                            Text="{Binding AzureChatDeployment}"
                            Placeholder="my-chat-deployment"
                            HorizontalOptions="FillAndExpand"
@@ -130,7 +130,7 @@
 
                 <Label Text="Vision Deployment" FontSize="Small" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
                 <HorizontalStackLayout Spacing="8">
-                    <Entry AutomationId="AzureVisionDeploymentEntry" TabIndex="34"
+                    <Entry AutomationId="AzureVisionDeploymentEntry"
                            Text="{Binding AzureVisionDeployment}"
                            Placeholder="my-vision-deployment"
                            HorizontalOptions="FillAndExpand"
@@ -147,19 +147,19 @@
                    SemanticProperties.HeadingLevel="Level1" />
 
             <Label Text="Voice" FontSize="Small" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
-            <Picker AutomationId="VoicePicker" TabIndex="40"
+            <Picker AutomationId="VoicePicker"
                     ItemsSource="{Binding VoiceOptions}"
                     SelectedItem="{Binding SelectedVoice}"
                     SemanticProperties.Description="Voice" />
 
             <Label Text="Turn Detection" FontSize="Small" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
-            <Picker AutomationId="TurnDetectionPicker" TabIndex="41"
+            <Picker AutomationId="TurnDetectionPicker"
                     ItemsSource="{Binding TurnDetectionOptions}"
                     SelectedItem="{Binding SelectedTurnDetection}"
                     SemanticProperties.Description="Turn detection" />
 
             <Label Text="Noise Reduction" FontSize="Small" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
-            <Picker AutomationId="NoiseReductionPicker" TabIndex="42"
+            <Picker AutomationId="NoiseReductionPicker"
                     ItemsSource="{Binding NoiseReductionOptions}"
                     SelectedItem="{Binding SelectedNoiseReduction}"
                     SemanticProperties.Description="Noise reduction" />
@@ -167,7 +167,7 @@
             <!-- SECTION: System Prompt -->
             <Label Text="System Instructions" FontSize="Title" FontAttributes="Bold" Margin="0,8,0,0"
                    SemanticProperties.HeadingLevel="Level1" />
-            <Editor AutomationId="SystemInstructionsEditor" TabIndex="50"
+            <Editor AutomationId="SystemInstructionsEditor"
                     Text="{Binding SystemInstructions}"
                     HeightRequest="100"
                     Placeholder="You are a helpful assistant."
@@ -177,14 +177,14 @@
             <Label Text="API Key" FontSize="Title" FontAttributes="Bold" Margin="0,8,0,0"
                    SemanticProperties.HeadingLevel="Level1" />
             <HorizontalStackLayout Spacing="8">
-                <Entry AutomationId="ApiKeyDisplay" TabIndex="60"
+                <Entry AutomationId="ApiKeyDisplay"
                        Text="{Binding ApiKeyDisplay}"
                        IsPassword="{Binding IsKeyVisible, Converter={StaticResource InvertBoolConverter}}"
                        IsReadOnly="True"
                        HorizontalOptions="FillAndExpand"
                        WidthRequest="200"
                        SemanticProperties.Description="API key, masked" />
-                <Button AutomationId="ToggleKeyVisibilityButton" TabIndex="61"
+                <Button AutomationId="ToggleKeyVisibilityButton"
                         Text="{Binding KeyToggleText}"
                         Command="{Binding ToggleKeyVisibilityCommand}"
                         WidthRequest="60" Padding="4"
@@ -192,12 +192,12 @@
                         TextColor="{AppThemeBinding Light=#333, Dark=#E0E0E0}"
                         SemanticProperties.Description="Toggle key visibility"
                         SemanticProperties.Hint="Shows or hides the API key" />
-                <Button AutomationId="ChangeApiKeyButton" TabIndex="62"
+                <Button AutomationId="ChangeApiKeyButton"
                         Text="Change" Command="{Binding ChangeApiKeyCommand}"
                         BackgroundColor="{AppThemeBinding Light=#512BD4, Dark=#7C4DFF}"
                         TextColor="White"
                         SemanticProperties.Description="Change API key" />
-                <Button AutomationId="ClearApiKeyButton" TabIndex="63"
+                <Button AutomationId="ClearApiKeyButton"
                         Text="Clear" Command="{Binding ClearApiKeyCommand}"
                         BackgroundColor="{AppThemeBinding Light=#E0E0E0, Dark=#333}"
                         TextColor="{AppThemeBinding Light=#333, Dark=#E0E0E0}"
@@ -207,7 +207,7 @@
 
             <!-- SECTION: Test Connection -->
             <HorizontalStackLayout Spacing="8" Margin="0,4,0,0">
-                <Button AutomationId="TestConnectionButton" TabIndex="64"
+                <Button AutomationId="TestConnectionButton"
                         Text="Test Connection"
                         Command="{Binding TestConnectionCommand}"
                         IsEnabled="{Binding IsTesting, Converter={StaticResource InvertBoolConverter}}"
@@ -225,7 +225,7 @@
             <Label Text="Camera" FontSize="Title" FontAttributes="Bold" Margin="0,8,0,0"
                    SemanticProperties.HeadingLevel="Level1" />
             <Label Text="Camera Source" FontSize="Small" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
-            <Picker AutomationId="CameraSourcePicker" TabIndex="70"
+            <Picker AutomationId="CameraSourcePicker"
                     ItemsSource="{Binding CameraProviders}"
                     ItemDisplayBinding="{Binding DisplayName}"
                     SelectedItem="{Binding SelectedCameraProvider}"
@@ -235,7 +235,7 @@
             <Label Text="Audio Input" FontSize="Title" FontAttributes="Bold" Margin="0,8,0,0"
                    SemanticProperties.HeadingLevel="Level1" />
             <Label Text="Microphone Source" FontSize="Small" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
-            <Picker AutomationId="AudioInputPicker" TabIndex="80"
+            <Picker AutomationId="AudioInputPicker"
                     ItemsSource="{Binding AudioInputProviders}"
                     ItemDisplayBinding="{Binding DisplayName}"
                     SelectedItem="{Binding SelectedAudioInputProvider}"
@@ -245,7 +245,7 @@
             <Label Text="Audio Output" FontSize="Title" FontAttributes="Bold" Margin="0,8,0,0"
                    SemanticProperties.HeadingLevel="Level1" />
             <Label Text="Speaker" FontSize="Small" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
-            <Picker AutomationId="AudioOutputPicker" TabIndex="90"
+            <Picker AutomationId="AudioOutputPicker"
                     ItemsSource="{Binding AudioOutputProviders}"
                     ItemDisplayBinding="{Binding DisplayName}"
                     SelectedItem="{Binding SelectedAudioOutputProvider}"
@@ -257,16 +257,48 @@
 
             <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
                 <Label Text="Debug Mode" VerticalOptions="Center" Grid.Row="0" Grid.Column="0" />
-                <Switch AutomationId="DebugModeSwitch" TabIndex="100" IsToggled="{Binding DebugMode}" Grid.Row="0" Grid.Column="1"
+                <Switch AutomationId="DebugModeSwitch" IsToggled="{Binding DebugMode}" Grid.Row="0" Grid.Column="1"
                         SemanticProperties.Description="Debug mode" />
 
                 <Label Text="Show Token Counts" VerticalOptions="Center" Grid.Row="1" Grid.Column="0" />
-                <Switch AutomationId="ShowTokenCountsSwitch" TabIndex="101" IsToggled="{Binding ShowTokenCounts}" Grid.Row="1" Grid.Column="1"
+                <Switch AutomationId="ShowTokenCountsSwitch" IsToggled="{Binding ShowTokenCounts}" Grid.Row="1" Grid.Column="1"
                         SemanticProperties.Description="Show token counts" />
 
                 <Label Text="Show Cost Estimate" VerticalOptions="Center" Grid.Row="2" Grid.Column="0" />
-                <Switch AutomationId="ShowCostEstimateSwitch" TabIndex="102" IsToggled="{Binding ShowCostEstimate}" Grid.Row="2" Grid.Column="1"
+                <Switch AutomationId="ShowCostEstimateSwitch" IsToggled="{Binding ShowCostEstimate}" Grid.Row="2" Grid.Column="1"
                         SemanticProperties.Description="Show cost estimate" />
+            </Grid>
+
+            <!-- SECTION: Diagnostics & Telemetry -->
+            <Label Text="Diagnostics" FontSize="Title" FontAttributes="Bold" Margin="0,8,0,0"
+                   SemanticProperties.HeadingLevel="Level1" />
+            <Label Text="All telemetry is opt-in. No transcripts or API keys are ever sent."
+                   FontSize="Caption" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+
+            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="8">
+                <Label Text="Send diagnostic data" VerticalOptions="Center" Grid.Row="0" Grid.Column="0" />
+                <Switch AutomationId="SendDiagnosticDataSwitch" IsToggled="{Binding SendDiagnosticData}" Grid.Row="0" Grid.Column="1"
+                        SemanticProperties.Description="Send diagnostic data to Azure Monitor" />
+
+                <Label Text="Azure Monitor Connection String" VerticalOptions="Center" Grid.Row="1" Grid.Column="0"
+                       FontSize="Small" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+                <Entry AutomationId="AzureMonitorConnectionStringEntry" Text="{Binding AzureMonitorConnectionString}"
+                       Placeholder="InstrumentationKey=..." Grid.Row="2" Grid.ColumnSpan="2"
+                       SemanticProperties.Description="Azure Monitor connection string" />
+
+                <Label Text="Send crash reports" VerticalOptions="Center" Grid.Row="3" Grid.Column="0" />
+                <Switch AutomationId="SendCrashReportsSwitch" IsToggled="{Binding SendCrashReports}" Grid.Row="3" Grid.Column="1"
+                        SemanticProperties.Description="Send crash reports via Sentry" />
+
+                <Label Text="Sentry DSN" VerticalOptions="Center" Grid.Row="4" Grid.Column="0"
+                       FontSize="Small" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+                <Entry AutomationId="SentryDsnEntry" Text="{Binding SentryDsn}"
+                       Placeholder="https://xxx@sentry.io/yyy" Grid.Row="5" Grid.ColumnSpan="2"
+                       SemanticProperties.Description="Sentry DSN" />
+
+                <Label Text="Send anonymous usage data" VerticalOptions="Center" Grid.Row="6" Grid.Column="0" />
+                <Switch AutomationId="SendUsageDataSwitch" IsToggled="{Binding SendUsageData}" Grid.Row="6" Grid.Column="1"
+                        SemanticProperties.Description="Send anonymous usage analytics" />
             </Grid>
 
             <!-- SECTION: Tool Settings -->

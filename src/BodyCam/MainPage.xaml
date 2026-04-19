@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:BodyCam.ViewModels"
@@ -63,7 +63,7 @@
                     MinimumHeightRequest="36">
                 <Grid ColumnDefinitions="Auto,Auto,Auto" ColumnSpacing="0">
                     <Button AutomationId="SleepButton"
-                            Text="😴" TabIndex="10"
+                            Text="😴"
                             Command="{Binding SetStateCommand}"
                             CommandParameter="Sleep"
                             BackgroundColor="{Binding SleepSegmentColor}"
@@ -89,7 +89,7 @@
                         </VisualStateManager.VisualStateGroups>
                     </Button>
                     <Button Grid.Column="1" AutomationId="ListenButton"
-                            Text="👂" TabIndex="11"
+                            Text="👂"
                             Command="{Binding SetStateCommand}"
                             CommandParameter="Listen"
                             BackgroundColor="{Binding ListenSegmentColor}"
@@ -115,7 +115,7 @@
                         </VisualStateManager.VisualStateGroups>
                     </Button>
                     <Button Grid.Column="2" AutomationId="ActiveButton"
-                            Text="💬" TabIndex="12"
+                            Text="💬"
                             Command="{Binding SetStateCommand}"
                             CommandParameter="Active"
                             BackgroundColor="{Binding ActiveSegmentColor}"
@@ -145,7 +145,7 @@
 
             <!-- Debug toggle -->
             <Button Grid.Column="2" AutomationId="DebugToggleButton"
-                    Text="🐛" TabIndex="13"
+                    Text="🐛"
                     Command="{Binding ToggleDebugCommand}"
                     WidthRequest="40" MinimumHeightRequest="32"
                     FontSize="Subtitle" Padding="0"
@@ -155,7 +155,7 @@
 
             <!-- Clear button -->
             <Button Grid.Column="3" AutomationId="ClearButton"
-                    Text="Clear" TabIndex="14"
+                    Text="Clear"
                     Command="{Binding ClearCommand}"
                     WidthRequest="60" MinimumHeightRequest="32"
                     FontSize="Caption"
@@ -210,6 +210,31 @@
                                        FontSize="Caption"
                                        TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}"
                                        FontAttributes="Italic" />
+
+                                <!-- Inline action buttons for detected content -->
+                                <FlexLayout IsVisible="{Binding HasActions}"
+                                            Wrap="Wrap" Direction="Row"
+                                            JustifyContent="Start"
+                                            Margin="0,4,0,0">
+                                    <BindableLayout.ItemsSource>
+                                        <Binding Path="Actions" />
+                                    </BindableLayout.ItemsSource>
+                                    <BindableLayout.ItemTemplate>
+                                        <DataTemplate x:DataType="models:ContentAction">
+                                            <Button Text="{Binding Label, StringFormat='{0}'}"
+                                                    Command="{Binding Command}"
+                                                    FontSize="Caption"
+                                                    Padding="10,4"
+                                                    Margin="0,2,6,2"
+                                                    MinimumHeightRequest="32"
+                                                    CornerRadius="16"
+                                                    BackgroundColor="{AppThemeBinding Light=#E3F2FD, Dark=#1A3A5C}"
+                                                    TextColor="{AppThemeBinding Light=#1565C0, Dark=#90CAF9}"
+                                                    SemanticProperties.Description="{Binding AccessibleLabel}"
+                                                    SemanticProperties.Hint="Tap to perform this action" />
+                                        </DataTemplate>
+                                    </BindableLayout.ItemTemplate>
+                                </FlexLayout>
                             </VerticalStackLayout>
                         </DataTemplate>
                     </CollectionView.ItemTemplate>
@@ -248,7 +273,7 @@
                                    HorizontalTextAlignment="Center" />
                             <Button AutomationId="DismissSnapshotButton"
                                     x:Name="DismissSnapshotButton"
-                                    Text="Dismiss" TabIndex="40"
+                                    Text="Dismiss"
                                     Command="{Binding DismissSnapshotCommand}"
                                     HorizontalOptions="Center"
                                     BackgroundColor="{AppThemeBinding Light=#E0E0E0, Dark=#333}"
@@ -280,7 +305,7 @@
         <Grid Grid.Row="2" ColumnDefinitions="*,*" MinimumHeightRequest="40"
               BackgroundColor="{AppThemeBinding Light=#F0F0F0, Dark=#222222}">
             <Button AutomationId="TranscriptTabButton"
-                    Text="📝 Transcript" TabIndex="20"
+                    Text="📝 Transcript"
                     Command="{Binding SwitchToTranscriptCommand}"
                     BackgroundColor="{Binding TranscriptTabBackground}"
                     TextColor="{Binding TranscriptTabTextColor}"
@@ -289,7 +314,7 @@
                     SemanticProperties.Description="Transcript tab"
                     SemanticProperties.Hint="Shows the conversation transcript" />
             <Button Grid.Column="1" AutomationId="CameraTabButton"
-                    Text="📷 Camera" TabIndex="21"
+                    Text="📷 Camera"
                     Command="{Binding SwitchToCameraCommand}"
                     BackgroundColor="{Binding CameraTabBackground}"
                     TextColor="{Binding CameraTabTextColor}"
@@ -303,31 +328,31 @@
         <Grid Grid.Row="3" ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto"
               ColumnSpacing="4" RowSpacing="4" Padding="8">
             <Button AutomationId="LookButton"
-                    Text="👁 Look" TabIndex="30"
+                    Text="👁 Look"
                     Command="{Binding LookCommand}"
                     Style="{StaticResource ActionButton}"
                     SemanticProperties.Description="Look"
                     SemanticProperties.Hint="Describes what the camera sees" />
             <Button Grid.Column="1" AutomationId="ReadButton"
-                    Text="📖 Read" TabIndex="31"
+                    Text="📖 Read"
                     Command="{Binding ReadCommand}"
                     Style="{StaticResource ActionButton}"
                     SemanticProperties.Description="Read"
                     SemanticProperties.Hint="Reads text visible to the camera" />
             <Button Grid.Column="2" AutomationId="FindButton"
-                    Text="🔍 Find" TabIndex="32"
+                    Text="🔍 Find"
                     Command="{Binding FindCommand}"
                     Style="{StaticResource ActionButton}"
                     SemanticProperties.Description="Find"
                     SemanticProperties.Hint="Finds specific objects in the camera view" />
             <Button Grid.Row="1" AutomationId="AskButton"
-                    Text="💬 Ask" TabIndex="33"
+                    Text="💬 Ask"
                     Command="{Binding AskCommand}"
                     Style="{StaticResource ActionButton}"
                     SemanticProperties.Description="Ask"
                     SemanticProperties.Hint="Asks the AI a question" />
             <Button Grid.Row="1" Grid.Column="1" AutomationId="PhotoButton"
-                    Text="📸 Photo" TabIndex="34"
+                    Text="📸 Photo"
                     Command="{Binding PhotoCommand}"
                     Style="{StaticResource ActionButton}"
                     SemanticProperties.Description="Photo"

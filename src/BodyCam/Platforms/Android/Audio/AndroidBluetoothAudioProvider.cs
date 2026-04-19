@@ -1,6 +1,7 @@
 using Android.Bluetooth;
 using Android.Content;
 using Android.Media;
+using Android.Media.Audiofx;
 using BodyCam.Services.Audio;
 
 namespace BodyCam.Platforms.Android.Audio;
@@ -67,7 +68,7 @@ public sealed class AndroidBluetoothAudioProvider : IAudioInputProvider, IDispos
         // Route audio to BT SCO
         if (OperatingSystem.IsAndroidVersionAtLeast(31))
         {
-            var devices = audioManager.GetDevices(AudioDeviceType.Input);
+            var devices = audioManager.GetDevices(GetDevicesTargets.Inputs);
             var btInputDevice = devices?.FirstOrDefault(d =>
                 d.Type == AudioDeviceType.BluetoothSco);
 

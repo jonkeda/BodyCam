@@ -2,9 +2,11 @@ using BodyCam.Services;
 using BodyCam.Services.Audio;
 using BodyCam.Services.Camera;
 using BodyCam.Services.Input;
+using BodyCam.Services.Logging;
 using BodyCam.Tests.TestInfrastructure.Providers;
 using BodyCam.Tools;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 
 namespace BodyCam.Tests.TestInfrastructure;
@@ -82,6 +84,11 @@ public sealed class BodyCamTestHost : IDisposable, IAsyncDisposable
 
         // Realtime client stub
         services.AddSingleton(Substitute.For<IRealtimeClient>());
+
+        // Logging
+        services.AddSingleton<InAppLogSink>();
+        services.AddLogging(lb => lb.AddProvider(
+            new InAppLoggerProvider(new InAppLogSink(), LogLevel.Debug)));
 
         // Memory store (in-memory temp file)
         var tempPath = Path.Combine(Path.GetTempPath(), $"bodycam-test-{Guid.NewGuid():N}.json");

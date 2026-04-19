@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using BodyCam.Mvvm;
 
 namespace BodyCam.Models;
@@ -47,6 +48,11 @@ public class TranscriptEntry : ObservableObject
     public ImageSource? Image { get; set; }
     public string? ImageCaption { get; set; }
     public bool HasImage => Image is not null;
+
+    public ObservableCollection<ContentAction> Actions { get; } = [];
+    public bool HasActions => Actions.Count > 0;
+
+    public void NotifyActionsChanged() => OnPropertyChanged(nameof(HasActions));
 
     public Color RoleColor => (Role, IsLightTheme) switch
     {

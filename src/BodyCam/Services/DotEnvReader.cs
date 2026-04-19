@@ -4,6 +4,22 @@ public static class DotEnvReader
 {
     public static string? Read(string key)
     {
+        // Try .env file in app data directory (Android: pushed via adb)
+        try
+        {
+            var appData = FileSystem.AppDataDirectory;
+            if (!string.IsNullOrEmpty(appData))
+            {
+                var appEnv = Path.Combine(appData, ".env");
+                if (File.Exists(appEnv))
+                {
+                    var val = ReadKey(appEnv, key);
+                    if (val is not null) return val;
+                }
+            }
+        }
+        catch { /* FileSystem not available during early init */ }
+
         // Try .env file in base directory and walking up to repo root
         var dir = AppContext.BaseDirectory;
         while (dir is not null)

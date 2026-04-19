@@ -3,6 +3,7 @@ using BodyCam.Models;
 using BodyCam.Services;
 using BodyCam.Services.Camera;
 using BodyCam.Tools;
+using Microsoft.Extensions.Logging;
 
 namespace BodyCam.Orchestration;
 
@@ -16,8 +17,9 @@ public class AgentOrchestrator
     private readonly ISettingsService _settingsService;
     private readonly AppSettings _settings;
     private readonly ToolDispatcher _dispatcher;
-    private readonly Lazy<IWakeWordService> _wakeWord;
+    private readonly IWakeWordService _wakeWord;
     private readonly CameraManager _cameraManager;
+    private readonly ILogger<AgentOrchestrator> _logger;
 
     public VisionAgent Vision => _vision;
     private readonly IMicrophoneCoordinator _micCoordinator;
@@ -29,7 +31,6 @@ public class AgentOrchestrator
     public event EventHandler<string>? TranscriptUpdated;
     public event EventHandler<string>? TranscriptDelta;
     public event EventHandler<string>? TranscriptCompleted;
-    public event EventHandler<string>? DebugLog;
 
     public SessionConfig? CurrentConfig { get; private set; }
 
@@ -44,9 +45,10 @@ public class AgentOrchestrator
         ISettingsService settingsService,
         AppSettings settings,
         ToolDispatcher dispatcher,
-        Lazy<IWakeWordService> wakeWord,
+        IWakeWordService wakeWord,
         IMicrophoneCoordinator micCoordinator,
-        CameraManager cameraManager)
+        CameraManager cameraManager,
+        ILogger<AgentOrchestrator> logger)
     {
         _voiceIn = voiceIn;
         _conversation = conversation;
@@ -59,6 +61,7 @@ public class AgentOrchestrator
         _wakeWord = wakeWord;
         _micCoordinator = micCoordinator;
         _cameraManager = cameraManager;
+        _logger = logger;
     }
 
     public async Task StartAsync()
@@ -97,7 +100,7 @@ public class AgentOrchestrator
             SystemInstructions = _settings.SystemInstructions,
         };
 
-        DebugLog?.Invoke(this, $"Model: {_settings.RealtimeModel}");
+        _logger.LogInformation("Realtime model: {Model}", _settings.RealtimeModel);
 
         // Subscribe to Realtime events
         _realtime.AudioDelta += OnAudioDelta;
@@ -113,12 +116,12 @@ public class AgentOrchestrator
 
         // Connect to OpenAI
         await _realtime.ConnectAsync(_cts.Token);
-        DebugLog?.Invoke(this, "Realtime connected.");
+        _logger.LogInformation("Realtime connected");
 
         // Start audio pipeline
         await _voiceOut.StartAsync(_cts.Token);
         await _voiceIn.StartAsync(_cts.Token);
-        DebugLog?.Invoke(this, "Audio pipeline started.");
+        _logger.LogInformation("Audio pipeline started");
     }
 
     public async Task StopAsync()
@@ -148,7 +151,7 @@ public class AgentOrchestrator
         CurrentConfig = null;
         _cts?.Dispose();
         _cts = null;
-        DebugLog?.Invoke(this, "Orchestrator stopped.");
+        _logger.LogInformation("Orchestrator stopped");
     }
 
     // --- Event handlers ---
@@ -156,7 +159,7 @@ public class AgentOrchestrator
     private async void OnAudioDelta(object? sender, byte[] pcmData)
     {
         try { await _voiceOut.PlayAudioDeltaAsync(pcmData); }
-        catch (Exception ex) { DebugLog?.Invoke(this, $"Playback error: {ex.Message}"); }
+        catch (Exception ex) { _logger.LogError(ex, "Playback error"); }
     }
 
     private void OnOutputTranscriptDelta(object? sender, string delta)
@@ -168,14 +171,14 @@ public class AgentOrchestrator
     private void OnOutputTranscriptCompleted(object? sender, string transcript)
     {
         TranscriptCompleted?.Invoke(this, $"AI:{transcript}");
-        DebugLog?.Invoke(this, $"AI said: {transcript}");
+        _logger.LogDebug("AI transcript: {Length} chars", transcript.Length);
     }
 
     private void OnInputTranscriptCompleted(object? sender, string transcript)
     {
         TranscriptUpdated?.Invoke(this, $"You: {transcript}");
         TranscriptCompleted?.Invoke(this, $"You:{transcript}");
-        DebugLog?.Invoke(this, $"User said: {transcript}");
+        _logger.LogDebug("User transcript received");
     }
 
     private async void OnSpeechStarted(object? sender, EventArgs e)
@@ -193,17 +196,17 @@ public class AgentOrchestrator
                 try
                 {
                     await _realtime.TruncateResponseAudioAsync(itemId, playedMs);
-                    DebugLog?.Invoke(this, $"Interrupted at {playedMs}ms.");
+                    _logger.LogDebug("Interrupted at {PlayedMs}ms", playedMs);
                 }
                 catch (Exception ex)
                 {
-                    DebugLog?.Invoke(this, $"Truncation error: {ex.Message}");
+                    _logger.LogWarning(ex, "Truncation error");
                 }
             }
         }
         catch (Exception ex)
         {
-            DebugLog?.Invoke(this, $"SpeechStarted handler error: {ex.Message}");
+            _logger.LogError(ex, "SpeechStarted handler error");
         }
     }
 
@@ -215,24 +218,24 @@ public class AgentOrchestrator
     private void OnResponseDone(object? sender, RealtimeResponseInfo info)
     {
         _voiceOut.ResetTracker();
-        DebugLog?.Invoke(this, $"Response complete: {info.ResponseId}");
+        _logger.LogDebug("Response complete: {ResponseId}", info.ResponseId);
     }
 
     private void OnError(object? sender, string error)
     {
-        DebugLog?.Invoke(this, $"Realtime error: {error}");
+        _logger.LogError("Realtime error: {Error}", error);
     }
 
     private async void OnConnectionLost(object? sender, string reason)
     {
         try
         {
-            DebugLog?.Invoke(this, $"Connection lost: {reason}");
+            _logger.LogWarning("Connection lost: {Reason}", reason);
             await ReconnectAsync();
         }
         catch (Exception ex)
         {
-            DebugLog?.Invoke(this, $"Reconnect handler error: {ex.Message}");
+            _logger.LogError(ex, "Reconnect handler error");
         }
     }
 
@@ -243,46 +246,46 @@ public class AgentOrchestrator
 
         for (int i = 0; i < maxRetries; i++)
         {
-            DebugLog?.Invoke(this, $"Reconnecting ({i + 1}/{maxRetries})...");
+            _logger.LogInformation("Reconnecting ({Attempt}/{MaxRetries})", i + 1, maxRetries);
             try
             {
                 await _realtime.ConnectAsync(_cts?.Token ?? CancellationToken.None);
                 await _realtime.UpdateSessionAsync(_cts?.Token ?? CancellationToken.None);
                 await _voiceIn.StartAsync(_cts?.Token ?? CancellationToken.None);
-                DebugLog?.Invoke(this, "Reconnected.");
+                _logger.LogInformation("Reconnected");
                 return;
             }
             catch (Exception ex)
             {
-                DebugLog?.Invoke(this, $"Reconnect failed: {ex.Message}");
+                _logger.LogWarning(ex, "Reconnect failed");
                 await Task.Delay(delay);
                 delay *= 2; // exponential backoff: 1s, 2s, 4s, 8s, 16s
             }
         }
 
-        DebugLog?.Invoke(this, "Reconnection failed after 5 attempts. Stopping session.");
+        _logger.LogError("Reconnection failed after {MaxRetries} attempts. Stopping session", maxRetries);
         await StopAsync();
     }
 
     public async Task StartListeningAsync()
     {
-        _wakeWord.Value.WakeWordDetected += OnWakeWordDetected;
-        await _wakeWord.Value.StartAsync(_cts?.Token ?? CancellationToken.None);
-        DebugLog?.Invoke(this, "Wake word listening started.");
+        _wakeWord.WakeWordDetected += OnWakeWordDetected;
+        await _wakeWord.StartAsync(_cts?.Token ?? CancellationToken.None);
+        _logger.LogInformation("Wake word listening started");
     }
 
     public async Task StopListeningAsync()
     {
-        _wakeWord.Value.WakeWordDetected -= OnWakeWordDetected;
-        await _wakeWord.Value.StopAsync();
-        DebugLog?.Invoke(this, "Wake word listening stopped.");
+        _wakeWord.WakeWordDetected -= OnWakeWordDetected;
+        await _wakeWord.StopAsync();
+        _logger.LogInformation("Wake word listening stopped");
     }
 
     private async void OnWakeWordDetected(object? sender, WakeWordDetectedEventArgs e)
     {
         try
         {
-            DebugLog?.Invoke(this, $"Wake word: {e.Keyword} ({e.Action})");
+            _logger.LogInformation("Wake word: {Keyword} ({Action})", e.Keyword, e.Action);
 
             switch (e.Action)
             {
@@ -308,14 +311,14 @@ public class AgentOrchestrator
                         var result = await _dispatcher.ExecuteAsync(
                             e.ToolName, null, context, _cts?.Token ?? CancellationToken.None);
 
-                        DebugLog?.Invoke(this, $"Wake word tool result: {result}");
+                        _logger.LogDebug("Wake word tool result: {Result}", result);
                     }
                     break;
             }
         }
         catch (Exception ex)
         {
-            DebugLog?.Invoke(this, $"Wake word handler error: {ex.Message}");
+            _logger.LogError(ex, "Wake word handler error");
         }
     }
 
@@ -323,7 +326,7 @@ public class AgentOrchestrator
     {
         CaptureFrame = _cameraManager.CaptureFrameAsync,
         Session = Session,
-        Log = msg => DebugLog?.Invoke(this, msg),
+        Log = msg => _logger.LogInformation("{ToolMessage}", msg),
         RealtimeClient = _realtime
     };
 
@@ -337,7 +340,7 @@ public class AgentOrchestrator
 
     private async void OnFunctionCallReceived(object? sender, FunctionCallInfo info)
     {
-        DebugLog?.Invoke(this, $"Function call: {info.Name}");
+        _logger.LogInformation("Function call: {ToolName}", info.Name);
 
         try
         {
@@ -346,11 +349,11 @@ public class AgentOrchestrator
                 info.Name, info.Arguments, context, _cts?.Token ?? CancellationToken.None);
 
             await _realtime.SendFunctionCallOutputAsync(info.CallId, result);
-            DebugLog?.Invoke(this, $"Function result sent for {info.Name}");
+            _logger.LogDebug("Function result sent for {ToolName}", info.Name);
         }
         catch (Exception ex)
         {
-            DebugLog?.Invoke(this, $"Function call error ({info.Name}): {ex.Message}");
+            _logger.LogError(ex, "Function call error ({ToolName})", info.Name);
 
             try
             {
@@ -360,7 +363,7 @@ public class AgentOrchestrator
             }
             catch (Exception sendEx)
             {
-                DebugLog?.Invoke(this, $"Failed to send error result: {sendEx.Message}");
+                _logger.LogError(sendEx, "Failed to send error result");
             }
         }
     }

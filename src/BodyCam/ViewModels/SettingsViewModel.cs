@@ -236,6 +236,38 @@ public class SettingsViewModel : ViewModelBase
         set => SetProperty(_settings.ShowCostEstimate, value, v => _settings.ShowCostEstimate = v);
     }
 
+    // --- Diagnostics & Telemetry ---
+
+    public bool SendDiagnosticData
+    {
+        get => _settings.SendDiagnosticData;
+        set => SetProperty(_settings.SendDiagnosticData, value, v => _settings.SendDiagnosticData = v);
+    }
+
+    public string? AzureMonitorConnectionString
+    {
+        get => _settings.AzureMonitorConnectionString;
+        set => SetProperty(_settings.AzureMonitorConnectionString, value, v => _settings.AzureMonitorConnectionString = v);
+    }
+
+    public bool SendCrashReports
+    {
+        get => _settings.SendCrashReports;
+        set => SetProperty(_settings.SendCrashReports, value, v => _settings.SendCrashReports = v);
+    }
+
+    public string? SentryDsn
+    {
+        get => _settings.SentryDsn;
+        set => SetProperty(_settings.SentryDsn, value, v => _settings.SentryDsn = v);
+    }
+
+    public bool SendUsageData
+    {
+        get => _settings.SendUsageData;
+        set => SetProperty(_settings.SendUsageData, value, v => _settings.SendUsageData = v);
+    }
+
     // --- API Key ---
 
     private string _apiKeyDisplay = string.Empty;

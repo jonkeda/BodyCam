@@ -137,4 +137,41 @@ public class SettingsService : ISettingsService
         get { var v = Preferences.Get(nameof(PicovoiceAccessKey), string.Empty); return v.Length == 0 ? null : v; }
         set => Preferences.Set(nameof(PicovoiceAccessKey), value ?? string.Empty);
     }
+
+    // Diagnostics & Telemetry
+    public bool SendDiagnosticData
+    {
+        get => Preferences.Get(nameof(SendDiagnosticData), false);
+        set => Preferences.Set(nameof(SendDiagnosticData), value);
+    }
+
+    public string? AzureMonitorConnectionString
+    {
+        get { var v = Preferences.Get(nameof(AzureMonitorConnectionString), string.Empty); return v.Length == 0 ? null : v; }
+        set => Preferences.Set(nameof(AzureMonitorConnectionString), value ?? string.Empty);
+    }
+
+    public bool SendCrashReports
+    {
+        get => Preferences.Get(nameof(SendCrashReports), false);
+        set => Preferences.Set(nameof(SendCrashReports), value);
+    }
+
+    public string? SentryDsn
+    {
+        get { var v = Preferences.Get(nameof(SentryDsn), string.Empty); return v.Length == 0 ? null : v; }
+        set => Preferences.Set(nameof(SentryDsn), value ?? string.Empty);
+    }
+
+    public bool SendUsageData
+    {
+        get => Preferences.Get(nameof(SendUsageData), false);
+        set => Preferences.Set(nameof(SendUsageData), value);
+    }
+
+    public bool SetupCompleted
+    {
+        get => Preferences.Get(nameof(SetupCompleted), false);
+        set => Preferences.Set(nameof(SetupCompleted), value);
+    }
 }

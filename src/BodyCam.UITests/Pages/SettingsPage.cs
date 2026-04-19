@@ -9,6 +9,9 @@ public class SettingsPage : PageObjectBase<SettingsPage>
     public override bool IsLoaded(int? timeoutMs = null)
         => ProviderOpenAiRadio.IsExists();
 
+    // Shell navigation
+    public Button<SettingsPage> NavIcon => Button("NavIcon");
+
     // Provider selection
     public RadioButton<SettingsPage> ProviderOpenAiRadio => RadioButton("ProviderOpenAiRadio");
     public RadioButton<SettingsPage> ProviderAzureRadio => RadioButton("ProviderAzureRadio");

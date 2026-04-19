@@ -1,4 +1,5 @@
 using Android.Media;
+using Android.Media.Audiofx;
 using BodyCam.Services;
 using BodyCam.Services.Audio;
 
@@ -50,6 +51,13 @@ public sealed class PlatformMicProvider : IAudioInputProvider, IDisposable
             ChannelIn.Mono,
             Encoding.Pcm16bit,
             bufferSize);
+
+        // Enable hardware echo cancellation and noise suppression
+        if (AcousticEchoCanceler.IsAvailable)
+            AcousticEchoCanceler.Create(_audioRecord.AudioSessionId)?.SetEnabled(true);
+
+        if (NoiseSuppressor.IsAvailable)
+            NoiseSuppressor.Create(_audioRecord.AudioSessionId)?.SetEnabled(true);
 
         _audioRecord.StartRecording();
         IsCapturing = true;

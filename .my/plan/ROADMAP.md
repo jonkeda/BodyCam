@@ -319,35 +319,40 @@ Scan QR codes from camera feed on demand, read content aloud via AI, ask user wh
 
 ## M19 — Logging, Crash Reporting & Analytics
 
-**Status:** Not started  
+**Status:** Complete  
 **Plan:** [m19-logging/](m19-logging/)
 
 Replace ad-hoc `DebugLog` string events with structured `ILogger<T>`, persist to remote sinks, add crash reporting and usage analytics.
 
-- **Phase 1: Core ILogger Integration**
-  - [ ] Inject `ILogger<T>` into AgentOrchestrator, RealtimeClient, managers
-  - [ ] Replace all `DebugLog?.Invoke()` calls with leveled `ILogger` calls
-  - [ ] `InAppLoggerProvider` (custom provider for debug overlay, ring buffer)
-  - [ ] Wire into MAUI logging pipeline (`MauiProgram.cs`)
-  - [ ] Update MainViewModel to consume `InAppLoggerProvider`
-  - [ ] Remove `AgentOrchestrator.DebugLog` event
-- **Phase 2: Remote Sink (OpenTelemetry + Azure Monitor)**
-  - [ ] Add `OpenTelemetry` + `Azure.Monitor.OpenTelemetry.Exporter` packages
-  - [ ] Configure OpenTelemetry logging exporter in MAUI pipeline
-  - [ ] Configure connection string via settings (opt-in)
-  - [ ] Filter: Warning+ to remote, privacy-safe properties only
-  - [ ] Resource attributes: SessionId, Platform, AppVersion
-- **Phase 3: Crash Reporting (Sentry)**
-  - [ ] Add `Sentry.Maui` package
-  - [ ] Configure `UseSentry()` in `MauiProgram.cs`
-  - [ ] `BeforeSend` callback to strip API keys and transcript text
-  - [ ] Breadcrumbs from ILogger entries
-  - [ ] Offline envelope caching
-  - [ ] Exclude PII, API keys, transcript text
-- **Phase 4: Usage Analytics (OpenTelemetry)**
-  - [ ] Custom events via `ActivitySource`: SessionStarted, ToolExecuted, VisionCaptured
-  - [ ] Metrics via `Meter`: session duration, tool call count, error rate
-  - [ ] Opt-in toggle in settings
+- **Phase 1: Core ILogger Integration** ✅
+  - [x] Inject `ILogger<T>` into AgentOrchestrator, MainViewModel
+  - [x] Replace all `DebugLog?.Invoke()` calls with leveled `ILogger` calls
+  - [x] `InAppLoggerProvider` + `InAppLogSink` (custom provider for debug overlay, ring buffer)
+  - [x] Wire into MAUI logging pipeline (`MauiProgram.cs`)
+  - [x] Update MainViewModel to consume `InAppLogSink`
+  - [x] Remove `AgentOrchestrator.DebugLog` event
+  - [x] Unit tests for InAppLogSink and InAppLoggerProvider (10 tests)
+- **Phase 2: Remote Sink (OpenTelemetry + Azure Monitor)** ✅
+  - [x] Add `OpenTelemetry` + `Azure.Monitor.OpenTelemetry.Exporter` packages
+  - [x] Configure OpenTelemetry logging exporter in MAUI pipeline
+  - [x] Configure connection string via settings (opt-in)
+  - [x] Filter: Warning+ to remote, privacy-safe properties only
+  - [x] Resource attributes: SessionId, Platform, AppVersion
+  - [x] Settings UI (SendDiagnosticData toggle + connection string entry)
+- **Phase 3: Crash Reporting (Sentry)** ✅
+  - [x] Add `Sentry.Maui` package
+  - [x] Configure `UseSentry()` in `MauiProgram.cs`
+  - [x] `BeforeSend` callback to strip API keys
+  - [x] Breadcrumbs from ILogger entries
+  - [x] Offline envelope caching (`CacheDirectoryPath`)
+  - [x] Exclude PII (`SendDefaultPii = false`)
+  - [x] Settings UI (SendCrashReports toggle + Sentry DSN entry)
+- **Phase 4: Usage Analytics (OpenTelemetry)** ✅
+  - [x] `IAnalyticsService` interface
+  - [x] `OpenTelemetryAnalyticsService` (ActivitySource + Meter)
+  - [x] `NullAnalyticsService` (testing/disabled)
+  - [x] Opt-in toggle in settings (`SendUsageData`)
+  - [x] DI registration (conditional based on opt-in)
 - **Phase 5: iOS Platform Support**
   - [ ] Verify OpenTelemetry exporter on iOS (.NET AOT)
   - [ ] Verify Sentry.Maui on iOS

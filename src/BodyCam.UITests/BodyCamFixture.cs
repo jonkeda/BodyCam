@@ -8,15 +8,19 @@ public class BodyCamFixture : MauiTestFixtureBase
 {
     private readonly MainPage _mainPage;
     private readonly SettingsPage _settingsPage;
+    private readonly SetupPage _setupPage;
 
     public BodyCamFixture()
     {
         _mainPage = new MainPage(Context);
         _settingsPage = new SettingsPage(Context);
+        _setupPage = new SetupPage(Context);
+        DismissSetupIfShown();
     }
 
     public MainPage MainPage => _mainPage;
     public SettingsPage SettingsPage => _settingsPage;
+    public SetupPage SetupPage => _setupPage;
 
     protected override string GetDefaultAppPath(string platform)
         => platform.ToLowerInvariant() switch
@@ -27,17 +31,33 @@ public class BodyCamFixture : MauiTestFixtureBase
 
     public void NavigateToHome()
     {
-        // Click the Home tab in Shell TabBar
-        // Shell uses Title-based navigation — find by Name "Home"
-        var homeTab = Context.TryFindElement(Locator.ByName("Home"));
-        homeTab?.Click();
+        _settingsPage.NavIcon.Click();
         _mainPage.WaitReady(10000);
     }
 
     public void NavigateToSettings()
     {
-        var settingsTab = Context.TryFindElement(Locator.ByName("Settings"));
-        settingsTab?.Click();
+        _mainPage.NavIcon.Click();
         _settingsPage.WaitReady(10000);
+    }
+
+    /// <summary>
+    /// If the Setup page is shown (first launch), skip through it to reach MainPage.
+    /// </summary>
+    private void DismissSetupIfShown()
+    {
+        if (!_setupPage.IsLoaded(3000)) return;
+
+        // On Windows, setup only has the API Key step — skip through to finish
+        for (int i = 0; i < 5; i++)
+        {
+            if (_mainPage.IsLoaded())
+                break;
+
+            if (_setupPage.SetupNextButton.IsExists())
+                _setupPage.SetupNextButton.Click();
+        }
+
+        _mainPage.WaitReady(10000);
     }
 }

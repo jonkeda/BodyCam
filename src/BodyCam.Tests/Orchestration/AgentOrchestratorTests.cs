@@ -3,9 +3,12 @@ using BodyCam.Models;
 using BodyCam.Orchestration;
 using BodyCam.Services;
 using BodyCam.Services.Camera;
+using BodyCam.Services.Logging;
 using BodyCam.Tools;
 using FluentAssertions;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 
 namespace BodyCam.Tests.Orchestration;
@@ -15,7 +18,8 @@ public class AgentOrchestratorTests
     private static AgentOrchestrator CreateOrchestrator(
         out IAudioInputService audioIn,
         out IAudioOutputService audioOut,
-        out IRealtimeClient realtime)
+        out IRealtimeClient realtime,
+        InAppLogSink? logSink = null)
     {
         audioIn = Substitute.For<IAudioInputService>();
         audioOut = Substitute.For<IAudioOutputService>();
@@ -45,8 +49,12 @@ public class AgentOrchestratorTests
         var wakeWord = Substitute.For<IWakeWordService>();
         var micCoordinator = Substitute.For<IMicrophoneCoordinator>();
         var cameraManager = new CameraManager([], settingsService);
+        var sink = logSink ?? new InAppLogSink();
+        var loggerProvider = new InAppLoggerProvider(sink, LogLevel.Debug);
+        var loggerFactory = new LoggerFactory([loggerProvider]);
+        var logger = loggerFactory.CreateLogger<AgentOrchestrator>();
 
-        return new AgentOrchestrator(voiceIn, conversation, voiceOut, vision, realtime, settingsService, new AppSettings(), dispatcher, new Lazy<IWakeWordService>(() => wakeWord), micCoordinator, cameraManager);
+        return new AgentOrchestrator(voiceIn, conversation, voiceOut, vision, realtime, settingsService, new AppSettings(), dispatcher, wakeWord, micCoordinator, cameraManager, logger);
     }
 
     [Fact]
@@ -96,14 +104,14 @@ public class AgentOrchestratorTests
     [Fact]
     public async Task StartAsync_EmitsDebugLogs()
     {
-        var orchestrator = CreateOrchestrator(out _, out _, out _);
-        var logs = new List<string>();
-        orchestrator.DebugLog += (_, msg) => logs.Add(msg);
+        var sink = new InAppLogSink();
+        var orchestrator = CreateOrchestrator(out _, out _, out _, sink);
 
         await orchestrator.StartAsync();
 
-        logs.Should().Contain(m => m.Contains("connected"));
-        logs.Should().Contain(m => m.Contains("pipeline started"));
+        var entries = sink.GetEntries();
+        entries.Should().Contain(e => e.Message.Contains("connected"));
+        entries.Should().Contain(e => e.Message.Contains("pipeline started"));
 
         await orchestrator.StopAsync();
     }
@@ -157,15 +165,15 @@ public class AgentOrchestratorTests
     [Fact]
     public async Task StopAsync_EmitsDebugLog()
     {
-        var orchestrator = CreateOrchestrator(out _, out _, out _);
-        var logs = new List<string>();
-        orchestrator.DebugLog += (_, msg) => logs.Add(msg);
+        var sink = new InAppLogSink();
+        var orchestrator = CreateOrchestrator(out _, out _, out _, sink);
 
         await orchestrator.StartAsync();
-        logs.Clear();
+        sink.Clear();
         await orchestrator.StopAsync();
 
-        logs.Should().Contain(m => m.Contains("stopped"));
+        var entries = sink.GetEntries();
+        entries.Should().Contain(e => e.Message.Contains("stopped"));
     }
 
     [Fact]
@@ -207,17 +215,17 @@ public class AgentOrchestratorTests
     [Fact]
     public async Task OutputTranscriptCompleted_AddsAssistantMessage()
     {
-        var orchestrator = CreateOrchestrator(out _, out _, out var realtime);
-        var logs = new List<string>();
+        var sink = new InAppLogSink();
+        var orchestrator = CreateOrchestrator(out _, out _, out var realtime, sink);
         var completed = new List<string>();
-        orchestrator.DebugLog += (_, msg) => logs.Add(msg);
         orchestrator.TranscriptCompleted += (_, c) => completed.Add(c);
 
         await orchestrator.StartAsync();
 
         realtime.OutputTranscriptCompleted += Raise.Event<EventHandler<string>>(realtime, "I'm fine, thanks");
 
-        logs.Should().Contain(m => m.Contains("AI said"));
+        var entries = sink.GetEntries();
+        entries.Should().Contain(e => e.Message.Contains("AI transcript"));
         completed.Should().ContainSingle().Which.Should().Be("AI:I'm fine, thanks");
 
         await orchestrator.StopAsync();
@@ -245,9 +253,8 @@ public class AgentOrchestratorTests
     [Fact]
     public async Task ResponseDone_ResetsTracker()
     {
-        var orchestrator = CreateOrchestrator(out _, out _, out var realtime);
-        var logs = new List<string>();
-        orchestrator.DebugLog += (_, msg) => logs.Add(msg);
+        var sink = new InAppLogSink();
+        var orchestrator = CreateOrchestrator(out _, out _, out var realtime, sink);
 
         await orchestrator.StartAsync();
 
@@ -255,7 +262,8 @@ public class AgentOrchestratorTests
             realtime,
             new RealtimeResponseInfo { ResponseId = "resp-001" });
 
-        logs.Should().Contain(m => m.Contains("Response complete"));
+        var entries = sink.GetEntries();
+        entries.Should().Contain(e => e.Message.Contains("Response complete"));
 
         await orchestrator.StopAsync();
     }
@@ -263,15 +271,15 @@ public class AgentOrchestratorTests
     [Fact]
     public async Task ErrorOccurred_EmitsDebugLog()
     {
-        var orchestrator = CreateOrchestrator(out _, out _, out var realtime);
-        var logs = new List<string>();
-        orchestrator.DebugLog += (_, msg) => logs.Add(msg);
+        var sink = new InAppLogSink();
+        var orchestrator = CreateOrchestrator(out _, out _, out var realtime, sink);
 
         await orchestrator.StartAsync();
 
         realtime.ErrorOccurred += Raise.Event<EventHandler<string>>(realtime, "Connection lost");
 
-        logs.Should().Contain(m => m.Contains("Realtime error") && m.Contains("Connection lost"));
+        var entries = sink.GetEntries();
+        entries.Should().Contain(e => e.Message.Contains("Realtime error") && e.Message.Contains("Connection lost"));
 
         await orchestrator.StopAsync();
     }

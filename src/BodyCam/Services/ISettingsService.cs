@@ -40,4 +40,14 @@ public interface ISettingsService
 
     // Wake Word
     string? PicovoiceAccessKey { get; set; }
+
+    // Diagnostics & Telemetry
+    bool SendDiagnosticData { get; set; }
+    string? AzureMonitorConnectionString { get; set; }
+    bool SendCrashReports { get; set; }
+    string? SentryDsn { get; set; }
+    bool SendUsageData { get; set; }
+
+    // Setup
+    bool SetupCompleted { get; set; }
 }

@@ -1,8 +1,11 @@
 ﻿using BodyCam.Services;
+using BodyCam.Services.Logging;
+using Azure.Monitor.OpenTelemetry.Exporter;
 using CommunityToolkit.Maui;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
-using OpenAI;
+using OpenTelemetry.Logs;
+using OpenTelemetry.Resources;
 
 namespace BodyCam;
 
@@ -78,33 +81,79 @@ public static class MauiProgram
 			.AddOrchestration()
 			.AddViewModels();
 
-		// Chat Completions client (deep_analysis tool)
-		builder.Services.AddSingleton<IChatClient>(sp =>
-		{
-			var appSettings = sp.GetRequiredService<AppSettings>();
-			var apiKeyService = sp.GetRequiredService<IApiKeyService>();
-
-			if (appSettings.Provider == OpenAiProvider.Azure)
-			{
-				var credential = new Azure.AzureKeyCredential(
-					apiKeyService.GetApiKeyAsync().GetAwaiter().GetResult()
-					?? throw new InvalidOperationException("API key not configured."));
-				var azureClient = new Azure.AI.OpenAI.AzureOpenAIClient(
-					new Uri(appSettings.AzureEndpoint!), credential);
-				return azureClient.GetChatClient(appSettings.AzureChatDeploymentName!).AsIChatClient();
-			}
-			else
-			{
-				var key = apiKeyService.GetApiKeyAsync().GetAwaiter().GetResult()
-					?? throw new InvalidOperationException("API key not configured.");
-				var openAiClient = new OpenAIClient(key);
-				return openAiClient.GetChatClient(appSettings.ChatModel).AsIChatClient();
-			}
-		});
+// Chat Completions client (deep_analysis + vision tools)
+		builder.Services.AddSingleton<IChatClient, AppChatClient>();
 
 		// Memory store
 		builder.Services.AddSingleton<MemoryStore>(sp =>
 			new MemoryStore(Path.Combine(FileSystem.AppDataDirectory, "memories.json")));
+
+		// Analytics service (opt-in)
+		if (settingsService.SendUsageData)
+			builder.Services.AddSingleton<IAnalyticsService, OpenTelemetryAnalyticsService>();
+		else
+			builder.Services.AddSingleton<IAnalyticsService, NullAnalyticsService>();
+
+		// In-app log sink (ring buffer for debug overlay)
+		var logSink = new InAppLogSink();
+		builder.Services.AddSingleton(logSink);
+		builder.Logging.AddProvider(new InAppLoggerProvider(logSink, LogLevel.Debug));
+
+		// OpenTelemetry + Azure Monitor (opt-in, Warning+ only)
+		if (settingsService.SendDiagnosticData
+			&& !string.IsNullOrEmpty(settingsService.AzureMonitorConnectionString))
+		{
+			builder.Logging.AddOpenTelemetry(otel =>
+			{
+				otel.SetResourceBuilder(ResourceBuilder.CreateDefault()
+					.AddService("BodyCam", serviceVersion: AppInfo.VersionString)
+					.AddAttributes(new Dictionary<string, object>
+					{
+						["device.platform"] = DeviceInfo.Platform.ToString(),
+						["device.model"] = DeviceInfo.Model,
+						["os.version"] = DeviceInfo.VersionString,
+						["session.id"] = Guid.NewGuid().ToString("N")[..12]
+					}));
+
+				otel.AddAzureMonitorLogExporter(options =>
+				{
+					options.ConnectionString = settingsService.AzureMonitorConnectionString;
+				});
+			});
+
+			builder.Logging.AddFilter<OpenTelemetryLoggerProvider>("", LogLevel.Warning);
+		}
+
+		// Sentry crash reporting (opt-in)
+		if (settingsService.SendCrashReports
+			&& !string.IsNullOrEmpty(settingsService.SentryDsn))
+		{
+			builder.UseSentry(options =>
+			{
+				options.Dsn = settingsService.SentryDsn;
+				options.IsGlobalModeEnabled = true;
+				options.MinimumBreadcrumbLevel = LogLevel.Information;
+				options.MinimumEventLevel = LogLevel.Error;
+				options.SendDefaultPii = false;
+				options.CacheDirectoryPath = FileSystem.CacheDirectory;
+				options.TracesSampleRate = 0;
+				options.Release = $"bodycam@{AppInfo.VersionString}";
+				options.Environment =
+#if DEBUG
+					"development";
+#else
+					"production";
+#endif
+				options.SetBeforeSend((sentryEvent, _) =>
+				{
+					// Strip API keys from exception messages
+					if (sentryEvent.Message?.Formatted?.Contains("sk-", StringComparison.Ordinal) == true)
+						sentryEvent.Message = new Sentry.SentryMessage { Formatted = "[redacted - contained API key]" };
+
+					return sentryEvent;
+				});
+			});
+		}
 
 #if DEBUG
 		builder.Logging.AddDebug();

@@ -6,6 +6,8 @@ using BodyCam.Orchestration;
 using BodyCam.Services;
 using BodyCam.Services.Camera;
 using BodyCam.Services.Input;
+using BodyCam.Services.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace BodyCam.ViewModels;
 
@@ -21,6 +23,8 @@ public class MainViewModel : ViewModelBase
     private readonly AgentOrchestrator _orchestrator;
     private readonly IApiKeyService _apiKeyService;
     private readonly ISettingsService _settingsService;
+    private readonly ILogger<MainViewModel> _logger;
+    private readonly InAppLogSink _logSink;
     private string _debugLog = string.Empty;
     private string _toggleButtonText = "Start";
     private string _statusText = "Ready";
@@ -40,13 +44,16 @@ public class MainViewModel : ViewModelBase
     private readonly CameraManager _cameraManager;
     private readonly ButtonInputManager _buttonInput;
 
-    public MainViewModel(AgentOrchestrator orchestrator, IApiKeyService apiKeyService, ISettingsService settingsService, CameraManager cameraManager, ButtonInputManager buttonInput)
+    public MainViewModel(AgentOrchestrator orchestrator, IApiKeyService apiKeyService, ISettingsService settingsService, CameraManager cameraManager, ButtonInputManager buttonInput, InAppLogSink logSink, ILogger<MainViewModel> logger)
     {
         _orchestrator = orchestrator;
         _apiKeyService = apiKeyService;
         _settingsService = settingsService;
         _cameraManager = cameraManager;
         _buttonInput = buttonInput;
+        _logSink = logSink;
+        _logger = logger;
+
         Title = "BodyCam";
 
         _debugVisible = _settingsService.DebugMode;
@@ -140,17 +147,22 @@ public class MainViewModel : ViewModelBase
                     {
                         _currentAiEntry.IsThinking = false;
                         _currentAiEntry.Text = msg[3..].Trim();
+
+                        foreach (var action in ContentActionDetector.Detect(_currentAiEntry.Text))
+                            _currentAiEntry.Actions.Add(action);
+                        if (_currentAiEntry.HasActions)
+                            _currentAiEntry.NotifyActionsChanged();
                     }
                     _currentAiEntry = null;
                 }
             });
         };
 
-        _orchestrator.DebugLog += (_, msg) =>
+        _logSink.EntryAdded += (_, _) =>
         {
             MainThread.BeginInvokeOnMainThread(() =>
             {
-                DebugLog += $"[{DateTime.Now:HH:mm:ss}] {msg}{Environment.NewLine}";
+                DebugLog = _logSink.GetFormattedLog();
             });
         };
     }
@@ -348,13 +360,27 @@ public class MainViewModel : ViewModelBase
         var aiEntry = new TranscriptEntry { Role = "AI", IsThinking = true };
         Entries.Add(aiEntry);
 
-        var description = await _orchestrator.Vision.DescribeFrameAsync(frame, prompt);
-
-        aiEntry.IsThinking = false;
-        aiEntry.Text = description;
-
-        // Switch to transcript tab so the user sees the result
+        // Switch to transcript tab immediately so the user sees the thinking indicator
         ShowTranscriptTab = true;
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        try
+        {
+            var description = await _orchestrator.Vision.DescribeFrameAsync(frame, prompt, cts.Token);
+            aiEntry.IsThinking = false;
+            aiEntry.Text = description;
+        }
+        catch (OperationCanceledException)
+        {
+            aiEntry.IsThinking = false;
+            aiEntry.Text = "Vision request timed out. Check your network connection and try again.";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Vision API error");
+            aiEntry.IsThinking = false;
+            aiEntry.Text = $"Vision error: {ex.Message}";
+        }
     }
 
     private async Task EnsureActiveAndSendAsync(string prompt)
@@ -424,7 +450,7 @@ public class MainViewModel : ViewModelBase
                     IsRunning = false;
                     ToggleButtonText = "Start";
                     StatusText = "Ready";
-                    DebugLog += $"[{DateTime.Now:HH:mm:ss}] Start failed: {ex.Message}{Environment.NewLine}";
+                    _logger.LogError(ex, "Start failed");
                     return;
                 }
             }
@@ -476,7 +502,7 @@ public class MainViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            DebugLog += $"[{DateTime.Now:HH:mm:ss}] Action error ({action}): {ex.Message}{Environment.NewLine}";
+            _logger.LogError(ex, "Action error ({Action})", action);
         }
     }
 
@@ -488,7 +514,7 @@ public class MainViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            DebugLog += $"[{DateTime.Now:HH:mm:ss}] Button handler error: {ex.Message}{Environment.NewLine}";
+            _logger.LogError(ex, "Button handler error");
         }
     }
 

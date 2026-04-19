@@ -9,6 +9,9 @@ public class MainPage : PageObjectBase<MainPage>
     public override bool IsLoaded(int? timeoutMs = null)
         => SleepButton.IsExists();
 
+    // Shell navigation
+    public Button<MainPage> NavIcon => Button("NavIcon");
+
     // Status bar
     public Button<MainPage> SleepButton => Button("SleepButton");
     public Button<MainPage> ListenButton => Button("ListenButton");

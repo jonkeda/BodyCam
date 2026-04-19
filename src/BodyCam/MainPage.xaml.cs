@@ -39,13 +39,17 @@ public partial class MainPage : ContentPage
 			btOutEnum?.ScanAndRegister();
 			btOutEnum?.StartListening();
 #elif ANDROID
-			var btEnum = services.GetService<BodyCam.Platforms.Android.Audio.AndroidBluetoothEnumerator>();
-			btEnum?.ScanAndRegister();
-			btEnum?.StartListening();
+			var btStatus = await Permissions.CheckStatusAsync<Permissions.Bluetooth>();
+			if (btStatus == PermissionStatus.Granted)
+			{
+				var btEnum = services.GetService<BodyCam.Platforms.Android.Audio.AndroidBluetoothEnumerator>();
+				btEnum?.ScanAndRegister();
+				btEnum?.StartListening();
 
-			var btOutEnum = services.GetService<BodyCam.Platforms.Android.Audio.AndroidBluetoothOutputEnumerator>();
-			btOutEnum?.ScanAndRegister();
-			btOutEnum?.StartListening();
+				var btOutEnum = services.GetService<BodyCam.Platforms.Android.Audio.AndroidBluetoothOutputEnumerator>();
+				btOutEnum?.ScanAndRegister();
+				btOutEnum?.StartListening();
+			}
 #endif
 		};
 

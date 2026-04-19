@@ -76,11 +76,34 @@
 		<PackageReference Include="OpenAI" Version="2.*" />
 		<PackageReference Include="Azure.AI.OpenAI" Version="2.*" />
 		<PackageReference Include="SkiaSharp.Views.Maui.Controls" Version="3.*" />
+		<PackageReference Include="OpenTelemetry" Version="1.*" />
+		<PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.*" />
+		<PackageReference Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.*" />
+		<PackageReference Include="Sentry.Maui" Version="5.*" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<InternalsVisibleTo Include="BodyCam.Tests" />
 		<InternalsVisibleTo Include="BodyCam.RealTests" />
 	</ItemGroup>
+
+	<!-- Auto-increment build number -->
+	<Target Name="IncrementBuildNumber" BeforeTargets="CoreCompile" Condition="'$(DesignTimeBuild)' != 'true'">
+		<ReadLinesFromFile File="$(MSBuildProjectDirectory)\build-number.txt">
+			<Output TaskParameter="Lines" ItemName="_BuildNumberLines" />
+		</ReadLinesFromFile>
+		<PropertyGroup>
+			<_CurrentBuild>@(_BuildNumberLines->'%(Identity)', '')</_CurrentBuild>
+			<_NextBuild>$([MSBuild]::Add($(_CurrentBuild), 1))</_NextBuild>
+		</PropertyGroup>
+		<WriteLinesToFile File="$(MSBuildProjectDirectory)\build-number.txt" Lines="$(_NextBuild)" Overwrite="true" />
+		<WriteLinesToFile File="$(IntermediateOutputPath)BuildNumber.g.cs"
+			Lines="[assembly: System.Reflection.AssemblyMetadata(&quot;BuildNumber&quot;, &quot;$(_NextBuild)&quot;)]"
+			Overwrite="true" />
+		<ItemGroup>
+			<Compile Include="$(IntermediateOutputPath)BuildNumber.g.cs" />
+		</ItemGroup>
+		<Message Importance="high" Text="Build #$(_NextBuild)" />
+	</Target>
 
 </Project>

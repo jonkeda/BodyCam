@@ -96,7 +96,6 @@ public static class ServiceExtensions
 
 		services.AddSingleton<PorcupineWakeWordService>();
 		services.AddSingleton<IWakeWordService>(sp => sp.GetRequiredService<PorcupineWakeWordService>());
-		services.AddSingleton(sp => new Lazy<IWakeWordService>(() => sp.GetRequiredService<IWakeWordService>()));
 		services.AddSingleton<IMicrophoneCoordinator, MicrophoneCoordinator>();
 		services.AddSingleton<IApiKeyService, ApiKeyService>();
 		services.AddSingleton<IRealtimeClient, RealtimeClient>();
@@ -107,8 +106,10 @@ public static class ServiceExtensions
 
 	public static IServiceCollection AddViewModels(this IServiceCollection services)
 	{
+		services.AddTransient<SetupViewModel>();
 		services.AddTransient<MainViewModel>();
 		services.AddTransient<SettingsViewModel>();
+		services.AddTransient<SetupPage>();
 		services.AddTransient<MainPage>();
 		services.AddTransient<SettingsPage>();
 
