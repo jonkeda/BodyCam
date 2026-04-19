@@ -13,7 +13,6 @@ public class SaveMemoryToolTests
         CaptureFrame = ct => Task.FromResult<byte[]?>(null),
         Session = new SessionContext(),
         Log = _ => { },
-        RealtimeClient = Substitute.For<IRealtimeClient>()
     };
 
     [Fact]

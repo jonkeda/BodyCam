@@ -19,8 +19,6 @@ public class ToolPipelineTests : IAsyncLifetime
             CaptureFrame = _ => _host.CameraManager.CaptureFrameAsync(),
             Session = new SessionContext(),
             Log = _ => { },
-            RealtimeClient = _host.Services.GetService(typeof(IRealtimeClient)) as IRealtimeClient
-                ?? throw new InvalidOperationException(),
         };
     }
 

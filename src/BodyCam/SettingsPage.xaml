@@ -4,7 +4,6 @@
              xmlns:vm="clr-namespace:BodyCam.ViewModels"
              x:Class="BodyCam.SettingsPage"
              x:DataType="vm:SettingsViewModel"
-             Shell.TabBarIsVisible="False"
              Title="{Binding Title}">
 
     <ScrollView>
@@ -12,197 +11,166 @@
 
             <!-- Note -->
             <Label Text="Changes take effect on next session start."
-                   FontSize="Caption" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" FontAttributes="Italic" />
+                   FontSize="12" TextColor="Gray" FontAttributes="Italic" />
 
             <!-- SECTION: Provider -->
-            <Label Text="Provider" FontSize="Title" FontAttributes="Bold" Margin="0,8,0,0"
-                   SemanticProperties.HeadingLevel="Level1" />
+            <Label Text="Provider" FontSize="18" FontAttributes="Bold" Margin="0,8,0,0" />
 
             <HorizontalStackLayout Spacing="16">
                 <RadioButton AutomationId="ProviderOpenAiRadio"
                              Content="OpenAI"
                              IsChecked="{Binding IsOpenAi}"
-                             CheckedChanged="OnOpenAiChecked"
-                             SemanticProperties.Description="Use OpenAI provider" />
+                             CheckedChanged="OnOpenAiChecked" />
                 <RadioButton AutomationId="ProviderAzureRadio"
                              Content="Azure"
                              IsChecked="{Binding IsAzure}"
-                             CheckedChanged="OnAzureChecked"
-                             SemanticProperties.Description="Use Azure OpenAI provider" />
+                             CheckedChanged="OnAzureChecked" />
             </HorizontalStackLayout>
 
             <!-- SECTION: Models (OpenAI only) -->
             <VerticalStackLayout Spacing="12" IsVisible="{Binding IsOpenAi}">
-                <Label Text="Models" FontSize="Title" FontAttributes="Bold" Margin="0,8,0,0"
-                       SemanticProperties.HeadingLevel="Level1" />
+                <Label Text="Models" FontSize="18" FontAttributes="Bold" Margin="0,8,0,0" />
 
-                <Label Text="Voice Model" FontSize="Small" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+                <Label Text="Voice Model" FontSize="13" TextColor="Gray" />
                 <HorizontalStackLayout Spacing="8">
                     <Picker AutomationId="VoiceModelPicker"
                             ItemsSource="{Binding RealtimeModelOptions}"
-                            ItemDisplayBinding="{Binding Label}"
                             SelectedItem="{Binding SelectedRealtimeModel}"
-                            HorizontalOptions="FillAndExpand"
-                            SemanticProperties.Description="Voice model" />
+                            HorizontalOptions="FillAndExpand" />
                     <Label AutomationId="RealtimeStatusLabel"
                            Text="{Binding RealtimeStatus}"
-                           VerticalOptions="Center" FontSize="Small" />
+                           VerticalOptions="Center" FontSize="13" />
                 </HorizontalStackLayout>
 
-                <Label Text="Chat Model" FontSize="Small" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+                <Label Text="Chat Model" FontSize="13" TextColor="Gray" />
                 <HorizontalStackLayout Spacing="8">
                     <Picker AutomationId="ChatModelPicker"
                             ItemsSource="{Binding ChatModelOptions}"
-                            ItemDisplayBinding="{Binding Label}"
                             SelectedItem="{Binding SelectedChatModel}"
-                            HorizontalOptions="FillAndExpand"
-                            SemanticProperties.Description="Chat model" />
+                            HorizontalOptions="FillAndExpand" />
                     <Label AutomationId="ChatStatusLabel"
                            Text="{Binding ChatStatus}"
-                           VerticalOptions="Center" FontSize="Small" />
+                           VerticalOptions="Center" FontSize="13" />
                 </HorizontalStackLayout>
 
-                <Label Text="Vision Model" FontSize="Small" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+                <Label Text="Vision Model" FontSize="13" TextColor="Gray" />
                 <HorizontalStackLayout Spacing="8">
                     <Picker AutomationId="VisionModelPicker"
                             ItemsSource="{Binding VisionModelOptions}"
-                            ItemDisplayBinding="{Binding Label}"
                             SelectedItem="{Binding SelectedVisionModel}"
-                            HorizontalOptions="FillAndExpand"
-                            SemanticProperties.Description="Vision model" />
+                            HorizontalOptions="FillAndExpand" />
                     <Label AutomationId="VisionStatusLabel"
                            Text="{Binding VisionStatus}"
-                           VerticalOptions="Center" FontSize="Small" />
+                           VerticalOptions="Center" FontSize="13" />
                 </HorizontalStackLayout>
 
-                <Label Text="Transcription Model" FontSize="Small" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+                <Label Text="Transcription Model" FontSize="13" TextColor="Gray" />
                 <HorizontalStackLayout Spacing="8">
                     <Picker AutomationId="TranscriptionModelPicker"
                             ItemsSource="{Binding TranscriptionModelOptions}"
-                            ItemDisplayBinding="{Binding Label}"
                             SelectedItem="{Binding SelectedTranscriptionModel}"
-                            HorizontalOptions="FillAndExpand"
-                            SemanticProperties.Description="Transcription model" />
+                            HorizontalOptions="FillAndExpand" />
                     <Label AutomationId="TranscriptionStatusLabel"
                            Text="{Binding TranscriptionStatus}"
-                           VerticalOptions="Center" FontSize="Small" />
+                           VerticalOptions="Center" FontSize="13" />
                 </HorizontalStackLayout>
             </VerticalStackLayout>
 
             <!-- SECTION: Azure Deployments (Azure only) -->
             <VerticalStackLayout Spacing="12" IsVisible="{Binding IsAzure}">
-                <Label Text="Azure Deployments" FontSize="Title" FontAttributes="Bold" Margin="0,8,0,0"
-                       SemanticProperties.HeadingLevel="Level1" />
+                <Label Text="Azure Deployments" FontSize="18" FontAttributes="Bold" Margin="0,8,0,0" />
 
-                <Label Text="Endpoint" FontSize="Small" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+                <Label Text="Endpoint" FontSize="13" TextColor="Gray" />
                 <Entry AutomationId="AzureEndpointEntry"
                        Text="{Binding AzureEndpoint}"
-                       Placeholder="https://your-resource.cognitiveservices.azure.com"
-                       SemanticProperties.Description="Azure endpoint URL" />
+                       Placeholder="https://your-resource.cognitiveservices.azure.com" />
 
-                <Label Text="API Version" FontSize="Small" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+                <Label Text="API Version" FontSize="13" TextColor="Gray" />
                 <Entry AutomationId="AzureApiVersionEntry"
                        Text="{Binding AzureApiVersion}"
-                       Placeholder="2025-04-01-preview"
-                       SemanticProperties.Description="Azure API version" />
+                       Placeholder="2025-04-01-preview" />
 
-                <Label Text="Realtime Deployment" FontSize="Small" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+                <Label Text="Realtime Deployment" FontSize="13" TextColor="Gray" />
                 <HorizontalStackLayout Spacing="8">
                     <Entry AutomationId="AzureRealtimeDeploymentEntry"
                            Text="{Binding AzureRealtimeDeployment}"
                            Placeholder="my-realtime-deployment"
-                           HorizontalOptions="FillAndExpand"
-                           SemanticProperties.Description="Azure realtime deployment name" />
+                           HorizontalOptions="FillAndExpand" />
                     <Label Text="{Binding RealtimeStatus}"
-                           VerticalOptions="Center" FontSize="Small" />
+                           VerticalOptions="Center" FontSize="13" />
                 </HorizontalStackLayout>
 
-                <Label Text="Chat Deployment" FontSize="Small" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+                <Label Text="Chat Deployment" FontSize="13" TextColor="Gray" />
                 <HorizontalStackLayout Spacing="8">
                     <Entry AutomationId="AzureChatDeploymentEntry"
                            Text="{Binding AzureChatDeployment}"
                            Placeholder="my-chat-deployment"
-                           HorizontalOptions="FillAndExpand"
-                           SemanticProperties.Description="Azure chat deployment name" />
+                           HorizontalOptions="FillAndExpand" />
                     <Label Text="{Binding ChatStatus}"
-                           VerticalOptions="Center" FontSize="Small" />
+                           VerticalOptions="Center" FontSize="13" />
                 </HorizontalStackLayout>
 
-                <Label Text="Vision Deployment" FontSize="Small" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+                <Label Text="Vision Deployment" FontSize="13" TextColor="Gray" />
                 <HorizontalStackLayout Spacing="8">
                     <Entry AutomationId="AzureVisionDeploymentEntry"
                            Text="{Binding AzureVisionDeployment}"
                            Placeholder="my-vision-deployment"
-                           HorizontalOptions="FillAndExpand"
-                           SemanticProperties.Description="Azure vision deployment name" />
+                           HorizontalOptions="FillAndExpand" />
                     <Label Text="{Binding VisionStatus}"
-                           VerticalOptions="Center" FontSize="Small" />
+                           VerticalOptions="Center" FontSize="13" />
                 </HorizontalStackLayout>
 
 
             </VerticalStackLayout>
 
             <!-- SECTION: Voice -->
-            <Label Text="Voice Settings" FontSize="Title" FontAttributes="Bold" Margin="0,8,0,0"
-                   SemanticProperties.HeadingLevel="Level1" />
+            <Label Text="Voice Settings" FontSize="18" FontAttributes="Bold" Margin="0,8,0,0" />
 
-            <Label Text="Voice" FontSize="Small" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+            <Label Text="Voice" FontSize="13" TextColor="Gray" />
             <Picker AutomationId="VoicePicker"
                     ItemsSource="{Binding VoiceOptions}"
-                    SelectedItem="{Binding SelectedVoice}"
-                    SemanticProperties.Description="Voice" />
+                    SelectedItem="{Binding SelectedVoice}" />
 
-            <Label Text="Turn Detection" FontSize="Small" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+            <Label Text="Turn Detection" FontSize="13" TextColor="Gray" />
             <Picker AutomationId="TurnDetectionPicker"
                     ItemsSource="{Binding TurnDetectionOptions}"
-                    SelectedItem="{Binding SelectedTurnDetection}"
-                    SemanticProperties.Description="Turn detection" />
+                    SelectedItem="{Binding SelectedTurnDetection}" />
 
-            <Label Text="Noise Reduction" FontSize="Small" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+            <Label Text="Noise Reduction" FontSize="13" TextColor="Gray" />
             <Picker AutomationId="NoiseReductionPicker"
                     ItemsSource="{Binding NoiseReductionOptions}"
-                    SelectedItem="{Binding SelectedNoiseReduction}"
-                    SemanticProperties.Description="Noise reduction" />
+                    SelectedItem="{Binding SelectedNoiseReduction}" />
 
             <!-- SECTION: System Prompt -->
-            <Label Text="System Instructions" FontSize="Title" FontAttributes="Bold" Margin="0,8,0,0"
-                   SemanticProperties.HeadingLevel="Level1" />
+            <Label Text="System Instructions" FontSize="18" FontAttributes="Bold" Margin="0,8,0,0" />
             <Editor AutomationId="SystemInstructionsEditor"
                     Text="{Binding SystemInstructions}"
                     HeightRequest="100"
-                    Placeholder="You are a helpful assistant."
-                    SemanticProperties.Description="System instructions for the AI assistant" />
+                    Placeholder="You are a helpful assistant." />
 
             <!-- SECTION: API Key -->
-            <Label Text="API Key" FontSize="Title" FontAttributes="Bold" Margin="0,8,0,0"
-                   SemanticProperties.HeadingLevel="Level1" />
+            <Label Text="API Key" FontSize="18" FontAttributes="Bold" Margin="0,8,0,0" />
             <HorizontalStackLayout Spacing="8">
                 <Entry AutomationId="ApiKeyDisplay"
                        Text="{Binding ApiKeyDisplay}"
                        IsPassword="{Binding IsKeyVisible, Converter={StaticResource InvertBoolConverter}}"
                        IsReadOnly="True"
                        HorizontalOptions="FillAndExpand"
-                       WidthRequest="200"
-                       SemanticProperties.Description="API key, masked" />
+                       WidthRequest="200" />
                 <Button AutomationId="ToggleKeyVisibilityButton"
                         Text="{Binding KeyToggleText}"
                         Command="{Binding ToggleKeyVisibilityCommand}"
                         WidthRequest="60" Padding="4"
                         BackgroundColor="{AppThemeBinding Light=#E0E0E0, Dark=#333}"
-                        TextColor="{AppThemeBinding Light=#333, Dark=#E0E0E0}"
-                        SemanticProperties.Description="Toggle key visibility"
-                        SemanticProperties.Hint="Shows or hides the API key" />
+                        TextColor="{AppThemeBinding Light=#333, Dark=#E0E0E0}" />
                 <Button AutomationId="ChangeApiKeyButton"
                         Text="Change" Command="{Binding ChangeApiKeyCommand}"
                         BackgroundColor="{AppThemeBinding Light=#512BD4, Dark=#7C4DFF}"
-                        TextColor="White"
-                        SemanticProperties.Description="Change API key" />
+                        TextColor="White" />
                 <Button AutomationId="ClearApiKeyButton"
                         Text="Clear" Command="{Binding ClearApiKeyCommand}"
                         BackgroundColor="{AppThemeBinding Light=#E0E0E0, Dark=#333}"
-                        TextColor="{AppThemeBinding Light=#333, Dark=#E0E0E0}"
-                        SemanticProperties.Description="Clear API key"
-                        SemanticProperties.Hint="Removes the stored API key" />
+                        TextColor="{AppThemeBinding Light=#333, Dark=#E0E0E0}" />
             </HorizontalStackLayout>
 
             <!-- SECTION: Test Connection -->
@@ -212,107 +180,38 @@
                         Command="{Binding TestConnectionCommand}"
                         IsEnabled="{Binding IsTesting, Converter={StaticResource InvertBoolConverter}}"
                         BackgroundColor="{AppThemeBinding Light=#512BD4, Dark=#7C4DFF}"
-                        TextColor="White"
-                        SemanticProperties.Description="Test connection"
-                        SemanticProperties.Hint="Tests the API connection with current settings" />
+                        TextColor="White" />
                 <Label AutomationId="ConnectionStatusLabel"
                        Text="{Binding ConnectionStatus}"
                        VerticalOptions="Center"
-                       FontSize="Small" />
+                       FontSize="13" />
             </HorizontalStackLayout>
 
-            <!-- SECTION: Camera -->
-            <Label Text="Camera" FontSize="Title" FontAttributes="Bold" Margin="0,8,0,0"
-                   SemanticProperties.HeadingLevel="Level1" />
-            <Label Text="Camera Source" FontSize="Small" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
-            <Picker AutomationId="CameraSourcePicker"
-                    ItemsSource="{Binding CameraProviders}"
-                    ItemDisplayBinding="{Binding DisplayName}"
-                    SelectedItem="{Binding SelectedCameraProvider}"
-                    SemanticProperties.Description="Camera source" />
-
-            <!-- SECTION: Audio Input -->
-            <Label Text="Audio Input" FontSize="Title" FontAttributes="Bold" Margin="0,8,0,0"
-                   SemanticProperties.HeadingLevel="Level1" />
-            <Label Text="Microphone Source" FontSize="Small" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
-            <Picker AutomationId="AudioInputPicker"
-                    ItemsSource="{Binding AudioInputProviders}"
-                    ItemDisplayBinding="{Binding DisplayName}"
-                    SelectedItem="{Binding SelectedAudioInputProvider}"
-                    SemanticProperties.Description="Microphone source" />
-
-            <!-- SECTION: Audio Output -->
-            <Label Text="Audio Output" FontSize="Title" FontAttributes="Bold" Margin="0,8,0,0"
-                   SemanticProperties.HeadingLevel="Level1" />
-            <Label Text="Speaker" FontSize="Small" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
-            <Picker AutomationId="AudioOutputPicker"
-                    ItemsSource="{Binding AudioOutputProviders}"
-                    ItemDisplayBinding="{Binding DisplayName}"
-                    SelectedItem="{Binding SelectedAudioOutputProvider}"
-                    SemanticProperties.Description="Speaker" />
-
             <!-- SECTION: Debug -->
-            <Label Text="Debug" FontSize="Title" FontAttributes="Bold" Margin="0,8,0,0"
-                   SemanticProperties.HeadingLevel="Level1" />
+            <Label Text="Debug" FontSize="18" FontAttributes="Bold" Margin="0,8,0,0" />
 
             <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
                 <Label Text="Debug Mode" VerticalOptions="Center" Grid.Row="0" Grid.Column="0" />
-                <Switch AutomationId="DebugModeSwitch" IsToggled="{Binding DebugMode}" Grid.Row="0" Grid.Column="1"
-                        SemanticProperties.Description="Debug mode" />
+                <Switch AutomationId="DebugModeSwitch" IsToggled="{Binding DebugMode}" Grid.Row="0" Grid.Column="1" />
 
                 <Label Text="Show Token Counts" VerticalOptions="Center" Grid.Row="1" Grid.Column="0" />
-                <Switch AutomationId="ShowTokenCountsSwitch" IsToggled="{Binding ShowTokenCounts}" Grid.Row="1" Grid.Column="1"
-                        SemanticProperties.Description="Show token counts" />
+                <Switch AutomationId="ShowTokenCountsSwitch" IsToggled="{Binding ShowTokenCounts}" Grid.Row="1" Grid.Column="1" />
 
                 <Label Text="Show Cost Estimate" VerticalOptions="Center" Grid.Row="2" Grid.Column="0" />
-                <Switch AutomationId="ShowCostEstimateSwitch" IsToggled="{Binding ShowCostEstimate}" Grid.Row="2" Grid.Column="1"
-                        SemanticProperties.Description="Show cost estimate" />
-            </Grid>
-
-            <!-- SECTION: Diagnostics & Telemetry -->
-            <Label Text="Diagnostics" FontSize="Title" FontAttributes="Bold" Margin="0,8,0,0"
-                   SemanticProperties.HeadingLevel="Level1" />
-            <Label Text="All telemetry is opt-in. No transcripts or API keys are ever sent."
-                   FontSize="Caption" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
-
-            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="8">
-                <Label Text="Send diagnostic data" VerticalOptions="Center" Grid.Row="0" Grid.Column="0" />
-                <Switch AutomationId="SendDiagnosticDataSwitch" IsToggled="{Binding SendDiagnosticData}" Grid.Row="0" Grid.Column="1"
-                        SemanticProperties.Description="Send diagnostic data to Azure Monitor" />
-
-                <Label Text="Azure Monitor Connection String" VerticalOptions="Center" Grid.Row="1" Grid.Column="0"
-                       FontSize="Small" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
-                <Entry AutomationId="AzureMonitorConnectionStringEntry" Text="{Binding AzureMonitorConnectionString}"
-                       Placeholder="InstrumentationKey=..." Grid.Row="2" Grid.ColumnSpan="2"
-                       SemanticProperties.Description="Azure Monitor connection string" />
-
-                <Label Text="Send crash reports" VerticalOptions="Center" Grid.Row="3" Grid.Column="0" />
-                <Switch AutomationId="SendCrashReportsSwitch" IsToggled="{Binding SendCrashReports}" Grid.Row="3" Grid.Column="1"
-                        SemanticProperties.Description="Send crash reports via Sentry" />
-
-                <Label Text="Sentry DSN" VerticalOptions="Center" Grid.Row="4" Grid.Column="0"
-                       FontSize="Small" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
-                <Entry AutomationId="SentryDsnEntry" Text="{Binding SentryDsn}"
-                       Placeholder="https://xxx@sentry.io/yyy" Grid.Row="5" Grid.ColumnSpan="2"
-                       SemanticProperties.Description="Sentry DSN" />
-
-                <Label Text="Send anonymous usage data" VerticalOptions="Center" Grid.Row="6" Grid.Column="0" />
-                <Switch AutomationId="SendUsageDataSwitch" IsToggled="{Binding SendUsageData}" Grid.Row="6" Grid.Column="1"
-                        SemanticProperties.Description="Send anonymous usage analytics" />
+                <Switch AutomationId="ShowCostEstimateSwitch" IsToggled="{Binding ShowCostEstimate}" Grid.Row="2" Grid.Column="1" />
             </Grid>
 
             <!-- SECTION: Tool Settings -->
-            <Label Text="Tool Settings" FontSize="Title" FontAttributes="Bold" Margin="0,16,0,0"
-                   SemanticProperties.HeadingLevel="Level1" />
-            <Label Text="Configure individual tool behavior." FontSize="Caption" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+            <Label Text="Tool Settings" FontSize="18" FontAttributes="Bold" Margin="0,16,0,0" />
+            <Label Text="Configure individual tool behavior." FontSize="12" TextColor="Gray" />
 
             <CollectionView ItemsSource="{Binding ToolSettingsSections}"
                             SelectionMode="None">
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="vm:ToolSettingsSection">
                         <VerticalStackLayout Padding="0,12,0,0">
-                            <Label Text="{Binding DisplayName}" FontSize="Body" FontAttributes="Bold" />
-                            <Label Text="{Binding Description}" FontSize="Caption" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" Margin="0,0,0,4" />
+                            <Label Text="{Binding DisplayName}" FontSize="15" FontAttributes="Bold" />
+                            <Label Text="{Binding Description}" FontSize="12" TextColor="Gray" Margin="0,0,0,4" />
                             <CollectionView ItemsSource="{Binding Items}"
                                             SelectionMode="None">
                                 <CollectionView.ItemTemplate>
@@ -321,18 +220,15 @@
                                             <Label Text="{Binding Label}" VerticalOptions="Center" />
                                             <Switch IsToggled="{Binding BoolValue}"
                                                     IsVisible="{Binding IsBoolean}"
-                                                    SemanticProperties.Description="{Binding Label}"
                                                     Grid.Column="1" />
                                             <Entry Text="{Binding StringValue}"
                                                    IsVisible="{Binding IsInteger}"
                                                    Keyboard="Numeric"
                                                    WidthRequest="80"
-                                                   SemanticProperties.Description="{Binding Label}"
                                                    Grid.Column="1" />
                                             <Entry Text="{Binding StringValue}"
                                                    IsVisible="{Binding IsText}"
                                                    WidthRequest="200"
-                                                   SemanticProperties.Description="{Binding Label}"
                                                    Grid.Column="1" />
                                         </Grid>
                                     </DataTemplate>

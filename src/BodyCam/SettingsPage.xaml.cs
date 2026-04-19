@@ -10,15 +10,15 @@ public partial class SettingsPage : ContentPage
         BindingContext = viewModel;
     }
 
-    private void OnOpenAiChecked(object? sender, CheckedChangedEventArgs e)
-    {
-        if (e.Value && BindingContext is SettingsViewModel vm)
-            vm.SelectedProvider = OpenAiProvider.OpenAi;
-    }
+    private async void OnConnectionTapped(object? sender, EventArgs e)
+        => await Shell.Current.GoToAsync(nameof(Settings.ConnectionSettingsPage));
 
-    private void OnAzureChecked(object? sender, CheckedChangedEventArgs e)
-    {
-        if (e.Value && BindingContext is SettingsViewModel vm)
-            vm.SelectedProvider = OpenAiProvider.Azure;
-    }
+    private async void OnVoiceTapped(object? sender, EventArgs e)
+        => await Shell.Current.GoToAsync(nameof(Settings.VoiceSettingsPage));
+
+    private async void OnDevicesTapped(object? sender, EventArgs e)
+        => await Shell.Current.GoToAsync(nameof(Settings.DeviceSettingsPage));
+
+    private async void OnAdvancedTapped(object? sender, EventArgs e)
+        => await Shell.Current.GoToAsync(nameof(Settings.AdvancedSettingsPage));
 }

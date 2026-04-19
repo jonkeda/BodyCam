@@ -89,8 +89,6 @@ public class BodyCamTestHostTests : IAsyncDisposable
             CaptureFrame = _ => Task.FromResult<byte[]?>(TestAssets.MinimalJpeg),
             Session = new BodyCam.Models.SessionContext(),
             Log = _ => { },
-            RealtimeClient = _host.Services.GetService(typeof(BodyCam.Services.IRealtimeClient)) as BodyCam.Services.IRealtimeClient
-                ?? throw new InvalidOperationException(),
         };
 
         var result = await _host.ToolDispatcher.ExecuteAsync(

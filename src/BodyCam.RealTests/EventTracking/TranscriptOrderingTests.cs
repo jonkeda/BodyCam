@@ -113,7 +113,7 @@ public class TranscriptOrderingTests : IAsyncLifetime
         await _fixture.WaitForFirstAudioAsync(TimeSpan.FromSeconds(15));
 
         // Cancel the in-progress response before sending new input
-        await _fixture.Client.CancelResponseAsync();
+        await _fixture.CancelResponseAsync();
 
         // Wait for the cancelled response.done
         await _fixture.WaitForResponseAsync(TimeSpan.FromSeconds(10));

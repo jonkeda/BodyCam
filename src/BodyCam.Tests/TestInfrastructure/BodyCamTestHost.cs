@@ -83,7 +83,7 @@ public sealed class BodyCamTestHost : IDisposable, IAsyncDisposable
         services.AddSingleton<ButtonInputManager>();
 
         // Realtime client stub
-        services.AddSingleton(Substitute.For<IRealtimeClient>());
+        services.AddSingleton(Substitute.For<Microsoft.Extensions.AI.IRealtimeClient>());
 
         // Logging
         services.AddSingleton<InAppLogSink>();

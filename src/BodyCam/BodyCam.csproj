@@ -19,6 +19,7 @@
 		<SingleProject>true</SingleProject>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
+		<NoWarn>$(NoWarn);MEAI001;OPENAI002</NoWarn>
 
 		<!-- Display name -->
 		<ApplicationTitle>BodyCam</ApplicationTitle>
@@ -71,20 +72,29 @@
 
 	<ItemGroup>
 		<PackageReference Include="CommunityToolkit.Maui.Camera" Version="6.*" />
-		<PackageReference Include="Microsoft.Extensions.AI" Version="9.*" />
-		<PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="9.*" />
+		<PackageReference Include="Microsoft.Extensions.AI" Version="10.*" />
+		<PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.*" />
 		<PackageReference Include="OpenAI" Version="2.*" />
 		<PackageReference Include="Azure.AI.OpenAI" Version="2.*" />
 		<PackageReference Include="SkiaSharp.Views.Maui.Controls" Version="3.*" />
 		<PackageReference Include="OpenTelemetry" Version="1.*" />
 		<PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.*" />
 		<PackageReference Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.*" />
-		<PackageReference Include="Sentry.Maui" Version="5.*" />
+		<PackageReference Include="Sentry.Maui" Version="6.*" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<InternalsVisibleTo Include="BodyCam.Tests" />
 		<InternalsVisibleTo Include="BodyCam.RealTests" />
+	</ItemGroup>
+
+	<!-- WebRTC APM native binaries -->
+	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
+		<None Include="runtimes\win-x64\native\webrtc-apm.dll" CopyToOutputDirectory="PreserveNewest" Link="webrtc-apm.dll" />
+	</ItemGroup>
+	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+		<AndroidNativeLibrary Include="runtimes\android-arm64\native\libwebrtc-apm.so" Abi="arm64-v8a" />
+		<AndroidNativeLibrary Include="runtimes\android-x64\native\libwebrtc-apm.so" Abi="x86_64" />
 	</ItemGroup>
 
 	<!-- Auto-increment build number -->

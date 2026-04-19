@@ -14,7 +14,6 @@ public class StartSceneWatchToolTests
         CaptureFrame = ct => Task.FromResult<byte[]?>(null),
         Session = new BodyCam.Models.SessionContext(),
         Log = _ => { },
-        RealtimeClient = Substitute.For<IRealtimeClient>()
     };
 
     [Fact]

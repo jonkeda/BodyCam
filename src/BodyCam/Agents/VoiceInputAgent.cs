@@ -1,4 +1,5 @@
 using BodyCam.Services;
+using BodyCam.Services.Audio.WebRtcApm;
 
 namespace BodyCam.Agents;
 
@@ -8,13 +9,20 @@ namespace BodyCam.Agents;
 public class VoiceInputAgent
 {
     private readonly IAudioInputService _audioInput;
-    private readonly IRealtimeClient _realtime;
+    private readonly AecProcessor? _aec;
 
-    public VoiceInputAgent(IAudioInputService audioInput, IRealtimeClient realtime)
+    private Func<byte[], CancellationToken, Task>? _audioSink;
+    private volatile bool _isConnected;
+
+    public VoiceInputAgent(IAudioInputService audioInput, AecProcessor? aec = null)
     {
         _audioInput = audioInput;
-        _realtime = realtime;
+        _aec = aec;
     }
+
+    public void SetAudioSink(Func<byte[], CancellationToken, Task>? sink) => _audioSink = sink;
+
+    public void SetConnected(bool connected) => _isConnected = connected;
 
     public async Task StartAsync(CancellationToken ct = default)
     {
@@ -32,13 +40,15 @@ public class VoiceInputAgent
     {
         try
         {
-            if (_realtime.IsConnected)
-                await _realtime.SendAudioChunkAsync(chunk);
+            if (_isConnected && _audioSink is not null)
+            {
+                byte[] processed = _aec is not null ? _aec.ProcessCapture(chunk) : chunk;
+                await _audioSink(processed, CancellationToken.None);
+            }
         }
         catch (Exception)
         {
             // Swallow — don't crash the audio capture thread.
-            // Errors surface via IRealtimeClient.ErrorOccurred.
         }
     }
 }

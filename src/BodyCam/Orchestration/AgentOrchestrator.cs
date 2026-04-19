@@ -1,6 +1,8 @@
 using BodyCam.Agents;
 using BodyCam.Models;
 using BodyCam.Services;
+using BodyCam.Services.Audio.WebRtcApm;
+using Microsoft.Extensions.AI;
 using BodyCam.Services.Camera;
 using BodyCam.Tools;
 using Microsoft.Extensions.Logging;
@@ -13,12 +15,15 @@ public class AgentOrchestrator
     private readonly VoiceOutputAgent _voiceOut;
     private readonly ConversationAgent _conversation;
     private readonly VisionAgent _vision;
-    private readonly IRealtimeClient _realtime;
+    private readonly Microsoft.Extensions.AI.IRealtimeClient _realtimeFactory;
+    private Microsoft.Extensions.AI.IRealtimeClientSession? _session;
+    private Task? _messageLoop;
     private readonly ISettingsService _settingsService;
     private readonly AppSettings _settings;
     private readonly ToolDispatcher _dispatcher;
     private readonly IWakeWordService _wakeWord;
     private readonly CameraManager _cameraManager;
+    private readonly AecProcessor _aec;
     private readonly ILogger<AgentOrchestrator> _logger;
 
     public VisionAgent Vision => _vision;
@@ -36,32 +41,56 @@ public class AgentOrchestrator
 
     public bool IsRunning => _cts is not null && !_cts.IsCancellationRequested;
 
+    // Speech events not in MAF — use extensible RealtimeServerMessageType
+    private static readonly RealtimeServerMessageType SpeechStarted =
+        new("input_audio_buffer.speech_started");
+
     public AgentOrchestrator(
         VoiceInputAgent voiceIn,
         ConversationAgent conversation,
         VoiceOutputAgent voiceOut,
         VisionAgent vision,
-        IRealtimeClient realtime,
+        Microsoft.Extensions.AI.IRealtimeClient realtimeFactory,
         ISettingsService settingsService,
         AppSettings settings,
         ToolDispatcher dispatcher,
         IWakeWordService wakeWord,
         IMicrophoneCoordinator micCoordinator,
         CameraManager cameraManager,
+        AecProcessor aec,
         ILogger<AgentOrchestrator> logger)
     {
         _voiceIn = voiceIn;
         _conversation = conversation;
         _voiceOut = voiceOut;
         _vision = vision;
-        _realtime = realtime;
+        _realtimeFactory = realtimeFactory;
         _settingsService = settingsService;
         _settings = settings;
         _dispatcher = dispatcher;
         _wakeWord = wakeWord;
         _micCoordinator = micCoordinator;
         _cameraManager = cameraManager;
+        _aec = aec;
         _logger = logger;
+    }
+
+    private RealtimeSessionOptions BuildSessionOptions()
+    {
+        return new RealtimeSessionOptions
+        {
+            Instructions = _settings.SystemInstructions,
+            Voice = _settings.Voice,
+            InputAudioFormat = new RealtimeAudioFormat("audio/pcm", _settings.SampleRate),
+            OutputAudioFormat = new RealtimeAudioFormat("audio/pcm", _settings.SampleRate),
+            OutputModalities = ["audio", "text"],
+            TranscriptionOptions = new TranscriptionOptions { ModelId = _settings.TranscriptionModel },
+            VoiceActivityDetection = new VoiceActivityDetectionOptions
+            {
+                Enabled = true,
+                AllowInterruption = true,
+            },
+        };
     }
 
     public async Task StartAsync()
@@ -102,21 +131,38 @@ public class AgentOrchestrator
 
         _logger.LogInformation("Realtime model: {Model}", _settings.RealtimeModel);
 
-        // Subscribe to Realtime events
-        _realtime.AudioDelta += OnAudioDelta;
-        _realtime.OutputTranscriptDelta += OnOutputTranscriptDelta;
-        _realtime.OutputTranscriptCompleted += OnOutputTranscriptCompleted;
-        _realtime.InputTranscriptCompleted += OnInputTranscriptCompleted;
-        _realtime.SpeechStarted += OnSpeechStarted;
-        _realtime.ResponseDone += OnResponseDone;
-        _realtime.ErrorOccurred += OnError;
-        _realtime.OutputItemAdded += OnOutputItemAdded;
-        _realtime.FunctionCallReceived += OnFunctionCallReceived;
-        _realtime.ConnectionLost += OnConnectionLost;
+        var options = BuildSessionOptions();
+        _session = await _realtimeFactory.CreateSessionAsync(options, _cts.Token);
+        _messageLoop = Task.Run(() => RunMessageLoopAsync(_session, _cts.Token));
+        _logger.LogInformation("Realtime session created");
 
-        // Connect to OpenAI
-        await _realtime.ConnectAsync(_cts.Token);
-        _logger.LogInformation("Realtime connected");
+        // Wire audio sink for VoiceInputAgent
+        _voiceIn.SetAudioSink(async (pcm, ct) =>
+        {
+            var audioMsg = new InputAudioBufferAppendRealtimeClientMessage(
+                new DataContent(pcm, "audio/pcm"));
+            await _session.SendAsync(audioMsg, ct);
+        });
+        _voiceIn.SetConnected(true);
+
+        // Initialize echo cancellation
+        if (_settings.AecEnabled)
+        {
+            try
+            {
+                bool mobile = OperatingSystem.IsAndroid() || OperatingSystem.IsIOS();
+                _aec.Initialize(mobile);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "AEC initialization failed, continuing without echo cancellation");
+                _aec.IsEnabled = false;
+            }
+        }
+        else
+        {
+            _aec.IsEnabled = false;
+        }
 
         // Start audio pipeline
         await _voiceOut.StartAsync(_cts.Token);
@@ -128,24 +174,24 @@ public class AgentOrchestrator
     {
         if (!IsRunning) return;
 
-        // Unsubscribe events
-        _realtime.AudioDelta -= OnAudioDelta;
-        _realtime.OutputTranscriptDelta -= OnOutputTranscriptDelta;
-        _realtime.OutputTranscriptCompleted -= OnOutputTranscriptCompleted;
-        _realtime.InputTranscriptCompleted -= OnInputTranscriptCompleted;
-        _realtime.SpeechStarted -= OnSpeechStarted;
-        _realtime.ResponseDone -= OnResponseDone;
-        _realtime.ErrorOccurred -= OnError;
-        _realtime.OutputItemAdded -= OnOutputItemAdded;
-        _realtime.FunctionCallReceived -= OnFunctionCallReceived;
-        _realtime.ConnectionLost -= OnConnectionLost;
-
         _cts?.Cancel();
 
+        if (_messageLoop is not null)
+        {
+            try { await _messageLoop; } catch (OperationCanceledException) { }
+            _messageLoop = null;
+        }
+
+        _voiceIn.SetConnected(false);
+        _voiceIn.SetAudioSink(null);
         await _voiceIn.StopAsync();
         await _voiceOut.StopAsync();
 
-        await _realtime.DisconnectAsync();
+        if (_session is not null)
+        {
+            await _session.DisposeAsync();
+            _session = null;
+        }
 
         Session.IsActive = false;
         CurrentConfig = null;
@@ -154,38 +200,100 @@ public class AgentOrchestrator
         _logger.LogInformation("Orchestrator stopped");
     }
 
-    // --- Event handlers ---
-
-    private async void OnAudioDelta(object? sender, byte[] pcmData)
-    {
-        try { await _voiceOut.PlayAudioDeltaAsync(pcmData); }
-        catch (Exception ex) { _logger.LogError(ex, "Playback error"); }
-    }
-
-    private void OnOutputTranscriptDelta(object? sender, string delta)
-    {
-        TranscriptUpdated?.Invoke(this, $"AI: {delta}");
-        TranscriptDelta?.Invoke(this, delta);
-    }
-
-    private void OnOutputTranscriptCompleted(object? sender, string transcript)
-    {
-        TranscriptCompleted?.Invoke(this, $"AI:{transcript}");
-        _logger.LogDebug("AI transcript: {Length} chars", transcript.Length);
-    }
-
-    private void OnInputTranscriptCompleted(object? sender, string transcript)
-    {
-        TranscriptUpdated?.Invoke(this, $"You: {transcript}");
-        TranscriptCompleted?.Invoke(this, $"You:{transcript}");
-        _logger.LogDebug("User transcript received");
-    }
-
-    private async void OnSpeechStarted(object? sender, EventArgs e)
+    private async Task RunMessageLoopAsync(
+        Microsoft.Extensions.AI.IRealtimeClientSession session,
+        CancellationToken ct)
     {
         try
         {
-            // Truncation logic
+            await foreach (var message in session.GetStreamingResponseAsync(ct))
+            {
+                var type = message.Type;
+
+                if (type == RealtimeServerMessageType.OutputAudioDelta)
+                {
+                    var audioMsg = (OutputTextAudioRealtimeServerMessage)message;
+                    if (audioMsg.Audio is { } audio)
+                    {
+                        try { await _voiceOut.PlayAudioDeltaAsync(Convert.FromBase64String(audio)); }
+                        catch (Exception ex) { _logger.LogError(ex, "Playback error"); }
+                    }
+                }
+                else if (type == RealtimeServerMessageType.OutputTextDelta)
+                {
+                    var textMsg = (OutputTextAudioRealtimeServerMessage)message;
+                    if (textMsg.Text is { } delta)
+                    {
+                        TranscriptUpdated?.Invoke(this, $"AI: {delta}");
+                        TranscriptDelta?.Invoke(this, delta);
+                    }
+                }
+                else if (type == RealtimeServerMessageType.OutputTextDone
+                      || type == RealtimeServerMessageType.OutputAudioTranscriptionDone)
+                {
+                    var textMsg = (OutputTextAudioRealtimeServerMessage)message;
+                    if (textMsg.Text is { } transcript)
+                    {
+                        TranscriptCompleted?.Invoke(this, $"AI:{transcript}");
+                        _logger.LogDebug("AI transcript: {Length} chars", transcript.Length);
+                    }
+                }
+                else if (type == RealtimeServerMessageType.InputAudioTranscriptionCompleted)
+                {
+                    var transcriptMsg = (InputAudioTranscriptionRealtimeServerMessage)message;
+                    if (transcriptMsg.Transcription is { } transcript)
+                    {
+                        TranscriptUpdated?.Invoke(this, $"You: {transcript}");
+                        TranscriptCompleted?.Invoke(this, $"You:{transcript}");
+                        _logger.LogDebug("User transcript received");
+                    }
+                }
+                else if (type == RealtimeServerMessageType.ResponseOutputItemAdded)
+                {
+                    var itemMsg = (ResponseOutputItemRealtimeServerMessage)message;
+                    if (itemMsg.Item?.Id is { } itemId)
+                        _voiceOut.SetCurrentItem(itemId);
+                }
+                else if (type == RealtimeServerMessageType.ResponseDone)
+                {
+                    _voiceOut.ResetTracker();
+                    var respMsg = (ResponseCreatedRealtimeServerMessage)message;
+                    _logger.LogDebug("Response complete: {ResponseId}", respMsg.ResponseId);
+                }
+                else if (type == RealtimeServerMessageType.Error)
+                {
+                    var errorMsg = (ErrorRealtimeServerMessage)message;
+                    _logger.LogError("Realtime error: {Error}", errorMsg.Error);
+                }
+                else if (type == SpeechStarted)
+                {
+                    await HandleSpeechStartedAsync(session, ct);
+                }
+            }
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Message loop error");
+        }
+        finally
+        {
+            if (!ct.IsCancellationRequested)
+            {
+                _logger.LogWarning("Session ended unexpectedly — reconnecting");
+                await ReconnectAsync();
+            }
+        }
+    }
+
+    private async Task HandleSpeechStartedAsync(
+        Microsoft.Extensions.AI.IRealtimeClientSession session,
+        CancellationToken ct)
+    {
+        try
+        {
             if (_voiceOut.Tracker.CurrentItemId is not null)
             {
                 _voiceOut.HandleInterruption();
@@ -195,7 +303,15 @@ public class AgentOrchestrator
 
                 try
                 {
-                    await _realtime.TruncateResponseAudioAsync(itemId, playedMs);
+                    var truncateJson = BinaryData.FromObjectAsJson(new
+                    {
+                        type = "conversation.item.truncate",
+                        item_id = itemId,
+                        content_index = 0,
+                        audio_end_ms = playedMs,
+                    });
+                    var msg = new RealtimeClientMessage { RawRepresentation = truncateJson };
+                    await session.SendAsync(msg, ct);
                     _logger.LogDebug("Interrupted at {PlayedMs}ms", playedMs);
                 }
                 catch (Exception ex)
@@ -210,35 +326,6 @@ public class AgentOrchestrator
         }
     }
 
-    private void OnOutputItemAdded(object? sender, string itemId)
-    {
-        _voiceOut.SetCurrentItem(itemId);
-    }
-
-    private void OnResponseDone(object? sender, RealtimeResponseInfo info)
-    {
-        _voiceOut.ResetTracker();
-        _logger.LogDebug("Response complete: {ResponseId}", info.ResponseId);
-    }
-
-    private void OnError(object? sender, string error)
-    {
-        _logger.LogError("Realtime error: {Error}", error);
-    }
-
-    private async void OnConnectionLost(object? sender, string reason)
-    {
-        try
-        {
-            _logger.LogWarning("Connection lost: {Reason}", reason);
-            await ReconnectAsync();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Reconnect handler error");
-        }
-    }
-
     private async Task ReconnectAsync()
     {
         var delay = TimeSpan.FromSeconds(1);
@@ -249,9 +336,21 @@ public class AgentOrchestrator
             _logger.LogInformation("Reconnecting ({Attempt}/{MaxRetries})", i + 1, maxRetries);
             try
             {
-                await _realtime.ConnectAsync(_cts?.Token ?? CancellationToken.None);
-                await _realtime.UpdateSessionAsync(_cts?.Token ?? CancellationToken.None);
-                await _voiceIn.StartAsync(_cts?.Token ?? CancellationToken.None);
+                if (_session is not null)
+                    await _session.DisposeAsync();
+
+                var options = BuildSessionOptions();
+                var ct = _cts?.Token ?? CancellationToken.None;
+                _session = await _realtimeFactory.CreateSessionAsync(options, ct);
+                _messageLoop = Task.Run(() => RunMessageLoopAsync(_session, ct));
+                _voiceIn.SetAudioSink(async (pcm, innerCt) =>
+                {
+                    var audioMsg = new InputAudioBufferAppendRealtimeClientMessage(
+                        new DataContent(pcm, "audio/pcm"));
+                    await _session.SendAsync(audioMsg, innerCt);
+                });
+                _voiceIn.SetConnected(true);
+                await _voiceIn.StartAsync(ct);
                 _logger.LogInformation("Reconnected");
                 return;
             }
@@ -327,45 +426,16 @@ public class AgentOrchestrator
         CaptureFrame = _cameraManager.CaptureFrameAsync,
         Session = Session,
         Log = msg => _logger.LogInformation("{ToolMessage}", msg),
-        RealtimeClient = _realtime
     };
 
     public async Task SendTextInputAsync(string text, CancellationToken ct = default)
     {
-        if (!IsRunning)
-            throw new InvalidOperationException("Orchestrator is not running.");
+        if (_session is null)
+            throw new InvalidOperationException("Session is not active.");
 
-        await _realtime.SendTextInputAsync(text, ct);
-    }
-
-    private async void OnFunctionCallReceived(object? sender, FunctionCallInfo info)
-    {
-        _logger.LogInformation("Function call: {ToolName}", info.Name);
-
-        try
-        {
-            var context = CreateToolContext();
-            var result = await _dispatcher.ExecuteAsync(
-                info.Name, info.Arguments, context, _cts?.Token ?? CancellationToken.None);
-
-            await _realtime.SendFunctionCallOutputAsync(info.CallId, result);
-            _logger.LogDebug("Function result sent for {ToolName}", info.Name);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Function call error ({ToolName})", info.Name);
-
-            try
-            {
-                await _realtime.SendFunctionCallOutputAsync(
-                    info.CallId,
-                    System.Text.Json.JsonSerializer.Serialize(new { error = ex.Message }));
-            }
-            catch (Exception sendEx)
-            {
-                _logger.LogError(sendEx, "Failed to send error result");
-            }
-        }
+        var item = new RealtimeConversationItem([new TextContent(text)], null, ChatRole.User);
+        await _session.SendAsync(new CreateConversationItemRealtimeClientMessage(item), ct);
+        await _session.SendAsync(new CreateResponseRealtimeClientMessage(), ct);
     }
 
 }

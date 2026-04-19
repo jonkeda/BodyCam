@@ -26,7 +26,6 @@ public class ToolDispatcherTests
         CaptureFrame = ct => Task.FromResult<byte[]?>(null),
         Session = new BodyCam.Models.SessionContext(),
         Log = _ => { },
-        RealtimeClient = NSubstitute.Substitute.For<BodyCam.Services.IRealtimeClient>()
     };
 
     [Fact]

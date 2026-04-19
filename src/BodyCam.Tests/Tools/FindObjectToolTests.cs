@@ -14,7 +14,6 @@ public class FindObjectToolTests
         CaptureFrame = ct => Task.FromResult(frame),
         Session = new BodyCam.Models.SessionContext(),
         Log = _ => { },
-        RealtimeClient = Substitute.For<IRealtimeClient>()
     };
 
     [Fact]

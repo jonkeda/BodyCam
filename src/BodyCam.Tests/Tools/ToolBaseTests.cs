@@ -56,7 +56,6 @@ public class ToolBaseTests
         CaptureFrame = (ct) => Task.FromResult<byte[]?>(null),
         Session = new SessionContext(),
         Log = _ => { },
-        RealtimeClient = Substitute.For<IRealtimeClient>()
     };
 
     private class TestArgs

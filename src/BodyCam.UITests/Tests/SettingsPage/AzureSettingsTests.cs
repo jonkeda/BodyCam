@@ -8,12 +8,14 @@ namespace BodyCam.UITests.Tests.SettingsPage;
 public class AzureSettingsTests
 {
     private readonly BodyCamFixture _fixture;
-    private Pages.SettingsPage Page => _fixture.SettingsPage;
+    private Pages.ConnectionSettingsPage Page => _fixture.ConnectionSettingsPage;
 
     public AzureSettingsTests(BodyCamFixture fixture)
     {
         _fixture = fixture;
         _fixture.NavigateToSettings();
+        _fixture.SettingsPage.ConnectionSettingsCard.Click();
+        _fixture.ConnectionSettingsPage.WaitReady(10000);
         // Switch to Azure to make fields visible
         Page.ProviderAzureRadio.Select();
     }

@@ -8,12 +8,14 @@ namespace BodyCam.UITests.Tests.SettingsPage;
 public class VoiceSettingsTests
 {
     private readonly BodyCamFixture _fixture;
-    private Pages.SettingsPage Page => _fixture.SettingsPage;
+    private Pages.VoiceSettingsPage Page => _fixture.VoiceSettingsPage;
 
     public VoiceSettingsTests(BodyCamFixture fixture)
     {
         _fixture = fixture;
         _fixture.NavigateToSettings();
+        _fixture.SettingsPage.VoiceSettingsCard.Click();
+        _fixture.VoiceSettingsPage.WaitReady(10000);
     }
 
     [Fact]

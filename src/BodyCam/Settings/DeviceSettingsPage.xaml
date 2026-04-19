@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:BodyCam.ViewModels"
+             x:Class="BodyCam.Settings.DeviceSettingsPage"
+             x:DataType="vm:SettingsViewModel"
+             Shell.TabBarIsVisible="False"
+             Title="Devices">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="12" MaximumWidthRequest="500">
+
+            <!-- Camera -->
+            <Label Text="Camera" FontSize="Subtitle" FontAttributes="Bold"
+                   SemanticProperties.HeadingLevel="Level1" />
+            <Label Text="Camera Source" FontSize="Small" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+            <Picker AutomationId="CameraSourcePicker"
+                    ItemsSource="{Binding CameraProviders}"
+                    ItemDisplayBinding="{Binding DisplayName}"
+                    SelectedItem="{Binding SelectedCameraProvider}"
+                    SemanticProperties.Description="Camera source" />
+
+            <!-- Audio Input -->
+            <Label Text="Audio Input" FontSize="Subtitle" FontAttributes="Bold" Margin="0,12,0,0"
+                   SemanticProperties.HeadingLevel="Level1" />
+            <Label Text="Microphone Source" FontSize="Small" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+            <Picker AutomationId="AudioInputPicker"
+                    ItemsSource="{Binding AudioInputProviders}"
+                    ItemDisplayBinding="{Binding DisplayName}"
+                    SelectedItem="{Binding SelectedAudioInputProvider}"
+                    SemanticProperties.Description="Microphone source" />
+
+            <!-- Audio Output -->
+            <Label Text="Audio Output" FontSize="Subtitle" FontAttributes="Bold" Margin="0,12,0,0"
+                   SemanticProperties.HeadingLevel="Level1" />
+            <Label Text="Speaker" FontSize="Small" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+            <Picker AutomationId="AudioOutputPicker"
+                    ItemsSource="{Binding AudioOutputProviders}"
+                    ItemDisplayBinding="{Binding DisplayName}"
+                    SelectedItem="{Binding SelectedAudioOutputProvider}"
+                    SemanticProperties.Description="Speaker" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

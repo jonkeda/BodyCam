@@ -9,18 +9,30 @@ public class BodyCamFixture : MauiTestFixtureBase
     private readonly MainPage _mainPage;
     private readonly SettingsPage _settingsPage;
     private readonly SetupPage _setupPage;
+    private readonly ConnectionSettingsPage _connectionSettingsPage;
+    private readonly VoiceSettingsPage _voiceSettingsPage;
+    private readonly DeviceSettingsPage _deviceSettingsPage;
+    private readonly AdvancedSettingsPage _advancedSettingsPage;
 
     public BodyCamFixture()
     {
         _mainPage = new MainPage(Context);
         _settingsPage = new SettingsPage(Context);
         _setupPage = new SetupPage(Context);
+        _connectionSettingsPage = new ConnectionSettingsPage(Context);
+        _voiceSettingsPage = new VoiceSettingsPage(Context);
+        _deviceSettingsPage = new DeviceSettingsPage(Context);
+        _advancedSettingsPage = new AdvancedSettingsPage(Context);
         DismissSetupIfShown();
     }
 
     public MainPage MainPage => _mainPage;
     public SettingsPage SettingsPage => _settingsPage;
     public SetupPage SetupPage => _setupPage;
+    public ConnectionSettingsPage ConnectionSettingsPage => _connectionSettingsPage;
+    public VoiceSettingsPage VoiceSettingsPage => _voiceSettingsPage;
+    public DeviceSettingsPage DeviceSettingsPage => _deviceSettingsPage;
+    public AdvancedSettingsPage AdvancedSettingsPage => _advancedSettingsPage;
 
     protected override string GetDefaultAppPath(string platform)
         => platform.ToLowerInvariant() switch

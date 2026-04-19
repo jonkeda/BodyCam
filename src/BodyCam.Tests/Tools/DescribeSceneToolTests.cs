@@ -23,7 +23,6 @@ public class DescribeSceneToolTests
         CaptureFrame = (ct) => Task.FromResult(frame),
         Session = new SessionContext(),
         Log = _ => { },
-        RealtimeClient = Substitute.For<IRealtimeClient>()
     };
 
     [Fact]

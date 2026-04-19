@@ -1,8 +1,10 @@
+using System.Text.Json;
 using BodyCam.Agents;
 using BodyCam.Models;
 using BodyCam.Services;
 using BodyCam.Tools;
 using Microsoft.Extensions.AI;
+using System.ClientModel;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,14 +13,17 @@ using AIChatMessage = Microsoft.Extensions.AI.ChatMessage;
 namespace BodyCam.RealTests.Fixtures;
 
 /// <summary>
-/// Shared fixture that connects a RealtimeClient to the live API
-/// with all M5 tool definitions registered. Tool execution is not tested here —
-/// we only need the definitions sent to the model so it can trigger function calls.
+/// Shared fixture that connects to the live Realtime API via MAF
+/// with all M5 tool definitions registered.
 /// </summary>
 public class M5ToolFixture : IAsyncLifetime
 {
-    private readonly RealtimeClient _client;
+    private readonly IRealtimeClient _client;
     private readonly ToolDispatcher _dispatcher;
+    private IRealtimeClientSession? _session;
+    private Task? _messageLoop;
+    private CancellationTokenSource? _cts;
+
     private readonly List<(string Type, string Json)> _events = [];
     private readonly List<string> _outputTranscripts = [];
     private readonly List<byte[]> _audioChunks = [];
@@ -31,7 +36,6 @@ public class M5ToolFixture : IAsyncLifetime
 
     private ITestOutputHelper? _output;
 
-    public RealtimeClient Client => _client;
     public ToolDispatcher Dispatcher => _dispatcher;
     public IReadOnlyList<(string Type, string Json)> Events => _events;
     public IReadOnlyList<string> OutputTranscripts => _outputTranscripts;
@@ -42,11 +46,10 @@ public class M5ToolFixture : IAsyncLifetime
 
     public M5ToolFixture()
     {
-        var settings = LoadSettings();
-        var apiKeyService = new StaticApiKeyService(LoadApiKey(settings.Provider));
+        var settings = RealtimeFixture.LoadSettings();
+        var apiKey = RealtimeFixture.LoadApiKey(settings.Provider);
 
         // Build all M5 tools — we only need their definitions (Name, Description, ParameterSchema).
-        // Dependencies are stubs; the tools won't actually execute via the fixture.
         var stubChatClient = new StubChatClient();
         var vision = new VisionAgent(stubChatClient, settings);
         var conversation = new ConversationAgent(stubChatClient, settings);
@@ -70,33 +73,61 @@ public class M5ToolFixture : IAsyncLifetime
         };
 
         _dispatcher = new ToolDispatcher(tools);
-        _client = new RealtimeClient(apiKeyService, settings, _dispatcher);
+        _client = RealtimeFixture.BuildClient(apiKey, settings);
     }
 
     public void SetOutput(ITestOutputHelper output) => _output = output;
 
     public async Task InitializeAsync()
     {
-        _client.RawMessageReceived += OnRawMessage;
-        _client.AudioDelta += OnAudioDelta;
-        _client.OutputTranscriptCompleted += OnOutputTranscriptCompleted;
-        _client.ResponseDone += OnResponseDone;
-        _client.ErrorOccurred += OnError;
-        _client.FunctionCallReceived += OnFunctionCallReceived;
+        _cts = new CancellationTokenSource();
 
-        await _client.ConnectAsync();
+        var toolDefs = _dispatcher.GetToolDefinitions();
+
+        // Build raw session.update with tool schemas (bypasses SDK's session.type field
+        // which Azure doesn't support)
+        var rawTools = toolDefs.Select(d => new
+        {
+            type = "function",
+            name = d.Name,
+            description = d.Description,
+            parameters = JsonSerializer.Deserialize<JsonElement>(d.ParametersJson),
+        }).ToArray();
+
+        // Create session without options to avoid SDK sending session.type
+        _session = await _client.CreateSessionAsync(null, _cts.Token);
+        _messageLoop = Task.Run(() => RunMessageLoopAsync(_cts.Token));
+
+        // Send raw session.update with full config including tools
+        var sessionUpdate = JsonSerializer.Serialize(new
+        {
+            type = "session.update",
+            session = new
+            {
+                instructions = "You are a helpful assistant with access to tools.",
+                voice = "marin",
+                input_audio_format = "pcm16",
+                output_audio_format = "pcm16",
+                modalities = new[] { "audio", "text" },
+                input_audio_transcription = new { model = "gpt-realtime-transcribe" },
+                turn_detection = new { type = "server_vad" },
+                tools = rawTools,
+            }
+        });
+        var msg = new RealtimeClientMessage { RawRepresentation = sessionUpdate };
+        await _session.SendAsync(msg, _cts.Token);
     }
 
     public async Task DisposeAsync()
     {
-        _client.RawMessageReceived -= OnRawMessage;
-        _client.AudioDelta -= OnAudioDelta;
-        _client.OutputTranscriptCompleted -= OnOutputTranscriptCompleted;
-        _client.ResponseDone -= OnResponseDone;
-        _client.ErrorOccurred -= OnError;
-        _client.FunctionCallReceived -= OnFunctionCallReceived;
-
-        await _client.DisconnectAsync();
+        _cts?.Cancel();
+        if (_messageLoop is not null)
+        {
+            try { await _messageLoop; } catch (OperationCanceledException) { }
+            _messageLoop = null;
+        }
+        if (_session is not null) { await _session.DisposeAsync(); _session = null; }
+        _cts?.Dispose();
     }
 
     public void Reset()
@@ -117,53 +148,160 @@ public class M5ToolFixture : IAsyncLifetime
     public Task WaitForFunctionCallAsync(TimeSpan? timeout = null)
         => WaitWithTimeout(_functionCallTcs.Task, timeout ?? TimeSpan.FromSeconds(30), "function call");
 
-    public Task SendTextInputAsync(string text, CancellationToken ct = default)
-        => _client.SendTextInputAsync(text, ct);
-
-    public Task SendFunctionCallOutputAsync(string callId, string output, CancellationToken ct = default)
-        => _client.SendFunctionCallOutputAsync(callId, output, ct);
-
-    // --- Event handlers ---
-
-    private void OnRawMessage(object? sender, string json)
+    public async Task SendTextInputAsync(string text, CancellationToken ct = default)
     {
-        var type = BodyCam.Services.Realtime.ServerEventParser.GetType(json) ?? "unknown";
-        _events.Add((type, json));
-        _output?.WriteLine($"[{_events.Count}] {type}");
+        await SendRawAsync(new { type = "conversation.item.create", item = new { type = "message", role = "user", content = new[] { new { type = "input_text", text } } } }, ct);
+        await SendRawAsync(new { type = "response.create" }, ct);
     }
 
-    private void OnAudioDelta(object? sender, byte[] data)
+    public async Task SendFunctionCallOutputAsync(string callId, string output, CancellationToken ct = default)
     {
-        _audioChunks.Add(data);
+        await SendRawAsync(new { type = "conversation.item.create", item = new { type = "function_call_output", call_id = callId, output } }, ct);
+        await SendRawAsync(new { type = "response.create" }, ct);
     }
 
-    private void OnOutputTranscriptCompleted(object? sender, string transcript)
+    // --- Internals ---
+
+    private Task SendRawAsync(object payload, CancellationToken ct)
     {
-        _outputTranscripts.Add(transcript);
-        _output?.WriteLine($"[OUTPUT] {transcript}");
+        var json = JsonSerializer.Serialize(payload);
+        var msg = new RealtimeClientMessage { RawRepresentation = json };
+        return _session!.SendAsync(msg, ct);
     }
 
-    private void OnResponseDone(object? sender, RealtimeResponseInfo info)
+    private async Task RunMessageLoopAsync(CancellationToken ct)
     {
-        _responseDones.Add(info);
-        _responseDoneTcs.TrySetResult();
-        _output?.WriteLine($"[DONE] {info.ResponseId}");
+        try
+        {
+            await foreach (var message in _session!.GetStreamingResponseAsync(ct))
+            {
+                var rawJson = RealtimeFixture.SerializeRaw(message.RawRepresentation);
+                var eventType = RealtimeFixture.ExtractType(rawJson);
+                if (eventType == "unknown")
+                    eventType = RealtimeFixture.MapSdkType(message.Type);
+                _events.Add((eventType, rawJson));
+                _output?.WriteLine($"[{_events.Count}] {eventType}");
+                ProcessMessage(message, eventType, rawJson);
+            }
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
+        catch (Exception ex) { _output?.WriteLine($"[LOOP ERROR] {ex.Message}"); }
     }
 
-    private void OnError(object? sender, string error)
+    private void ProcessMessage(RealtimeServerMessage message, string eventType, string rawJson)
     {
-        _errors.Add(error);
-        _output?.WriteLine($"[ERROR] {error}");
+        var type = message.Type;
+
+        if (type == RealtimeServerMessageType.OutputAudioDelta)
+        {
+            var m = (OutputTextAudioRealtimeServerMessage)message;
+            if (m.Audio is { } audio)
+                _audioChunks.Add(Convert.FromBase64String(audio));
+        }
+        else if (type == RealtimeServerMessageType.OutputAudioTranscriptionDone)
+        {
+            var m = (OutputTextAudioRealtimeServerMessage)message;
+            if (m.Text is { } t)
+            {
+                _outputTranscripts.Add(t);
+                _output?.WriteLine($"[OUTPUT] {t}");
+            }
+        }
+        else if (type == RealtimeServerMessageType.ResponseDone)
+        {
+            var m = (ResponseCreatedRealtimeServerMessage)message;
+            var info = new RealtimeResponseInfo { ResponseId = m.ResponseId ?? "" };
+            _responseDones.Add(info);
+            _responseDoneTcs.TrySetResult();
+            _output?.WriteLine($"[DONE] {info.ResponseId}");
+        }
+        else if (type == RealtimeServerMessageType.Error)
+        {
+            var m = (ErrorRealtimeServerMessage)message;
+            var error = m.Error?.Message ?? "unknown error";
+            _errors.Add(error);
+            _output?.WriteLine($"[ERROR] {error}");
+        }
+        else if (type == RealtimeServerMessageType.ResponseOutputItemDone)
+        {
+            var m = (ResponseOutputItemRealtimeServerMessage)message;
+            if (m.Item?.Contents is { } contents)
+            {
+                foreach (var c in contents)
+                {
+                    if (c is FunctionCallContent fcc)
+                    {
+                        var argsJson = fcc.Arguments is not null ? JsonSerializer.Serialize(fcc.Arguments) : "{}";
+                        var info = new FunctionCallInfo(fcc.CallId ?? "", fcc.Name ?? "", argsJson);
+                        _functionCalls.Add(info);
+                        _functionCallTcs.TrySetResult();
+                        _output?.WriteLine($"[FUNC] {info.Name}({info.Arguments})");
+                    }
+                }
+            }
+        }
+
+        // Fallback: parse function call from raw JSON
+        if (eventType == "response.function_call_arguments.done")
+            TryParseFunctionCallFromJson(rawJson);
+
+        // Fallback: parse audio/text output from raw JSON for events MAF maps as RawContentOnly
+        if (eventType == "response.output_text.done" || eventType == "response.audio_transcript.done")
+            TryParseOutputTextFromJson(rawJson);
+        if (eventType == "response.audio.delta")
+            TryParseAudioDeltaFromJson(rawJson);
     }
 
-    private void OnFunctionCallReceived(object? sender, FunctionCallInfo info)
+    private void TryParseOutputTextFromJson(string json)
     {
-        _functionCalls.Add(info);
-        _functionCallTcs.TrySetResult();
-        _output?.WriteLine($"[FUNC] {info.Name}({info.Arguments})");
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+            var text = root.TryGetProperty("text", out var t) ? t.GetString()
+                     : root.TryGetProperty("transcript", out var tr) ? tr.GetString()
+                     : null;
+            if (text is not null)
+            {
+                _outputTranscripts.Add(text);
+                _output?.WriteLine($"[OUTPUT-RAW] {text}");
+            }
+        }
+        catch { /* ignore parse failures */ }
     }
 
-    // --- Helpers ---
+    private void TryParseAudioDeltaFromJson(string json)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+            var delta = root.TryGetProperty("delta", out var d) ? d.GetString() : null;
+            if (delta is not null)
+                _audioChunks.Add(Convert.FromBase64String(delta));
+        }
+        catch { /* ignore parse failures */ }
+    }
+
+    private void TryParseFunctionCallFromJson(string json)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+            var callId = root.TryGetProperty("call_id", out var c) ? c.GetString() ?? "" : "";
+            var name = root.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
+            var args = root.TryGetProperty("arguments", out var a) ? a.GetString() ?? "{}" : "{}";
+            if (!_functionCalls.Any(fc => fc.CallId == callId))
+            {
+                var info = new FunctionCallInfo(callId, name, args);
+                _functionCalls.Add(info);
+                _functionCallTcs.TrySetResult();
+                _output?.WriteLine($"[FUNC-RAW] {info.Name}({info.Arguments})");
+            }
+        }
+        catch { /* ignore parse failures */ }
+    }
 
     private static async Task WaitWithTimeout(Task task, TimeSpan timeout, string description)
     {
@@ -174,45 +312,8 @@ public class M5ToolFixture : IAsyncLifetime
         await task;
     }
 
-    private static AppSettings LoadSettings()
-    {
-        var settings = new AppSettings();
-        var provider = DotEnvReader.Read("OPENAI_PROVIDER");
-
-        if (string.Equals(provider, "azure", StringComparison.OrdinalIgnoreCase))
-        {
-            settings.Provider = OpenAiProvider.Azure;
-            settings.AzureEndpoint = DotEnvReader.Read("AZURE_OPENAI_ENDPOINT");
-            settings.AzureRealtimeDeploymentName = DotEnvReader.Read("AZURE_OPENAI_DEPLOYMENT");
-            settings.AzureChatDeploymentName = DotEnvReader.Read("AZURE_OPENAI_CHAT_DEPLOYMENT");
-            settings.AzureVisionDeploymentName = DotEnvReader.Read("AZURE_OPENAI_VISION_DEPLOYMENT");
-            var version = DotEnvReader.Read("AZURE_OPENAI_API_VERSION");
-            if (version is not null) settings.AzureApiVersion = version;
-        }
-
-        return settings;
-    }
-
-    private static string LoadApiKey(OpenAiProvider provider)
-    {
-        var key = provider == OpenAiProvider.Azure
-            ? DotEnvReader.Read("AZURE_OPENAI_API_KEY")
-            : DotEnvReader.Read("OPENAI_API_KEY");
-        return key ?? throw new InvalidOperationException(
-            $"API key not found in .env. Set {(provider == OpenAiProvider.Azure ? "AZURE_OPENAI_API_KEY" : "OPENAI_API_KEY")}.");
-    }
-
-    private sealed class StaticApiKeyService(string apiKey) : IApiKeyService
-    {
-        public bool HasKey => true;
-        public Task<string?> GetApiKeyAsync() => Task.FromResult<string?>(apiKey);
-        public Task SetApiKeyAsync(string apiKey) => Task.CompletedTask;
-        public Task ClearApiKeyAsync() => Task.CompletedTask;
-    }
-
     /// <summary>
     /// Stub chat client — tools won't actually execute during real API tests.
-    /// We intercept function calls at the Realtime API level and send mock results.
     /// </summary>
     private sealed class StubChatClient : IChatClient
     {

@@ -53,8 +53,6 @@ public class CrossCuttingTests : IAsyncLifetime
             CaptureFrame = _ => _host.CameraManager.CaptureFrameAsync(),
             Session = new SessionContext(),
             Log = _ => { },
-            RealtimeClient = _host.Services.GetService(typeof(IRealtimeClient)) as IRealtimeClient
-                ?? throw new InvalidOperationException(),
         };
 
         _host.Camera.SimulateDisconnect();
@@ -315,8 +313,6 @@ public class CrossCuttingTests : IAsyncLifetime
             CaptureFrame = _ => _host.CameraManager.CaptureFrameAsync(),
             Session = new SessionContext(),
             Log = _ => { },
-            RealtimeClient = _host.Services.GetService(typeof(IRealtimeClient)) as IRealtimeClient
-                ?? throw new InvalidOperationException(),
         };
 
         // Save

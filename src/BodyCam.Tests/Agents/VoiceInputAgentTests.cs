@@ -11,8 +11,7 @@ public class VoiceInputAgentTests
     public async Task StartAsync_StartsAudioInput()
     {
         var audioInput = Substitute.For<IAudioInputService>();
-        var realtime = Substitute.For<IRealtimeClient>();
-        var agent = new VoiceInputAgent(audioInput, realtime);
+        var agent = new VoiceInputAgent(audioInput);
 
         await agent.StartAsync();
 
@@ -23,8 +22,7 @@ public class VoiceInputAgentTests
     public async Task StopAsync_StopsAudioInput()
     {
         var audioInput = Substitute.For<IAudioInputService>();
-        var realtime = Substitute.For<IRealtimeClient>();
-        var agent = new VoiceInputAgent(audioInput, realtime);
+        var agent = new VoiceInputAgent(audioInput);
 
         await agent.StopAsync();
 
@@ -35,9 +33,10 @@ public class VoiceInputAgentTests
     public async Task StartAsync_SubscribesToAudioChunks()
     {
         var audioInput = Substitute.For<IAudioInputService>();
-        var realtime = Substitute.For<IRealtimeClient>();
-        realtime.IsConnected.Returns(true);
-        var agent = new VoiceInputAgent(audioInput, realtime);
+        byte[]? received = null;
+        var agent = new VoiceInputAgent(audioInput);
+        agent.SetAudioSink(async (data, ct) => received = data);
+        agent.SetConnected(true);
 
         await agent.StartAsync();
 
@@ -47,18 +46,18 @@ public class VoiceInputAgentTests
         // Give the async void handler a moment to execute
         await Task.Delay(50);
 
-        await realtime.Received(1).SendAudioChunkAsync(
-            Arg.Is<byte[]>(b => b.Length == 3),
-            Arg.Any<CancellationToken>());
+        received.Should().NotBeNull();
+        received!.Length.Should().Be(3);
     }
 
     [Fact]
     public async Task StopAsync_UnsubscribesFromAudioChunks()
     {
         var audioInput = Substitute.For<IAudioInputService>();
-        var realtime = Substitute.For<IRealtimeClient>();
-        realtime.IsConnected.Returns(true);
-        var agent = new VoiceInputAgent(audioInput, realtime);
+        byte[]? received = null;
+        var agent = new VoiceInputAgent(audioInput);
+        agent.SetAudioSink(async (data, ct) => received = data);
+        agent.SetConnected(true);
 
         await agent.StartAsync();
         await agent.StopAsync();
@@ -67,26 +66,23 @@ public class VoiceInputAgentTests
         audioInput.AudioChunkAvailable += Raise.Event<EventHandler<byte[]>>(audioInput, new byte[] { 1 });
         await Task.Delay(50);
 
-        await realtime.DidNotReceive().SendAudioChunkAsync(
-            Arg.Any<byte[]>(),
-            Arg.Any<CancellationToken>());
+        received.Should().BeNull();
     }
 
     [Fact]
     public async Task OnAudioChunk_WhenNotConnected_DoesNotSend()
     {
         var audioInput = Substitute.For<IAudioInputService>();
-        var realtime = Substitute.For<IRealtimeClient>();
-        realtime.IsConnected.Returns(false);
-        var agent = new VoiceInputAgent(audioInput, realtime);
+        byte[]? received = null;
+        var agent = new VoiceInputAgent(audioInput);
+        agent.SetAudioSink(async (data, ct) => received = data);
+        agent.SetConnected(false);
 
         await agent.StartAsync();
 
         audioInput.AudioChunkAvailable += Raise.Event<EventHandler<byte[]>>(audioInput, new byte[] { 1, 2, 3 });
         await Task.Delay(50);
 
-        await realtime.DidNotReceive().SendAudioChunkAsync(
-            Arg.Any<byte[]>(),
-            Arg.Any<CancellationToken>());
+        received.Should().BeNull();
     }
 }

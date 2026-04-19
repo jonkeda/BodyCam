@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>SoundFlow.Extensions.WebRtc.Apm</id>
+    <version>1.4.0</version>
+    <title>SoundFlow WebRTC APM Extension</title>
+    <authors>SoundFlow.Extensions.WebRtc.Apm</authors>
+    <license type="file">LICENSE.md</license>
+    <licenseUrl>https://aka.ms/deprecateLicenseUrl</licenseUrl>
+    <icon>logo.png</icon>
+    <readme>README.md</readme>
+    <projectUrl>https://github.com/LSXPrime/SoundFlow</projectUrl>
+    <description>WebRTC Audio Processing Module (APM) extension for SoundFlow, providing advanced audio processing capabilities like noise suppression, echo cancellation, and gain control.</description>
+    <copyright>Copyright (c) 2025 LSXPrime</copyright>
+    <tags>audio, webrtc, apm, noise-suppression, echo-cancellation, sound-processing</tags>
+    <repository type="Github" url="https://github.com/LSXPrime/SoundFlow" commit="c9bcf73512048181f25cb64cd824f4a406f0f96c" />
+    <dependencies>
+      <group targetFramework="net8.0">
+        <dependency id="SoundFlow" version="1.4.0" exclude="Build,Analyzers" />
+      </group>
+    </dependencies>
+  </metadata>
+</package>

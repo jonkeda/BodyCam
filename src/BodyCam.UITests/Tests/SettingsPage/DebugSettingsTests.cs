@@ -8,12 +8,14 @@ namespace BodyCam.UITests.Tests.SettingsPage;
 public class DebugSettingsTests
 {
     private readonly BodyCamFixture _fixture;
-    private Pages.SettingsPage Page => _fixture.SettingsPage;
+    private Pages.AdvancedSettingsPage Page => _fixture.AdvancedSettingsPage;
 
     public DebugSettingsTests(BodyCamFixture fixture)
     {
         _fixture = fixture;
         _fixture.NavigateToSettings();
+        _fixture.SettingsPage.AdvancedSettingsCard.Click();
+        _fixture.AdvancedSettingsPage.WaitReady(10000);
     }
 
     [Fact]
@@ -34,7 +36,7 @@ public class DebugSettingsTests
         Page.ShowCostEstimateSwitch.AssertExists();
     }
 
-    [Fact(Skip = "Debug switches are below ScrollView fold; FlaUI cannot scroll MAUI ScrollViews")]
+    [Fact]
     public void DebugModeSwitch_CanToggle()
     {
         var initial = Page.DebugModeSwitch.IsOn();
@@ -45,7 +47,7 @@ public class DebugSettingsTests
         Page.DebugModeSwitch.Toggle();
     }
 
-    [Fact(Skip = "Debug switches are below ScrollView fold; FlaUI cannot scroll MAUI ScrollViews")]
+    [Fact]
     public void ShowTokenCountsSwitch_CanToggle()
     {
         var initial = Page.ShowTokenCountsSwitch.IsOn();
@@ -56,7 +58,7 @@ public class DebugSettingsTests
         Page.ShowTokenCountsSwitch.Toggle();
     }
 
-    [Fact(Skip = "Debug switches are below ScrollView fold; FlaUI cannot scroll MAUI ScrollViews")]
+    [Fact]
     public void ShowCostEstimateSwitch_CanToggle()
     {
         var initial = Page.ShowCostEstimateSwitch.IsOn();

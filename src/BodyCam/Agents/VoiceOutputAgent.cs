@@ -1,5 +1,6 @@
 using BodyCam.Models;
 using BodyCam.Services;
+using BodyCam.Services.Audio.WebRtcApm;
 
 namespace BodyCam.Agents;
 
@@ -9,13 +10,15 @@ namespace BodyCam.Agents;
 public class VoiceOutputAgent
 {
     private readonly IAudioOutputService _audioOutput;
+    private readonly AecProcessor? _aec;
     private readonly AudioPlaybackTracker _tracker = new();
 
     public AudioPlaybackTracker Tracker => _tracker;
 
-    public VoiceOutputAgent(IAudioOutputService audioOutput)
+    public VoiceOutputAgent(IAudioOutputService audioOutput, AecProcessor? aec = null)
     {
         _audioOutput = audioOutput;
+        _aec = aec;
     }
 
     public async Task StartAsync(CancellationToken ct = default)
@@ -31,6 +34,7 @@ public class VoiceOutputAgent
 
     public async Task PlayAudioDeltaAsync(byte[] pcmData, CancellationToken ct = default)
     {
+        _aec?.FeedRenderReference(pcmData);
         await _audioOutput.PlayChunkAsync(pcmData, ct);
         _tracker.BytesPlayed += pcmData.Length;
     }

@@ -8,12 +8,14 @@ namespace BodyCam.UITests.Tests.SettingsPage;
 public class ModelSelectionTests
 {
     private readonly BodyCamFixture _fixture;
-    private Pages.SettingsPage Page => _fixture.SettingsPage;
+    private Pages.ConnectionSettingsPage Page => _fixture.ConnectionSettingsPage;
 
     public ModelSelectionTests(BodyCamFixture fixture)
     {
         _fixture = fixture;
         _fixture.NavigateToSettings();
+        _fixture.SettingsPage.ConnectionSettingsCard.Click();
+        _fixture.ConnectionSettingsPage.WaitReady(10000);
         // Ensure OpenAI provider is selected
         Page.ProviderOpenAiRadio.Select();
     }

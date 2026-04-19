@@ -42,6 +42,7 @@ public class AppSettings
     // Audio
     public int SampleRate { get; set; } = 24000;
     public int ChunkDurationMs { get; set; } = 50;
+    public bool AecEnabled { get; set; } = true;
 
     // Microphone coordination
     public int MicReleaseDelayMs { get; set; } = 50;
