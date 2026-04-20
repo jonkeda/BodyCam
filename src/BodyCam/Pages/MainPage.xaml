@@ -45,6 +45,23 @@
                                        FontSize="12"
                                        TextColor="Gray"
                                        FontAttributes="Italic" />
+                                <!-- Inline action buttons -->
+                                <HorizontalStackLayout IsVisible="{Binding HasActions}"
+                                                       BindableLayout.ItemsSource="{Binding Actions}"
+                                                       Spacing="8" Margin="0,4,0,0">
+                                    <BindableLayout.ItemTemplate>
+                                        <DataTemplate x:DataType="models:ContentAction">
+                                            <Button Text="{Binding Label}"
+                                                    Command="{Binding Command}"
+                                                    FontSize="12"
+                                                    HeightRequest="32"
+                                                    Padding="8,0"
+                                                    CornerRadius="4"
+                                                    BackgroundColor="{AppThemeBinding Light=#E3F2FD, Dark=#1A3A5C}"
+                                                    TextColor="{AppThemeBinding Light=#1565C0, Dark=#64B5F6}" />
+                                        </DataTemplate>
+                                    </BindableLayout.ItemTemplate>
+                                </HorizontalStackLayout>
                             </VerticalStackLayout>
                         </DataTemplate>
                     </CollectionView.ItemTemplate>
@@ -87,6 +104,9 @@
                     </Border>
                 </Grid>
             </Grid>
+
+            <!-- Scan result overlay (floats above both tabs) -->
+            <views:ScanResultOverlay />
 
             <!-- Debug overlay -->
             <views:DebugOverlayView />

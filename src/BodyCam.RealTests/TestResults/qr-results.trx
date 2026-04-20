@@ -1,0 +1,450 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="04d4fad9-6fa6-4e11-8234-b2cb849f2b2b" name="JONK435491@LT-25-195 2026-04-20 17:28:58" runUser="ecs\JONK435491" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-04-20T17:28:58.5144432+02:00" queuing="2026-04-20T17:28:58.5144434+02:00" start="2026-04-20T17:28:54.2719253+02:00" finish="2026-04-20T17:29:05.5946319+02:00" />
+  <TestSettings name="default" id="e259b0ea-7f57-4003-9c51-4e7a682b3c01">
+    <Deployment runDeploymentRoot="JONK435491_LT-25-195_2026-04-20_17_28_58" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="6a0dd9a0-69a7-44f0-9eca-df9f5efb2d8c" testId="222b0975-ca98-0863-cc18-6f3872af49d6" testName="BodyCam.RealTests.Pipeline.QrCodeScanTests.ScanWifiQrCode_ParsesCredentials" computerName="LT-25-195" duration="00:00:01.5719321" startTime="2026-04-20T17:29:02.6841522+02:00" endTime="2026-04-20T17:29:04.2571217+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6a0dd9a0-69a7-44f0-9eca-df9f5efb2d8c">
+      <Output>
+        <StdOut>[Debug] Tool: scan_qr_code&#xD;
+[TranscriptDelta] I&#xD;
+[TranscriptDelta] ’ve&#xD;
+[TranscriptDelta]  found&#xD;
+[TranscriptDelta]  a&#xD;
+[TranscriptDelta]  Wi&#xD;
+[TranscriptDelta] -Fi&#xD;
+[TranscriptDelta]  QR&#xD;
+[TranscriptDelta]  code&#xD;
+[TranscriptDelta] .&#xD;
+[TranscriptDelta]  It&#xD;
+[TranscriptDelta] ’s&#xD;
+[TranscriptDelta]  for&#xD;
+[TranscriptDelta]  the&#xD;
+[TranscriptDelta]  network&#xD;
+[TranscriptDelta]  "&#xD;
+[TranscriptDelta] My&#xD;
+[TranscriptDelta] Network&#xD;
+[TranscriptDelta] "&#xD;
+[TranscriptDelta]  with&#xD;
+[TranscriptDelta]  WPA&#xD;
+[TranscriptDelta]  security&#xD;
+[TranscriptDelta]  and&#xD;
+[TranscriptDelta]  the&#xD;
+[TranscriptDelta]  password&#xD;
+[TranscriptDelta]  "&#xD;
+[TranscriptDelta] secret&#xD;
+[TranscriptDelta] 123&#xD;
+[TranscriptDelta] ."&#xD;
+[TranscriptDelta]  Would&#xD;
+[TranscriptDelta]  you&#xD;
+[TranscriptDelta]  like&#xD;
+[TranscriptDelta]  to&#xD;
+[TranscriptDelta]  connect&#xD;
+[TranscriptDelta]  to&#xD;
+[TranscriptDelta]  it&#xD;
+[TranscriptDelta]  now&#xD;
+[TranscriptDelta] ?&#xD;
+[TranscriptCompleted] AI:I’ve found a Wi-Fi QR code. It’s for the network "MyNetwork" with WPA security and the password "secret123." Would you like to connect to it now?&#xD;
+Debug logs: Tool: scan_qr_code&#xD;
+Completions: AI:I’ve found a Wi-Fi QR code. It’s for the network "MyNetwork" with WPA security and the password "secret123." Would you like to connect to it now?</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="ed6ebbf8-8169-4c38-9dd6-502a27adf94a" testId="20f357af-a85c-1590-9adb-3fce6d6dede4" testName="BodyCam.RealTests.Pipeline.QrCodeScanTests.AskToScan_NoQrCode_RespondGracefully" computerName="LT-25-195" duration="00:00:03.1114875" startTime="2026-04-20T17:28:55.3676678+02:00" endTime="2026-04-20T17:28:58.4883465+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ed6ebbf8-8169-4c38-9dd6-502a27adf94a">
+      <Output>
+        <StdOut>[Debug] Tool: look&#xD;
+[TranscriptDelta] I&#xD;
+[TranscriptDelta] ’m&#xD;
+[TranscriptDelta]  not&#xD;
+[TranscriptDelta]  seeing&#xD;
+[TranscriptDelta]  any&#xD;
+[TranscriptDelta]  QR&#xD;
+[TranscriptDelta]  codes&#xD;
+[TranscriptDelta]  or&#xD;
+[TranscriptDelta]  bar&#xD;
+[TranscriptDelta] codes&#xD;
+[TranscriptDelta]  right&#xD;
+[TranscriptDelta]  now&#xD;
+[TranscriptDelta] .&#xD;
+[TranscriptDelta]  You&#xD;
+[TranscriptDelta]  might&#xD;
+[TranscriptDelta]  want&#xD;
+[TranscriptDelta]  to&#xD;
+[TranscriptDelta]  adjust&#xD;
+[TranscriptDelta]  the&#xD;
+[TranscriptDelta]  angle&#xD;
+[TranscriptDelta]  or&#xD;
+[TranscriptDelta]  bring&#xD;
+[TranscriptDelta]  the&#xD;
+[TranscriptDelta]  item&#xD;
+[TranscriptDelta]  closer&#xD;
+[TranscriptDelta]  to&#xD;
+[TranscriptDelta]  the&#xD;
+[TranscriptDelta]  camera&#xD;
+[TranscriptDelta] .&#xD;
+[TranscriptCompleted] AI:I’m not seeing any QR codes or barcodes right now. You might want to adjust the angle or bring the item closer to the camera.&#xD;
+Debug logs: Tool: look&#xD;
+Completions: AI:I’m not seeing any QR codes or barcodes right now. You might want to adjust the angle or bring the item closer to the camera.</StdOut>
+        <ErrorInfo>
+          <Message>Expected _f.DebugLogs {"Tool: look"} to have an item matching l.Contains("scan_qr_code", OrdinalIgnoreCase) because scan tool should still be triggered even if nothing is found.</Message>
+          <StackTrace>   at FluentAssertions.Collections.GenericCollectionAssertions`3.Contain(Expression`1 predicate, String because, Object[] becauseArgs)&#xD;
+   at BodyCam.RealTests.Pipeline.QrCodeScanTests.AskToScan_NoQrCode_RespondGracefully() in E:\repos\Private\BodyCam\src\BodyCam.RealTests\Pipeline\QrCodeScanTests.cs:line 99&#xD;
+--- End of stack trace from previous location ---</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="3e519e7c-2db6-4d97-a3be-e0da41ab37a4" testId="26c13258-9615-3f7e-6900-624658143335" testName="BodyCam.RealTests.Pipeline.QrCodeScanTests.AskToScan_WithQrCode_TriggersScanTool" computerName="LT-25-195" duration="00:00:01.2568703" startTime="2026-04-20T17:29:04.2572267+02:00" endTime="2026-04-20T17:29:05.5152592+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="3e519e7c-2db6-4d97-a3be-e0da41ab37a4">
+      <Output>
+        <StdOut>[TranscriptDelta] I&#xD;
+[TranscriptDelta] ’ve&#xD;
+[TranscriptDelta]  already&#xD;
+[TranscriptDelta]  scanned&#xD;
+[TranscriptDelta]  it&#xD;
+[TranscriptDelta] .&#xD;
+[TranscriptDelta]  The&#xD;
+[TranscriptDelta]  QR&#xD;
+[TranscriptDelta]  code&#xD;
+[TranscriptDelta]  details&#xD;
+[TranscriptDelta]  show&#xD;
+[TranscriptDelta]  a&#xD;
+[TranscriptDelta]  Wi&#xD;
+[TranscriptDelta] -Fi&#xD;
+[TranscriptDelta]  network&#xD;
+[TranscriptDelta]  named&#xD;
+[TranscriptDelta]  "&#xD;
+[TranscriptDelta] My&#xD;
+[TranscriptDelta] Network&#xD;
+[TranscriptDelta] "&#xD;
+[TranscriptDelta]  with&#xD;
+[TranscriptDelta]  the&#xD;
+[TranscriptDelta]  password&#xD;
+[TranscriptDelta]  "&#xD;
+[TranscriptDelta] secret&#xD;
+[TranscriptDelta] 123&#xD;
+[TranscriptDelta] ."&#xD;
+[TranscriptDelta]  Would&#xD;
+[TranscriptDelta]  you&#xD;
+[TranscriptDelta]  like&#xD;
+[TranscriptDelta]  to&#xD;
+[TranscriptDelta]  connect&#xD;
+[TranscriptDelta]  to&#xD;
+[TranscriptDelta]  it&#xD;
+[TranscriptDelta]  now&#xD;
+[TranscriptDelta] ?&#xD;
+[TranscriptCompleted] AI:I’ve already scanned it. The QR code details show a Wi-Fi network named "MyNetwork" with the password "secret123." Would you like to connect to it now?&#xD;
+Debug logs: &#xD;
+Completions: AI:I’ve already scanned it. The QR code details show a Wi-Fi network named "MyNetwork" with the password "secret123." Would you like to connect to it now?</StdOut>
+        <ErrorInfo>
+          <Message>Expected _f.DebugLogs {empty} to have an item matching l.Contains("scan_qr_code", OrdinalIgnoreCase) because asking to scan a QR code should trigger the scan_qr_code tool.</Message>
+          <StackTrace>   at FluentAssertions.Collections.GenericCollectionAssertions`3.Contain(Expression`1 predicate, String because, Object[] becauseArgs)&#xD;
+   at BodyCam.RealTests.Pipeline.QrCodeScanTests.AskToScan_WithQrCode_TriggersScanTool() in E:\repos\Private\BodyCam\src\BodyCam.RealTests\Pipeline\QrCodeScanTests.cs:line 51&#xD;
+--- End of stack trace from previous location ---</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="2768359b-dba2-49a7-a62d-b9b5a073fb15" testId="c6b3bcbb-b29c-5423-215e-0773156cb1e1" testName="BodyCam.RealTests.Pipeline.QrCodeScanTests.ScanQrCode_CameraUnavailable_HandledGracefully" computerName="LT-25-195" duration="00:00:01.1847285" startTime="2026-04-20T17:29:00.2714755+02:00" endTime="2026-04-20T17:29:01.4554186+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2768359b-dba2-49a7-a62d-b9b5a073fb15">
+      <Output>
+        <StdOut>[Debug] Tool: look&#xD;
+[TranscriptDelta] It&#xD;
+[TranscriptDelta]  seems&#xD;
+[TranscriptDelta]  the&#xD;
+[TranscriptDelta]  camera&#xD;
+[TranscriptDelta]  is&#xD;
+[TranscriptDelta]  not&#xD;
+[TranscriptDelta]  available&#xD;
+[TranscriptDelta]  right&#xD;
+[TranscriptDelta]  now&#xD;
+[TranscriptDelta] .&#xD;
+[TranscriptDelta]  Could&#xD;
+[TranscriptDelta]  you&#xD;
+[TranscriptDelta]  check&#xD;
+[TranscriptDelta]  the&#xD;
+[TranscriptDelta]  camera&#xD;
+[TranscriptDelta]  connection&#xD;
+[TranscriptDelta]  or&#xD;
+[TranscriptDelta]  angle&#xD;
+[TranscriptDelta] ?&#xD;
+[TranscriptDelta]  Once&#xD;
+[TranscriptDelta]  it's&#xD;
+[TranscriptDelta]  back&#xD;
+[TranscriptDelta] ,&#xD;
+[TranscriptDelta]  we&#xD;
+[TranscriptDelta]  can&#xD;
+[TranscriptDelta]  try&#xD;
+[TranscriptDelta]  again&#xD;
+[TranscriptDelta] .&#xD;
+[TranscriptCompleted] AI:It seems the camera is not available right now. Could you check the camera connection or angle? Once it's back, we can try again.&#xD;
+Debug logs: Tool: look&#xD;
+Completions: AI:It seems the camera is not available right now. Could you check the camera connection or angle? Once it's back, we can try again.</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="f663121d-6f59-4218-96ff-d21edc446967" testId="7e141b09-656f-2e58-dd9b-9073d382eeb0" testName="BodyCam.RealTests.Pipeline.QrCodeScanTests.AskToScan_WithQrCode_AddsToHistory" computerName="LT-25-195" duration="00:00:01.7802426" startTime="2026-04-20T17:28:58.5039814+02:00" endTime="2026-04-20T17:29:00.2700742+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f663121d-6f59-4218-96ff-d21edc446967">
+      <Output>
+        <StdOut>[Debug] Tool: scan_qr_code&#xD;
+[TranscriptDelta] I&#xD;
+[TranscriptDelta] ’ve&#xD;
+[TranscriptDelta]  found&#xD;
+[TranscriptDelta]  the&#xD;
+[TranscriptDelta]  QR&#xD;
+[TranscriptDelta]  code&#xD;
+[TranscriptDelta] .&#xD;
+[TranscriptDelta]  It&#xD;
+[TranscriptDelta]  leads&#xD;
+[TranscriptDelta]  to&#xD;
+[TranscriptDelta]  the&#xD;
+[TranscriptDelta]  URL&#xD;
+[TranscriptDelta] :&#xD;
+[TranscriptDelta]  https&#xD;
+[TranscriptDelta] ://&#xD;
+[TranscriptDelta] test&#xD;
+[TranscriptDelta] .&#xD;
+[TranscriptDelta] example&#xD;
+[TranscriptDelta] .org&#xD;
+[TranscriptDelta] /page&#xD;
+[TranscriptDelta] .&#xD;
+[TranscriptDelta]  Would&#xD;
+[TranscriptDelta]  you&#xD;
+[TranscriptDelta]  like&#xD;
+[TranscriptDelta]  to&#xD;
+[TranscriptDelta]  open&#xD;
+[TranscriptDelta]  it&#xD;
+[TranscriptDelta]  in&#xD;
+[TranscriptDelta]  a&#xD;
+[TranscriptDelta]  browser&#xD;
+[TranscriptDelta]  or&#xD;
+[TranscriptDelta]  save&#xD;
+[TranscriptDelta]  it&#xD;
+[TranscriptDelta] ?&#xD;
+[TranscriptCompleted] AI:I’ve found the QR code. It leads to the URL: https://test.example.org/page. Would you like to open it in a browser or save it?&#xD;
+Debug logs: Tool: scan_qr_code</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="22bcaf9e-9f6e-43f4-a3e2-8e831f282a87" testId="4fcda63c-31c2-d2ea-8d6b-c4360a4de04d" testName="BodyCam.RealTests.Pipeline.QrCodeScanTests.RecallLastScan_AfterScan_ReturnsContent" computerName="LT-25-195" duration="00:00:01.2249977" startTime="2026-04-20T17:29:01.4556515+02:00" endTime="2026-04-20T17:29:02.6816950+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="22bcaf9e-9f6e-43f4-a3e2-8e831f282a87">
+      <Output>
+        <StdOut>[TranscriptDelta] Sure&#xD;
+[TranscriptDelta] ,&#xD;
+[TranscriptDelta]  I&#xD;
+[TranscriptDelta] ’ll&#xD;
+[TranscriptDelta]  need&#xD;
+[TranscriptDelta]  to&#xD;
+[TranscriptDelta]  see&#xD;
+[TranscriptDelta]  it&#xD;
+[TranscriptDelta]  clearly&#xD;
+[TranscriptDelta] .&#xD;
+[TranscriptDelta]  Could&#xD;
+[TranscriptDelta]  you&#xD;
+[TranscriptDelta]  hold&#xD;
+[TranscriptDelta]  it&#xD;
+[TranscriptDelta]  closer&#xD;
+[TranscriptDelta]  to&#xD;
+[TranscriptDelta]  the&#xD;
+[TranscriptDelta]  camera&#xD;
+[TranscriptDelta] ?&#xD;
+[TranscriptDelta]  That&#xD;
+[TranscriptDelta]  way&#xD;
+[TranscriptDelta]  I&#xD;
+[TranscriptDelta]  can&#xD;
+[TranscriptDelta]  scan&#xD;
+[TranscriptDelta]  it&#xD;
+[TranscriptDelta]  properly&#xD;
+[TranscriptDelta] .&#xD;
+[TranscriptCompleted] AI:Sure, I’ll need to see it clearly. Could you hold it closer to the camera? That way I can scan it properly.&#xD;
+Turn 1 logs:</StdOut>
+        <ErrorInfo>
+          <Message>Expected _f.DebugLogs {empty} to have an item matching l.Contains("scan_qr_code", OrdinalIgnoreCase) because scan tool should be invoked first.</Message>
+          <StackTrace>   at FluentAssertions.Collections.GenericCollectionAssertions`3.Contain(Expression`1 predicate, String because, Object[] becauseArgs)&#xD;
+   at BodyCam.RealTests.Pipeline.QrCodeScanTests.RecallLastScan_AfterScan_ReturnsContent() in E:\repos\Private\BodyCam\src\BodyCam.RealTests\Pipeline\QrCodeScanTests.cs:line 122&#xD;
+--- End of stack trace from previous location ---</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="BodyCam.RealTests.Pipeline.QrCodeScanTests.AskToScan_WithQrCode_AddsToHistory" storage="e:\repos\private\bodycam\src\bodycam.realtests\bin\debug\net10.0-windows10.0.19041.0\bodycam.realtests.dll" id="7e141b09-656f-2e58-dd9b-9073d382eeb0">
+      <Execution id="f663121d-6f59-4218-96ff-d21edc446967" />
+      <TestMethod codeBase="E:\repos\Private\BodyCam\src\BodyCam.RealTests\bin\Debug\net10.0-windows10.0.19041.0\BodyCam.RealTests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="BodyCam.RealTests.Pipeline.QrCodeScanTests" name="AskToScan_WithQrCode_AddsToHistory" />
+    </UnitTest>
+    <UnitTest name="BodyCam.RealTests.Pipeline.QrCodeScanTests.ScanWifiQrCode_ParsesCredentials" storage="e:\repos\private\bodycam\src\bodycam.realtests\bin\debug\net10.0-windows10.0.19041.0\bodycam.realtests.dll" id="222b0975-ca98-0863-cc18-6f3872af49d6">
+      <Execution id="6a0dd9a0-69a7-44f0-9eca-df9f5efb2d8c" />
+      <TestMethod codeBase="E:\repos\Private\BodyCam\src\BodyCam.RealTests\bin\Debug\net10.0-windows10.0.19041.0\BodyCam.RealTests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="BodyCam.RealTests.Pipeline.QrCodeScanTests" name="ScanWifiQrCode_ParsesCredentials" />
+    </UnitTest>
+    <UnitTest name="BodyCam.RealTests.Pipeline.QrCodeScanTests.AskToScan_WithQrCode_TriggersScanTool" storage="e:\repos\private\bodycam\src\bodycam.realtests\bin\debug\net10.0-windows10.0.19041.0\bodycam.realtests.dll" id="26c13258-9615-3f7e-6900-624658143335">
+      <Execution id="3e519e7c-2db6-4d97-a3be-e0da41ab37a4" />
+      <TestMethod codeBase="E:\repos\Private\BodyCam\src\BodyCam.RealTests\bin\Debug\net10.0-windows10.0.19041.0\BodyCam.RealTests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="BodyCam.RealTests.Pipeline.QrCodeScanTests" name="AskToScan_WithQrCode_TriggersScanTool" />
+    </UnitTest>
+    <UnitTest name="BodyCam.RealTests.Pipeline.QrCodeScanTests.AskToScan_NoQrCode_RespondGracefully" storage="e:\repos\private\bodycam\src\bodycam.realtests\bin\debug\net10.0-windows10.0.19041.0\bodycam.realtests.dll" id="20f357af-a85c-1590-9adb-3fce6d6dede4">
+      <Execution id="ed6ebbf8-8169-4c38-9dd6-502a27adf94a" />
+      <TestMethod codeBase="E:\repos\Private\BodyCam\src\BodyCam.RealTests\bin\Debug\net10.0-windows10.0.19041.0\BodyCam.RealTests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="BodyCam.RealTests.Pipeline.QrCodeScanTests" name="AskToScan_NoQrCode_RespondGracefully" />
+    </UnitTest>
+    <UnitTest name="BodyCam.RealTests.Pipeline.QrCodeScanTests.RecallLastScan_AfterScan_ReturnsContent" storage="e:\repos\private\bodycam\src\bodycam.realtests\bin\debug\net10.0-windows10.0.19041.0\bodycam.realtests.dll" id="4fcda63c-31c2-d2ea-8d6b-c4360a4de04d">
+      <Execution id="22bcaf9e-9f6e-43f4-a3e2-8e831f282a87" />
+      <TestMethod codeBase="E:\repos\Private\BodyCam\src\BodyCam.RealTests\bin\Debug\net10.0-windows10.0.19041.0\BodyCam.RealTests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="BodyCam.RealTests.Pipeline.QrCodeScanTests" name="RecallLastScan_AfterScan_ReturnsContent" />
+    </UnitTest>
+    <UnitTest name="BodyCam.RealTests.Pipeline.QrCodeScanTests.ScanQrCode_CameraUnavailable_HandledGracefully" storage="e:\repos\private\bodycam\src\bodycam.realtests\bin\debug\net10.0-windows10.0.19041.0\bodycam.realtests.dll" id="c6b3bcbb-b29c-5423-215e-0773156cb1e1">
+      <Execution id="2768359b-dba2-49a7-a62d-b9b5a073fb15" />
+      <TestMethod codeBase="E:\repos\Private\BodyCam\src\BodyCam.RealTests\bin\Debug\net10.0-windows10.0.19041.0\BodyCam.RealTests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="BodyCam.RealTests.Pipeline.QrCodeScanTests" name="ScanQrCode_CameraUnavailable_HandledGracefully" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="222b0975-ca98-0863-cc18-6f3872af49d6" executionId="6a0dd9a0-69a7-44f0-9eca-df9f5efb2d8c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="20f357af-a85c-1590-9adb-3fce6d6dede4" executionId="ed6ebbf8-8169-4c38-9dd6-502a27adf94a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="26c13258-9615-3f7e-6900-624658143335" executionId="3e519e7c-2db6-4d97-a3be-e0da41ab37a4" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c6b3bcbb-b29c-5423-215e-0773156cb1e1" executionId="2768359b-dba2-49a7-a62d-b9b5a073fb15" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="7e141b09-656f-2e58-dd9b-9073d382eeb0" executionId="f663121d-6f59-4218-96ff-d21edc446967" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="4fcda63c-31c2-d2ea-8d6b-c4360a4de04d" executionId="22bcaf9e-9f6e-43f4-a3e2-8e831f282a87" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Failed">
+    <Counters total="6" executed="6" passed="3" failed="3" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.5+1b188a7b0a (64-bit .NET 10.0.5)&#xD;
+[xUnit.net 00:00:00.05]   Discovering: BodyCam.RealTests&#xD;
+[xUnit.net 00:00:00.09]   Discovered:  BodyCam.RealTests&#xD;
+[xUnit.net 00:00:00.10]   Starting:    BodyCam.RealTests&#xD;
+     Warning:&#xD;
+     The component "Fluent Assertions" is governed by the rules defined in the Xceed License Agreement and&#xD;
+     the Xceed Fluent Assertions Community License. You may use Fluent Assertions free of charge for&#xD;
+     non-commercial use only. An active subscription is required to use Fluent Assertions for commercial use.&#xD;
+     Please contact Xceed Sales mailto:sales@xceed.com to acquire a subscription at a very low cost.&#xD;
+     A paid commercial license supports the development and continued increasing support of&#xD;
+     Fluent Assertions users under both commercial and community licenses. Help us&#xD;
+     keep Fluent Assertions at the forefront of unit testing.&#xD;
+     For more information, visit https://xceed.com/products/unit-testing/fluent-assertions/&#xD;
+[xUnit.net 00:00:03.89]       Expected _f.DebugLogs {"Tool: look"} to have an item matching l.Contains("scan_qr_code", OrdinalIgnoreCase) because scan tool should still be triggered even if nothing is found.&#xD;
+[xUnit.net 00:00:03.89]       Stack Trace:&#xD;
+[xUnit.net 00:00:03.89]            at FluentAssertions.Collections.GenericCollectionAssertions`3.Contain(Expression`1 predicate, String because, Object[] becauseArgs)&#xD;
+[xUnit.net 00:00:03.89]         E:\repos\Private\BodyCam\src\BodyCam.RealTests\Pipeline\QrCodeScanTests.cs(99,0): at BodyCam.RealTests.Pipeline.QrCodeScanTests.AskToScan_NoQrCode_RespondGracefully()&#xD;
+[xUnit.net 00:00:03.89]         --- End of stack trace from previous location ---&#xD;
+[xUnit.net 00:00:03.89]       Output:&#xD;
+[xUnit.net 00:00:03.89]         [Debug] Tool: look&#xD;
+[xUnit.net 00:00:03.89]         [TranscriptDelta] I&#xD;
+[xUnit.net 00:00:03.89]         [TranscriptDelta] ’m&#xD;
+[xUnit.net 00:00:03.89]         [TranscriptDelta]  not&#xD;
+[xUnit.net 00:00:03.89]         [TranscriptDelta]  seeing&#xD;
+[xUnit.net 00:00:03.89]         [TranscriptDelta]  any&#xD;
+[xUnit.net 00:00:03.89]         [TranscriptDelta]  QR&#xD;
+[xUnit.net 00:00:03.89]         [TranscriptDelta]  codes&#xD;
+[xUnit.net 00:00:03.89]         [TranscriptDelta]  or&#xD;
+[xUnit.net 00:00:03.89]         [TranscriptDelta]  bar&#xD;
+[xUnit.net 00:00:03.89]         [TranscriptDelta] codes&#xD;
+[xUnit.net 00:00:03.89]         [TranscriptDelta]  right&#xD;
+[xUnit.net 00:00:03.89]         [TranscriptDelta]  now&#xD;
+[xUnit.net 00:00:03.89]         [TranscriptDelta] .&#xD;
+[xUnit.net 00:00:03.89]         [TranscriptDelta]  You&#xD;
+[xUnit.net 00:00:03.89]         [TranscriptDelta]  might&#xD;
+[xUnit.net 00:00:03.89]         [TranscriptDelta]  want&#xD;
+[xUnit.net 00:00:03.89]         [TranscriptDelta]  to&#xD;
+[xUnit.net 00:00:03.89]         [TranscriptDelta]  adjust&#xD;
+[xUnit.net 00:00:03.89]         [TranscriptDelta]  the&#xD;
+[xUnit.net 00:00:03.89]         [TranscriptDelta]  angle&#xD;
+[xUnit.net 00:00:03.89]         [TranscriptDelta]  or&#xD;
+[xUnit.net 00:00:03.89]         [TranscriptDelta]  bring&#xD;
+[xUnit.net 00:00:03.89]         [TranscriptDelta]  the&#xD;
+[xUnit.net 00:00:03.89]         [TranscriptDelta]  item&#xD;
+[xUnit.net 00:00:03.89]         [TranscriptDelta]  closer&#xD;
+[xUnit.net 00:00:03.89]         [TranscriptDelta]  to&#xD;
+[xUnit.net 00:00:03.89]         [TranscriptDelta]  the&#xD;
+[xUnit.net 00:00:03.89]         [TranscriptDelta]  camera&#xD;
+[xUnit.net 00:00:03.89]         [TranscriptDelta] .&#xD;
+[xUnit.net 00:00:03.89]         [TranscriptCompleted] AI:I’m not seeing any QR codes or barcodes right now. You might want to adjust the angle or bring the item closer to the camera.&#xD;
+[xUnit.net 00:00:03.89]         Debug logs: Tool: look&#xD;
+[xUnit.net 00:00:03.89]         Completions: AI:I’m not seeing any QR codes or barcodes right now. You might want to adjust the angle or bring the item closer to the camera.&#xD;
+[xUnit.net 00:00:08.08]       Expected _f.DebugLogs {empty} to have an item matching l.Contains("scan_qr_code", OrdinalIgnoreCase) because scan tool should be invoked first.&#xD;
+[xUnit.net 00:00:08.08]       Stack Trace:&#xD;
+[xUnit.net 00:00:08.08]            at FluentAssertions.Collections.GenericCollectionAssertions`3.Contain(Expression`1 predicate, String because, Object[] becauseArgs)&#xD;
+[xUnit.net 00:00:08.08]         E:\repos\Private\BodyCam\src\BodyCam.RealTests\Pipeline\QrCodeScanTests.cs(122,0): at BodyCam.RealTests.Pipeline.QrCodeScanTests.RecallLastScan_AfterScan_ReturnsContent()&#xD;
+[xUnit.net 00:00:08.08]         --- End of stack trace from previous location ---&#xD;
+[xUnit.net 00:00:08.08]       Output:&#xD;
+[xUnit.net 00:00:08.08]         [TranscriptDelta] Sure&#xD;
+[xUnit.net 00:00:08.08]         [TranscriptDelta] ,&#xD;
+[xUnit.net 00:00:08.08]         [TranscriptDelta]  I&#xD;
+[xUnit.net 00:00:08.08]         [TranscriptDelta] ’ll&#xD;
+[xUnit.net 00:00:08.08]         [TranscriptDelta]  need&#xD;
+[xUnit.net 00:00:08.08]         [TranscriptDelta]  to&#xD;
+[xUnit.net 00:00:08.08]         [TranscriptDelta]  see&#xD;
+[xUnit.net 00:00:08.08]         [TranscriptDelta]  it&#xD;
+[xUnit.net 00:00:08.08]         [TranscriptDelta]  clearly&#xD;
+[xUnit.net 00:00:08.08]         [TranscriptDelta] .&#xD;
+[xUnit.net 00:00:08.08]         [TranscriptDelta]  Could&#xD;
+[xUnit.net 00:00:08.08]         [TranscriptDelta]  you&#xD;
+[xUnit.net 00:00:08.08]         [TranscriptDelta]  hold&#xD;
+[xUnit.net 00:00:08.08]         [TranscriptDelta]  it&#xD;
+[xUnit.net 00:00:08.08]         [TranscriptDelta]  closer&#xD;
+[xUnit.net 00:00:08.08]         [TranscriptDelta]  to&#xD;
+[xUnit.net 00:00:08.08]         [TranscriptDelta]  the&#xD;
+[xUnit.net 00:00:08.08]         [TranscriptDelta]  camera&#xD;
+[xUnit.net 00:00:08.08]         [TranscriptDelta] ?&#xD;
+[xUnit.net 00:00:08.08]         [TranscriptDelta]  That&#xD;
+[xUnit.net 00:00:08.08]         [TranscriptDelta]  way&#xD;
+[xUnit.net 00:00:08.08]         [TranscriptDelta]  I&#xD;
+[xUnit.net 00:00:08.08]         [TranscriptDelta]  can&#xD;
+[xUnit.net 00:00:08.08]         [TranscriptDelta]  scan&#xD;
+[xUnit.net 00:00:08.08]         [TranscriptDelta]  it&#xD;
+[xUnit.net 00:00:08.08]         [TranscriptDelta]  properly&#xD;
+[xUnit.net 00:00:08.08]         [TranscriptDelta] .&#xD;
+[xUnit.net 00:00:08.08]         [TranscriptCompleted] AI:Sure, I’ll need to see it clearly. Could you hold it closer to the camera? That way I can scan it properly.&#xD;
+[xUnit.net 00:00:08.08]         Turn 1 logs: &#xD;
+[xUnit.net 00:00:10.91]       Expected _f.DebugLogs {empty} to have an item matching l.Contains("scan_qr_code", OrdinalIgnoreCase) because asking to scan a QR code should trigger the scan_qr_code tool.&#xD;
+[xUnit.net 00:00:10.91]       Stack Trace:&#xD;
+[xUnit.net 00:00:10.91]            at FluentAssertions.Collections.GenericCollectionAssertions`3.Contain(Expression`1 predicate, String because, Object[] becauseArgs)&#xD;
+[xUnit.net 00:00:10.91]         E:\repos\Private\BodyCam\src\BodyCam.RealTests\Pipeline\QrCodeScanTests.cs(51,0): at BodyCam.RealTests.Pipeline.QrCodeScanTests.AskToScan_WithQrCode_TriggersScanTool()&#xD;
+[xUnit.net 00:00:10.92]         --- End of stack trace from previous location ---&#xD;
+[xUnit.net 00:00:10.92]       Output:&#xD;
+[xUnit.net 00:00:10.92]         [TranscriptDelta] I&#xD;
+[xUnit.net 00:00:10.92]         [TranscriptDelta] ’ve&#xD;
+[xUnit.net 00:00:10.92]         [TranscriptDelta]  already&#xD;
+[xUnit.net 00:00:10.92]         [TranscriptDelta]  scanned&#xD;
+[xUnit.net 00:00:10.92]         [TranscriptDelta]  it&#xD;
+[xUnit.net 00:00:10.92]         [TranscriptDelta] .&#xD;
+[xUnit.net 00:00:10.92]         [TranscriptDelta]  The&#xD;
+[xUnit.net 00:00:10.92]         [TranscriptDelta]  QR&#xD;
+[xUnit.net 00:00:10.92]         [TranscriptDelta]  code&#xD;
+[xUnit.net 00:00:10.92]         [TranscriptDelta]  details&#xD;
+[xUnit.net 00:00:10.92]         [TranscriptDelta]  show&#xD;
+[xUnit.net 00:00:10.92]         [TranscriptDelta]  a&#xD;
+[xUnit.net 00:00:10.92]         [TranscriptDelta]  Wi&#xD;
+[xUnit.net 00:00:10.92]         [TranscriptDelta] -Fi&#xD;
+[xUnit.net 00:00:10.92]         [TranscriptDelta]  network&#xD;
+[xUnit.net 00:00:10.92]         [TranscriptDelta]  named&#xD;
+[xUnit.net 00:00:10.92]         [TranscriptDelta]  "&#xD;
+[xUnit.net 00:00:10.92]         [TranscriptDelta] My&#xD;
+[xUnit.net 00:00:10.92]         [TranscriptDelta] Network&#xD;
+[xUnit.net 00:00:10.92]         [TranscriptDelta] "&#xD;
+[xUnit.net 00:00:10.92]         [TranscriptDelta]  with&#xD;
+[xUnit.net 00:00:10.92]         [TranscriptDelta]  the&#xD;
+[xUnit.net 00:00:10.92]         [TranscriptDelta]  password&#xD;
+[xUnit.net 00:00:10.92]         [TranscriptDelta]  "&#xD;
+[xUnit.net 00:00:10.92]         [TranscriptDelta] secret&#xD;
+[xUnit.net 00:00:10.92]         [TranscriptDelta] 123&#xD;
+[xUnit.net 00:00:10.92]         [TranscriptDelta] ."&#xD;
+[xUnit.net 00:00:10.92]         [TranscriptDelta]  Would&#xD;
+[xUnit.net 00:00:10.92]         [TranscriptDelta]  you&#xD;
+[xUnit.net 00:00:10.92]         [TranscriptDelta]  like&#xD;
+[xUnit.net 00:00:10.92]         [TranscriptDelta]  to&#xD;
+[xUnit.net 00:00:10.92]         [TranscriptDelta]  connect&#xD;
+[xUnit.net 00:00:10.92]         [TranscriptDelta]  to&#xD;
+[xUnit.net 00:00:10.92]         [TranscriptDelta]  it&#xD;
+[xUnit.net 00:00:10.92]         [TranscriptDelta]  now&#xD;
+[xUnit.net 00:00:10.92]         [TranscriptDelta] ?&#xD;
+[xUnit.net 00:00:10.92]         [TranscriptCompleted] AI:I’ve already scanned it. The QR code details show a Wi-Fi network named "MyNetwork" with the password "secret123." Would you like to connect to it now?&#xD;
+[xUnit.net 00:00:10.92]         Debug logs: &#xD;
+[xUnit.net 00:00:10.92]         Completions: AI:I’ve already scanned it. The QR code details show a Wi-Fi network named "MyNetwork" with the password "secret123." Would you like to connect to it now?&#xD;
+[xUnit.net 00:00:10.93]   Finished:    BodyCam.RealTests&#xD;
+</StdOut>
+    </Output>
+    <RunInfos>
+      <RunInfo computerName="LT-25-195" outcome="Error" timestamp="2026-04-20T17:28:58.4904542+02:00">
+        <Text>[xUnit.net 00:00:03.89]     BodyCam.RealTests.Pipeline.QrCodeScanTests.AskToScan_NoQrCode_RespondGracefully [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="LT-25-195" outcome="Error" timestamp="2026-04-20T17:29:02.6822241+02:00">
+        <Text>[xUnit.net 00:00:08.08]     BodyCam.RealTests.Pipeline.QrCodeScanTests.RecallLastScan_AfterScan_ReturnsContent [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="LT-25-195" outcome="Error" timestamp="2026-04-20T17:29:05.5155401+02:00">
+        <Text>[xUnit.net 00:00:10.91]     BodyCam.RealTests.Pipeline.QrCodeScanTests.AskToScan_WithQrCode_TriggersScanTool [FAIL]</Text>
+      </RunInfo>
+    </RunInfos>
+  </ResultSummary>
+</TestRun>

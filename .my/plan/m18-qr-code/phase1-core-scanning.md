@@ -130,24 +130,25 @@ Tools/ScanQrCodeTool.cs
 ```csharp
 public class ScanQrCodeTool : ToolBase<ScanQrCodeArgs>
 {
+    private readonly IQrCodeScanner _scanner;
+
+    public ScanQrCodeTool(IQrCodeScanner scanner) => _scanner = scanner;
+
     public override string Name => "scan_qr_code";
     public override string Description => "Capture a photo and scan for QR codes or barcodes. Returns decoded content.";
 
-    // Parameter schema: { "query": "optional context" }
-
-    protected override async Task<string> ExecuteAsync(
+    protected override async Task<ToolResult> ExecuteAsync(
         ScanQrCodeArgs args, ToolContext context, CancellationToken ct)
     {
         var frame = await context.CaptureFrame(ct);
         if (frame is null)
-            return """{"error":"Camera not available"}""";
+            return ToolResult.Fail("Camera not available.");
 
-        var scanner = // resolve from DI or inject via constructor
-        var result = await scanner.ScanAsync(frame, ct);
+        var result = await _scanner.ScanAsync(frame, ct);
         if (result is null)
-            return """{"found":false,"message":"No QR code detected in the image"}""";
+            return ToolResult.Success(new { found = false, message = "No QR code detected in the image" });
 
-        return JsonSerializer.Serialize(new
+        return ToolResult.Success(new
         {
             found = true,
             content = result.Content,
@@ -175,12 +176,14 @@ public record ScanQrCodeArgs(string? Query = null);
 
 ## Wave 3: DI Registration + Integration
 
-### 3.1 MauiProgram.cs
+### 3.1 ServiceExtensions.cs
 
 ```csharp
 services.AddSingleton<IQrCodeScanner, ZXingQrScanner>();
 services.AddSingleton<ITool, ScanQrCodeTool>();
 ```
+
+The tool is converted to an `AITool` via `AIFunctionFactory.Create()` in `AgentOrchestrator` and dispatched manually through `RawRepresentation` — the same pattern used by all existing tools.
 
 ### 3.2 NuGet Package
 

@@ -1,0 +1,288 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="055c4ab5-fd6e-43f0-a40c-d0b31205c34d" name="JONK435491@LT-25-195 2026-04-20 17:21:16" runUser="ecs\JONK435491" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-04-20T17:21:16.1906177+02:00" queuing="2026-04-20T17:21:16.1906178+02:00" start="2026-04-20T17:21:12.0788310+02:00" finish="2026-04-20T17:21:22.8933691+02:00" />
+  <TestSettings name="default" id="3f2761bd-71dc-4f07-90b3-b7e27fd7eb0f">
+    <Deployment runDeploymentRoot="JONK435491_LT-25-195_2026-04-20_17_21_16" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="99c92c75-1268-4474-9248-8a9cb87e442c" testId="2c46164f-6873-59ed-76c3-8a1799073b81" testName="BodyCam.RealTests.Pipeline.LookPipelineTests.Look_NoQrCode_FallsToVision" computerName="LT-25-195" duration="00:00:02.9722829" startTime="2026-04-20T17:21:13.1893908+02:00" endTime="2026-04-20T17:21:16.1687735+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="99c92c75-1268-4474-9248-8a9cb87e442c">
+      <Output>
+        <StdOut>[Debug] Tool: describe_scene&#xD;
+[TranscriptDelta] It&#xD;
+[TranscriptDelta]  looks&#xD;
+[TranscriptDelta]  like&#xD;
+[TranscriptDelta]  the&#xD;
+[TranscriptDelta]  view&#xD;
+[TranscriptDelta]  is&#xD;
+[TranscriptDelta]  mostly&#xD;
+[TranscriptDelta]  a&#xD;
+[TranscriptDelta]  blank&#xD;
+[TranscriptDelta]  white&#xD;
+[TranscriptDelta]  area&#xD;
+[TranscriptDelta] ,&#xD;
+[TranscriptDelta]  with&#xD;
+[TranscriptDelta]  just&#xD;
+[TranscriptDelta]  a&#xD;
+[TranscriptDelta]  thin&#xD;
+[TranscriptDelta]  black&#xD;
+[TranscriptDelta]  border&#xD;
+[TranscriptDelta]  along&#xD;
+[TranscriptDelta]  the&#xD;
+[TranscriptDelta]  edges&#xD;
+[TranscriptDelta] .&#xD;
+[TranscriptDelta]  There's&#xD;
+[TranscriptDelta]  nothing&#xD;
+[TranscriptDelta]  else&#xD;
+[TranscriptDelta]  clearly&#xD;
+[TranscriptDelta]  visible&#xD;
+[TranscriptDelta]  right&#xD;
+[TranscriptDelta]  now&#xD;
+[TranscriptDelta] .&#xD;
+[TranscriptCompleted] AI:It looks like the view is mostly a blank white area, with just a thin black border along the edges. There's nothing else clearly visible right now.&#xD;
+Debug logs: Tool: describe_scene&#xD;
+Completions: AI:It looks like the view is mostly a blank white area, with just a thin black border along the edges. There's nothing else clearly visible right now.</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="cb43c87f-a4ef-4969-8ee3-c1076a5e3eab" testId="dce7927c-17e2-2098-b8a8-edb3bce667f4" testName="BodyCam.RealTests.Pipeline.LookPipelineTests.DescribeScene_ReturnsStructuredAnalysis" computerName="LT-25-195" duration="00:00:01.7464006" startTime="2026-04-20T17:21:16.1794065+02:00" endTime="2026-04-20T17:21:17.9169913+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="cb43c87f-a4ef-4969-8ee3-c1076a5e3eab">
+      <Output>
+        <StdOut>[Debug] Tool: describe_scene&#xD;
+[TranscriptDelta] The&#xD;
+[TranscriptDelta]  scene&#xD;
+[TranscriptDelta]  is&#xD;
+[TranscriptDelta]  mostly&#xD;
+[TranscriptDelta]  blank&#xD;
+[TranscriptDelta]  white&#xD;
+[TranscriptDelta] ,&#xD;
+[TranscriptDelta]  with&#xD;
+[TranscriptDelta]  a&#xD;
+[TranscriptDelta]  thin&#xD;
+[TranscriptDelta]  black&#xD;
+[TranscriptDelta]  strip&#xD;
+[TranscriptDelta]  along&#xD;
+[TranscriptDelta]  the&#xD;
+[TranscriptDelta]  right&#xD;
+[TranscriptDelta]  and&#xD;
+[TranscriptDelta]  bottom&#xD;
+[TranscriptDelta]  edges&#xD;
+[TranscriptDelta] .&#xD;
+[TranscriptDelta]  There&#xD;
+[TranscriptDelta]  are&#xD;
+[TranscriptDelta]  no&#xD;
+[TranscriptDelta]  objects&#xD;
+[TranscriptDelta]  or&#xD;
+[TranscriptDelta]  people&#xD;
+[TranscriptDelta]  visible&#xD;
+[TranscriptDelta]  in&#xD;
+[TranscriptDelta]  the&#xD;
+[TranscriptDelta]  frame&#xD;
+[TranscriptDelta] .&#xD;
+[TranscriptCompleted] AI:The scene is mostly blank white, with a thin black strip along the right and bottom edges. There are no objects or people visible in the frame.&#xD;
+Debug logs: Tool: describe_scene&#xD;
+Completions: AI:The scene is mostly blank white, with a thin black strip along the right and bottom edges. There are no objects or people visible in the frame.</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="89657a82-349b-4474-9da2-b25fb4842f68" testId="c512f14c-d9ad-3e23-e44e-5e57baa670c2" testName="BodyCam.RealTests.Pipeline.LookPipelineTests.Look_CameraUnavailable_HandledGracefully" computerName="LT-25-195" duration="00:00:01.2560931" startTime="2026-04-20T17:21:21.5877561+02:00" endTime="2026-04-20T17:21:22.8397192+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="89657a82-349b-4474-9da2-b25fb4842f68">
+      <Output>
+        <StdOut>[Debug] Tool: look&#xD;
+[TranscriptDelta] It&#xD;
+[TranscriptDelta]  seems&#xD;
+[TranscriptDelta]  the&#xD;
+[TranscriptDelta]  camera&#xD;
+[TranscriptDelta]  isn't&#xD;
+[TranscriptDelta]  available&#xD;
+[TranscriptDelta]  right&#xD;
+[TranscriptDelta]  now&#xD;
+[TranscriptDelta] .&#xD;
+[TranscriptDelta]  Could&#xD;
+[TranscriptDelta]  you&#xD;
+[TranscriptDelta]  check&#xD;
+[TranscriptDelta]  the&#xD;
+[TranscriptDelta]  camera&#xD;
+[TranscriptDelta]  or&#xD;
+[TranscriptDelta]  describe&#xD;
+[TranscriptDelta]  what&#xD;
+[TranscriptDelta]  you'd&#xD;
+[TranscriptDelta]  like&#xD;
+[TranscriptDelta]  me&#xD;
+[TranscriptDelta]  to&#xD;
+[TranscriptDelta]  focus&#xD;
+[TranscriptDelta]  on&#xD;
+[TranscriptDelta] ?&#xD;
+[TranscriptCompleted] AI:It seems the camera isn't available right now. Could you check the camera or describe what you'd like me to focus on?&#xD;
+Debug logs: Tool: look&#xD;
+Completions: AI:It seems the camera isn't available right now. Could you check the camera or describe what you'd like me to focus on?</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="7a1266e8-13f0-4c84-bf9f-3f4393f40f92" testId="c8a24536-e10e-856c-c370-beb4fcad6596" testName="BodyCam.RealTests.Pipeline.LookPipelineTests.Look_WithQrCode_AddsToHistory" computerName="LT-25-195" duration="00:00:01.9522834" startTime="2026-04-20T17:21:17.9195830+02:00" endTime="2026-04-20T17:21:19.8704625+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="7a1266e8-13f0-4c84-bf9f-3f4393f40f92">
+      <Output>
+        <StdOut>[Debug] Tool: look&#xD;
+[TranscriptDelta] I&#xD;
+[TranscriptDelta]  see&#xD;
+[TranscriptDelta]  a&#xD;
+[TranscriptDelta]  QR&#xD;
+[TranscriptDelta]  code&#xD;
+[TranscriptDelta]  with&#xD;
+[TranscriptDelta]  a&#xD;
+[TranscriptDelta]  URL&#xD;
+[TranscriptDelta] :&#xD;
+[TranscriptDelta]  https&#xD;
+[TranscriptDelta] ://&#xD;
+[TranscriptDelta] pipeline&#xD;
+[TranscriptDelta] -test&#xD;
+[TranscriptDelta] .example&#xD;
+[TranscriptDelta] .&#xD;
+[TranscriptDelta] com&#xD;
+[TranscriptDelta] .&#xD;
+[TranscriptDelta]  Would&#xD;
+[TranscriptDelta]  you&#xD;
+[TranscriptDelta]  like&#xD;
+[TranscriptDelta]  to&#xD;
+[TranscriptDelta]  open&#xD;
+[TranscriptDelta]  it&#xD;
+[TranscriptDelta]  in&#xD;
+[TranscriptDelta]  your&#xD;
+[TranscriptDelta]  browser&#xD;
+[TranscriptDelta]  or&#xD;
+[TranscriptDelta]  save&#xD;
+[TranscriptDelta]  it&#xD;
+[TranscriptDelta] ?&#xD;
+[TranscriptCompleted] AI:I see a QR code with a URL: https://pipeline-test.example.com. Would you like to open it in your browser or save it?&#xD;
+Debug logs: Tool: look</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="b05c7352-67bd-496b-a359-bc29ee213a15" testId="bc9b87a2-386e-347e-343b-4bbc4856734a" testName="BodyCam.RealTests.Pipeline.LookPipelineTests.Look_WithQrCode_ReturnsQrResult" computerName="LT-25-195" duration="00:00:01.7105062" startTime="2026-04-20T17:21:19.8708824+02:00" endTime="2026-04-20T17:21:21.5835954+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b05c7352-67bd-496b-a359-bc29ee213a15">
+      <Output>
+        <StdOut>[TranscriptDelta] It&#xD;
+[TranscriptDelta] ’s&#xD;
+[TranscriptDelta]  a&#xD;
+[TranscriptDelta]  QR&#xD;
+[TranscriptDelta]  code&#xD;
+[TranscriptDelta]  that&#xD;
+[TranscriptDelta]  links&#xD;
+[TranscriptDelta]  to&#xD;
+[TranscriptDelta]  a&#xD;
+[TranscriptDelta]  website&#xD;
+[TranscriptDelta] :&#xD;
+[TranscriptDelta]  pipeline&#xD;
+[TranscriptDelta] -test&#xD;
+[TranscriptDelta] .example&#xD;
+[TranscriptDelta] .com&#xD;
+[TranscriptDelta] .&#xD;
+[TranscriptDelta]  You&#xD;
+[TranscriptDelta]  can&#xD;
+[TranscriptDelta]  open&#xD;
+[TranscriptDelta]  it&#xD;
+[TranscriptDelta]  in&#xD;
+[TranscriptDelta]  your&#xD;
+[TranscriptDelta]  browser&#xD;
+[TranscriptDelta]  if&#xD;
+[TranscriptDelta]  you'd&#xD;
+[TranscriptDelta]  like&#xD;
+[TranscriptDelta] .&#xD;
+[TranscriptCompleted] AI:It’s a QR code that links to a website: pipeline-test.example.com. You can open it in your browser if you'd like.&#xD;
+Debug logs: &#xD;
+Completions: AI:It’s a QR code that links to a website: pipeline-test.example.com. You can open it in your browser if you'd like.</StdOut>
+        <ErrorInfo>
+          <Message>Expected _f.DebugLogs {empty} to have an item matching l.StartsWith("Tool:", OrdinalIgnoreCase) because a vision tool should be invoked.</Message>
+          <StackTrace>   at FluentAssertions.Collections.GenericCollectionAssertions`3.Contain(Expression`1 predicate, String because, Object[] becauseArgs)&#xD;
+   at BodyCam.RealTests.Pipeline.LookPipelineTests.Look_WithQrCode_ReturnsQrResult() in E:\repos\Private\BodyCam\src\BodyCam.RealTests\Pipeline\LookPipelineTests.cs:line 49&#xD;
+--- End of stack trace from previous location ---</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="BodyCam.RealTests.Pipeline.LookPipelineTests.Look_NoQrCode_FallsToVision" storage="e:\repos\private\bodycam\src\bodycam.realtests\bin\debug\net10.0-windows10.0.19041.0\bodycam.realtests.dll" id="2c46164f-6873-59ed-76c3-8a1799073b81">
+      <Execution id="99c92c75-1268-4474-9248-8a9cb87e442c" />
+      <TestMethod codeBase="E:\repos\Private\BodyCam\src\BodyCam.RealTests\bin\Debug\net10.0-windows10.0.19041.0\BodyCam.RealTests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="BodyCam.RealTests.Pipeline.LookPipelineTests" name="Look_NoQrCode_FallsToVision" />
+    </UnitTest>
+    <UnitTest name="BodyCam.RealTests.Pipeline.LookPipelineTests.Look_WithQrCode_AddsToHistory" storage="e:\repos\private\bodycam\src\bodycam.realtests\bin\debug\net10.0-windows10.0.19041.0\bodycam.realtests.dll" id="c8a24536-e10e-856c-c370-beb4fcad6596">
+      <Execution id="7a1266e8-13f0-4c84-bf9f-3f4393f40f92" />
+      <TestMethod codeBase="E:\repos\Private\BodyCam\src\BodyCam.RealTests\bin\Debug\net10.0-windows10.0.19041.0\BodyCam.RealTests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="BodyCam.RealTests.Pipeline.LookPipelineTests" name="Look_WithQrCode_AddsToHistory" />
+    </UnitTest>
+    <UnitTest name="BodyCam.RealTests.Pipeline.LookPipelineTests.Look_WithQrCode_ReturnsQrResult" storage="e:\repos\private\bodycam\src\bodycam.realtests\bin\debug\net10.0-windows10.0.19041.0\bodycam.realtests.dll" id="bc9b87a2-386e-347e-343b-4bbc4856734a">
+      <Execution id="b05c7352-67bd-496b-a359-bc29ee213a15" />
+      <TestMethod codeBase="E:\repos\Private\BodyCam\src\BodyCam.RealTests\bin\Debug\net10.0-windows10.0.19041.0\BodyCam.RealTests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="BodyCam.RealTests.Pipeline.LookPipelineTests" name="Look_WithQrCode_ReturnsQrResult" />
+    </UnitTest>
+    <UnitTest name="BodyCam.RealTests.Pipeline.LookPipelineTests.DescribeScene_ReturnsStructuredAnalysis" storage="e:\repos\private\bodycam\src\bodycam.realtests\bin\debug\net10.0-windows10.0.19041.0\bodycam.realtests.dll" id="dce7927c-17e2-2098-b8a8-edb3bce667f4">
+      <Execution id="cb43c87f-a4ef-4969-8ee3-c1076a5e3eab" />
+      <TestMethod codeBase="E:\repos\Private\BodyCam\src\BodyCam.RealTests\bin\Debug\net10.0-windows10.0.19041.0\BodyCam.RealTests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="BodyCam.RealTests.Pipeline.LookPipelineTests" name="DescribeScene_ReturnsStructuredAnalysis" />
+    </UnitTest>
+    <UnitTest name="BodyCam.RealTests.Pipeline.LookPipelineTests.Look_CameraUnavailable_HandledGracefully" storage="e:\repos\private\bodycam\src\bodycam.realtests\bin\debug\net10.0-windows10.0.19041.0\bodycam.realtests.dll" id="c512f14c-d9ad-3e23-e44e-5e57baa670c2">
+      <Execution id="89657a82-349b-4474-9da2-b25fb4842f68" />
+      <TestMethod codeBase="E:\repos\Private\BodyCam\src\BodyCam.RealTests\bin\Debug\net10.0-windows10.0.19041.0\BodyCam.RealTests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="BodyCam.RealTests.Pipeline.LookPipelineTests" name="Look_CameraUnavailable_HandledGracefully" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="2c46164f-6873-59ed-76c3-8a1799073b81" executionId="99c92c75-1268-4474-9248-8a9cb87e442c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="dce7927c-17e2-2098-b8a8-edb3bce667f4" executionId="cb43c87f-a4ef-4969-8ee3-c1076a5e3eab" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c512f14c-d9ad-3e23-e44e-5e57baa670c2" executionId="89657a82-349b-4474-9da2-b25fb4842f68" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c8a24536-e10e-856c-c370-beb4fcad6596" executionId="7a1266e8-13f0-4c84-bf9f-3f4393f40f92" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="bc9b87a2-386e-347e-343b-4bbc4856734a" executionId="b05c7352-67bd-496b-a359-bc29ee213a15" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Failed">
+    <Counters total="5" executed="5" passed="4" failed="1" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.5+1b188a7b0a (64-bit .NET 10.0.5)&#xD;
+[xUnit.net 00:00:00.05]   Discovering: BodyCam.RealTests&#xD;
+[xUnit.net 00:00:00.08]   Discovered:  BodyCam.RealTests&#xD;
+[xUnit.net 00:00:00.10]   Starting:    BodyCam.RealTests&#xD;
+     Warning:&#xD;
+     The component "Fluent Assertions" is governed by the rules defined in the Xceed License Agreement and&#xD;
+     the Xceed Fluent Assertions Community License. You may use Fluent Assertions free of charge for&#xD;
+     non-commercial use only. An active subscription is required to use Fluent Assertions for commercial use.&#xD;
+     Please contact Xceed Sales mailto:sales@xceed.com to acquire a subscription at a very low cost.&#xD;
+     A paid commercial license supports the development and continued increasing support of&#xD;
+     Fluent Assertions users under both commercial and community licenses. Help us&#xD;
+     keep Fluent Assertions at the forefront of unit testing.&#xD;
+     For more information, visit https://xceed.com/products/unit-testing/fluent-assertions/&#xD;
+[xUnit.net 00:00:09.18]       Expected _f.DebugLogs {empty} to have an item matching l.StartsWith("Tool:", OrdinalIgnoreCase) because a vision tool should be invoked.&#xD;
+[xUnit.net 00:00:09.18]       Stack Trace:&#xD;
+[xUnit.net 00:00:09.18]            at FluentAssertions.Collections.GenericCollectionAssertions`3.Contain(Expression`1 predicate, String because, Object[] becauseArgs)&#xD;
+[xUnit.net 00:00:09.18]         E:\repos\Private\BodyCam\src\BodyCam.RealTests\Pipeline\LookPipelineTests.cs(49,0): at BodyCam.RealTests.Pipeline.LookPipelineTests.Look_WithQrCode_ReturnsQrResult()&#xD;
+[xUnit.net 00:00:09.18]         --- End of stack trace from previous location ---&#xD;
+[xUnit.net 00:00:09.18]       Output:&#xD;
+[xUnit.net 00:00:09.18]         [TranscriptDelta] It&#xD;
+[xUnit.net 00:00:09.18]         [TranscriptDelta] ’s&#xD;
+[xUnit.net 00:00:09.18]         [TranscriptDelta]  a&#xD;
+[xUnit.net 00:00:09.18]         [TranscriptDelta]  QR&#xD;
+[xUnit.net 00:00:09.18]         [TranscriptDelta]  code&#xD;
+[xUnit.net 00:00:09.18]         [TranscriptDelta]  that&#xD;
+[xUnit.net 00:00:09.18]         [TranscriptDelta]  links&#xD;
+[xUnit.net 00:00:09.18]         [TranscriptDelta]  to&#xD;
+[xUnit.net 00:00:09.18]         [TranscriptDelta]  a&#xD;
+[xUnit.net 00:00:09.18]         [TranscriptDelta]  website&#xD;
+[xUnit.net 00:00:09.18]         [TranscriptDelta] :&#xD;
+[xUnit.net 00:00:09.18]         [TranscriptDelta]  pipeline&#xD;
+[xUnit.net 00:00:09.18]         [TranscriptDelta] -test&#xD;
+[xUnit.net 00:00:09.18]         [TranscriptDelta] .example&#xD;
+[xUnit.net 00:00:09.18]         [TranscriptDelta] .com&#xD;
+[xUnit.net 00:00:09.18]         [TranscriptDelta] .&#xD;
+[xUnit.net 00:00:09.18]         [TranscriptDelta]  You&#xD;
+[xUnit.net 00:00:09.18]         [TranscriptDelta]  can&#xD;
+[xUnit.net 00:00:09.18]         [TranscriptDelta]  open&#xD;
+[xUnit.net 00:00:09.18]         [TranscriptDelta]  it&#xD;
+[xUnit.net 00:00:09.18]         [TranscriptDelta]  in&#xD;
+[xUnit.net 00:00:09.18]         [TranscriptDelta]  your&#xD;
+[xUnit.net 00:00:09.18]         [TranscriptDelta]  browser&#xD;
+[xUnit.net 00:00:09.18]         [TranscriptDelta]  if&#xD;
+[xUnit.net 00:00:09.18]         [TranscriptDelta]  you'd&#xD;
+[xUnit.net 00:00:09.18]         [TranscriptDelta]  like&#xD;
+[xUnit.net 00:00:09.18]         [TranscriptDelta] .&#xD;
+[xUnit.net 00:00:09.18]         [TranscriptCompleted] AI:It’s a QR code that links to a website: pipeline-test.example.com. You can open it in your browser if you'd like.&#xD;
+[xUnit.net 00:00:09.18]         Debug logs: &#xD;
+[xUnit.net 00:00:09.18]         Completions: AI:It’s a QR code that links to a website: pipeline-test.example.com. You can open it in your browser if you'd like.&#xD;
+[xUnit.net 00:00:10.44]   Finished:    BodyCam.RealTests&#xD;
+</StdOut>
+    </Output>
+    <RunInfos>
+      <RunInfo computerName="LT-25-195" outcome="Error" timestamp="2026-04-20T17:21:21.5855630+02:00">
+        <Text>[xUnit.net 00:00:09.18]     BodyCam.RealTests.Pipeline.LookPipelineTests.Look_WithQrCode_ReturnsQrResult [FAIL]</Text>
+      </RunInfo>
+    </RunInfos>
+  </ResultSummary>
+</TestRun>

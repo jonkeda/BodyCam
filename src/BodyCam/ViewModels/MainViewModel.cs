@@ -5,6 +5,7 @@ using BodyCam.Mvvm;
 using BodyCam.Orchestration;
 using BodyCam.Services;
 using BodyCam.Services.Camera;
+using BodyCam.Services.QrCode;
 using CommunityToolkit.Maui.Views;
 using Microsoft.Extensions.Logging;
 
@@ -23,6 +24,9 @@ public class MainViewModel : ViewModelBase
     private readonly IApiKeyService _apiKeyService;
     private readonly ISettingsService _settingsService;
     private readonly CameraManager _cameraManager;
+    private readonly IQrCodeScanner _qrScanner;
+    private readonly QrCodeService _qrCodeService;
+    private readonly QrContentResolver _contentResolver;
     private readonly ILogger<MainViewModel> _logger;
     private string _debugLog = string.Empty;
     private string _toggleButtonText = "Start";
@@ -41,12 +45,24 @@ public class MainViewModel : ViewModelBase
     private string? _snapshotCaption;
     private bool _showSnapshot;
 
-    public MainViewModel(AgentOrchestrator orchestrator, IApiKeyService apiKeyService, ISettingsService settingsService, CameraManager cameraManager, ILogger<MainViewModel> logger)
+    // Scan result overlay state
+    private bool _showScanResult;
+    private string _scanResultIcon = string.Empty;
+    private string _scanResultTitle = string.Empty;
+    private string _scanResultSummary = string.Empty;
+    private IQrContentHandler? _lastScanHandler;
+    private Dictionary<string, object>? _lastScanParsed;
+    private string? _lastScanRawContent;
+
+    public MainViewModel(AgentOrchestrator orchestrator, IApiKeyService apiKeyService, ISettingsService settingsService, CameraManager cameraManager, IQrCodeScanner qrScanner, QrCodeService qrCodeService, QrContentResolver contentResolver, ILogger<MainViewModel> logger)
     {
         _orchestrator = orchestrator;
         _apiKeyService = apiKeyService;
         _settingsService = settingsService;
         _cameraManager = cameraManager;
+        _qrScanner = qrScanner;
+        _qrCodeService = qrCodeService;
+        _contentResolver = contentResolver;
         _logger = logger;
         Title = "BodyCam";
 
@@ -90,10 +106,7 @@ public class MainViewModel : ViewModelBase
         {
             await SendVisionCommandAsync("Describe what you see in front of me.");
         });
-        ReadCommand = new AsyncRelayCommand(async () =>
-        {
-            await SendVisionCommandAsync("Read any text you can see in front of me.");
-        });
+        ReadCommand = new AsyncRelayCommand(ReadTextAsync);
         FindCommand = new AsyncRelayCommand(async () =>
         {
             await SendVisionCommandAsync("Look around and tell me what objects you can find.");
@@ -106,6 +119,7 @@ public class MainViewModel : ViewModelBase
         {
             await SendVisionCommandAsync("Take a photo of what you see.");
         });
+        ScanCommand = new AsyncRelayCommand(ScanAsync);
 
         _orchestrator.TranscriptDelta += (_, delta) =>
         {
@@ -168,6 +182,8 @@ public class MainViewModel : ViewModelBase
                 DebugLog += $"[{DateTime.Now:HH:mm:ss}] {msg}{Environment.NewLine}";
             });
         };
+
+        _orchestrator.ScanResultReady += (_, e) => ShowScanResultCard(e.Handler, e.Parsed, e.RawContent);
     }
 
     public ObservableCollection<TranscriptEntry> Entries { get; } = [];
@@ -220,6 +236,7 @@ public class MainViewModel : ViewModelBase
     public ICommand FindCommand { get; }
     public ICommand AskCommand { get; }
     public ICommand PhotoCommand { get; }
+    public ICommand ScanCommand { get; }
 
     private static readonly Color ActiveBg = Color.FromArgb("#512BD4");
     private static readonly Color InactiveBg = Colors.Transparent;
@@ -289,6 +306,29 @@ public class MainViewModel : ViewModelBase
         get => _showSnapshot;
         set => SetProperty(ref _showSnapshot, value);
     }
+
+    // --- Scan result overlay ---
+    public bool ShowScanResult
+    {
+        get => _showScanResult;
+        set => SetProperty(ref _showScanResult, value);
+    }
+    public string ScanResultIcon
+    {
+        get => _scanResultIcon;
+        set => SetProperty(ref _scanResultIcon, value);
+    }
+    public string ScanResultTitle
+    {
+        get => _scanResultTitle;
+        set => SetProperty(ref _scanResultTitle, value);
+    }
+    public string ScanResultSummary
+    {
+        get => _scanResultSummary;
+        set => SetProperty(ref _scanResultSummary, value);
+    }
+    public ObservableCollection<ContentAction> ScanActions { get; } = [];
 
     public Color StateColor => CurrentLayer switch
     {
@@ -399,6 +439,91 @@ public class MainViewModel : ViewModelBase
             };
         }
         finally { _isTransitioning = false; }
+    }
+
+    private async Task ScanAsync()
+    {
+        var frame = await _cameraManager.CaptureFrameAsync();
+        if (frame is null)
+        {
+            Entries.Add(new TranscriptEntry { Role = "AI", Text = "Camera not available or no frame captured." });
+            return;
+        }
+
+        var aiEntry = new TranscriptEntry { Role = "AI", IsThinking = true };
+        Entries.Add(aiEntry);
+
+        try
+        {
+            var result = await _qrScanner.ScanAsync(frame);
+            if (result is null)
+            {
+                aiEntry.IsThinking = false;
+                aiEntry.Text = "No QR code or barcode detected.";
+                return;
+            }
+
+            _qrCodeService.Add(result);
+
+            var handler = _contentResolver.Resolve(result.Content);
+            var parsed = handler.Parse(result.Content);
+
+            aiEntry.IsThinking = false;
+            aiEntry.Text = $"{handler.Icon} {handler.DisplayName}: {handler.Summarize(parsed)}";
+
+            ShowScanResultCard(handler, parsed, result.Content);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "QR scan error");
+            aiEntry.IsThinking = false;
+            aiEntry.Text = $"Scan error: {ex.Message}";
+        }
+    }
+
+    private async Task ReadTextAsync()
+    {
+        var frame = await _cameraManager.CaptureFrameAsync();
+        if (frame is null)
+        {
+            Entries.Add(new TranscriptEntry { Role = "AI", Text = "Camera not available or no frame captured." });
+            return;
+        }
+
+        var aiEntry = new TranscriptEntry { Role = "AI", IsThinking = true };
+        Entries.Add(aiEntry);
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        try
+        {
+            var text = await _orchestrator.Vision.DescribeFrameAsync(
+                frame,
+                "Extract all visible text from this image. Return ONLY the text you can read, nothing else. If no text is visible, respond with exactly: NO_TEXT",
+                cts.Token);
+
+            aiEntry.IsThinking = false;
+
+            if (string.IsNullOrWhiteSpace(text)
+                || text.Contains("NO_TEXT", StringComparison.OrdinalIgnoreCase))
+            {
+                aiEntry.Text = "No text detected.";
+            }
+            else
+            {
+                aiEntry.Text = text;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            aiEntry.IsThinking = false;
+            aiEntry.Text = "Text reading timed out. Check your network connection and try again.";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Text reading error");
+            aiEntry.IsThinking = false;
+            aiEntry.Text = $"Read error: {ex.Message}";
+        }
     }
 
     private async Task SendVisionCommandAsync(string prompt)
@@ -559,5 +684,70 @@ public class MainViewModel : ViewModelBase
         {
             return null;
         }
+    }
+
+    internal void ShowScanResultCard(IQrContentHandler handler, Dictionary<string, object> parsed, string rawContent)
+    {
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            _lastScanHandler = handler;
+            _lastScanParsed = parsed;
+            _lastScanRawContent = rawContent;
+
+            ScanResultIcon = handler.Icon;
+            ScanResultTitle = handler.DisplayName;
+            ScanResultSummary = handler.Summarize(parsed);
+
+            ScanActions.Clear();
+            foreach (var action in handler.SuggestedActions)
+            {
+                ScanActions.Add(new ContentAction
+                {
+                    Label = action,
+                    Icon = "",
+                    Command = new RelayCommand(() => ExecuteScanAction(action, handler, parsed, rawContent))
+                });
+            }
+
+            ShowScanResult = true;
+            _ = AutoDismissScanResultAsync();
+
+            var entry = new TranscriptEntry
+            {
+                Role = "Scan",
+                Text = $"{handler.Icon} {handler.DisplayName}: {handler.Summarize(parsed)}"
+            };
+            entry.Actions.Add(new ContentAction
+            {
+                Label = "Show actions",
+                Icon = "\u21a9\ufe0f",
+                Command = new RelayCommand(ReopenScanResultCard)
+            });
+            entry.NotifyActionsChanged();
+            Entries.Add(entry);
+        });
+    }
+
+    private void ReopenScanResultCard()
+    {
+        if (_lastScanHandler is not null && _lastScanParsed is not null && _lastScanRawContent is not null)
+            ShowScanResultCard(_lastScanHandler, _lastScanParsed, _lastScanRawContent);
+    }
+
+    private void ExecuteScanAction(string action, IQrContentHandler handler, Dictionary<string, object> parsed, string rawContent)
+    {
+        ShowScanResult = false;
+
+        if (IsRunning)
+        {
+            var prompt = $"The user chose \"{action}\" for the scanned {handler.ContentType}: {rawContent}";
+            _ = _orchestrator.SendTextInputAsync(prompt);
+        }
+    }
+
+    private async Task AutoDismissScanResultAsync()
+    {
+        await Task.Delay(TimeSpan.FromSeconds(30));
+        ShowScanResult = false;
     }
 }

@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:BodyCam.ViewModels"
+             xmlns:models="clr-namespace:BodyCam.Models"
+             x:Class="BodyCam.Pages.Main.Views.ScanResultOverlay"
+             x:DataType="vm:MainViewModel">
+
+    <Grid IsVisible="{Binding ShowScanResult}"
+          BackgroundColor="#80000000"
+          Padding="16">
+        <Border StrokeShape="RoundRectangle 12"
+                BackgroundColor="{AppThemeBinding Light=White, Dark=#2A2A2A}"
+                Padding="16"
+                VerticalOptions="Center"
+                HorizontalOptions="Center"
+                MaximumWidthRequest="360">
+            <VerticalStackLayout Spacing="12">
+
+                <!-- Content type icon + label -->
+                <HorizontalStackLayout Spacing="8" HorizontalOptions="Center">
+                    <Label Text="{Binding ScanResultIcon}"
+                           FontSize="24" VerticalOptions="Center" />
+                    <Label Text="{Binding ScanResultTitle}"
+                           FontSize="18" FontAttributes="Bold"
+                           VerticalOptions="Center"
+                           SemanticProperties.Description="{Binding ScanResultTitle}"
+                           SemanticProperties.Hint="Scan result type" />
+                </HorizontalStackLayout>
+
+                <!-- Parsed content summary -->
+                <Label AutomationId="ScanResultContent"
+                       Text="{Binding ScanResultSummary}"
+                       FontSize="14"
+                       HorizontalTextAlignment="Center"
+                       MaxLines="4"
+                       LineBreakMode="TailTruncation"
+                       SemanticProperties.Description="{Binding ScanResultSummary}"
+                       SemanticProperties.Hint="Scanned content" />
+
+                <!-- Action buttons -->
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding ScanActions}"
+                                     Spacing="8">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="models:ContentAction">
+                            <Button Text="{Binding Label}"
+                                    Command="{Binding Command}"
+                                    AutomationId="{Binding Label}"
+                                    HeightRequest="44"
+                                    CornerRadius="8"
+                                    FontSize="14"
+                                    BackgroundColor="{AppThemeBinding Light=#EEEEEE, Dark=#3A3A3A}"
+                                    TextColor="{AppThemeBinding Light=#333333, Dark=#E0E0E0}"
+                                    HorizontalOptions="Fill" />
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+
+            </VerticalStackLayout>
+        </Border>
+    </Grid>
+</ContentView>

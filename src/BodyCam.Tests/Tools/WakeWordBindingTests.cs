@@ -1,5 +1,6 @@
 using BodyCam.Agents;
 using BodyCam.Services;
+using BodyCam.Services.Vision;
 using BodyCam.Tools;
 using FluentAssertions;
 using Microsoft.Extensions.AI;
@@ -10,11 +11,20 @@ namespace BodyCam.Tests.Tools;
 public class WakeWordBindingTests
 {
     [Fact]
-    public void DescribeSceneTool_HasWakeWord()
+    public void DescribeSceneTool_HasNoWakeWord()
     {
         var chatClient = Substitute.For<IChatClient>();
         var vision = new VisionAgent(chatClient, new AppSettings());
         var tool = new DescribeSceneTool(vision);
+
+        tool.WakeWord.Should().BeNull();
+    }
+
+    [Fact]
+    public void LookTool_HasWakeWord()
+    {
+        var pipeline = new VisionPipeline([]);
+        var tool = new LookTool(pipeline);
 
         tool.WakeWord.Should().NotBeNull();
         tool.WakeWord!.KeywordPath.Should().Contain("bodycam-look");
@@ -44,14 +54,13 @@ public class WakeWordBindingTests
     [Fact]
     public void BuildWakeWordEntries_IncludesToolWithWakeWord()
     {
-        var chatClient = Substitute.For<IChatClient>();
-        var vision = new VisionAgent(chatClient, new AppSettings());
-        var descTool = new DescribeSceneTool(vision);
-        var dispatcher = new ToolDispatcher(new ITool[] { descTool });
+        var pipeline = new VisionPipeline([]);
+        var lookTool = new LookTool(pipeline);
+        var dispatcher = new ToolDispatcher(new ITool[] { lookTool });
 
         var entries = dispatcher.BuildWakeWordEntries();
 
-        entries.Should().Contain(e => e.ToolName == "describe_scene" && e.Action == WakeWordAction.InvokeTool);
+        entries.Should().Contain(e => e.ToolName == "look" && e.Action == WakeWordAction.InvokeTool);
     }
 
     [Fact]
@@ -70,10 +79,9 @@ public class WakeWordBindingTests
     [Fact]
     public void BuildWakeWordEntries_NoDuplicateKeywordPaths()
     {
-        var chatClient = Substitute.For<IChatClient>();
-        var vision = new VisionAgent(chatClient, new AppSettings());
-        var descTool = new DescribeSceneTool(vision);
-        var dispatcher = new ToolDispatcher(new ITool[] { descTool });
+        var pipeline = new VisionPipeline([]);
+        var lookTool = new LookTool(pipeline);
+        var dispatcher = new ToolDispatcher(new ITool[] { lookTool });
 
         var entries = dispatcher.BuildWakeWordEntries();
         var paths = entries.Select(e => e.KeywordPath).ToList();

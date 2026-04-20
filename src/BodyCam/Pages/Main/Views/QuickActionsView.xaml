@@ -39,5 +39,9 @@
                 Text="📸 Photo"
                 Command="{Binding PhotoCommand}"
                 Style="{StaticResource ActionButton}" />
+        <Button Grid.Row="1" Grid.Column="2" AutomationId="ScanButton"
+                Text="📷 Scan"
+                Command="{Binding ScanCommand}"
+                Style="{StaticResource ActionButton}" />
     </Grid>
 </ContentView>

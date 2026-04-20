@@ -1,0 +1,735 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="84a1de14-407a-4cbb-884f-7b1863273209" name="JONK435491@LT-25-195 2026-04-20 17:33:05" runUser="ecs\JONK435491" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-04-20T17:33:05.3660969+02:00" queuing="2026-04-20T17:33:05.3660973+02:00" start="2026-04-20T17:33:03.5307195+02:00" finish="2026-04-20T17:33:16.9006448+02:00" />
+  <TestSettings name="default" id="a55c87cd-ed29-49d1-ac51-a11a1f4c1b78">
+    <Deployment runDeploymentRoot="JONK435491_LT-25-195_2026-04-20_17_33_05" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="ec9ce858-2638-4b0a-bd50-5e5b01a91355" testId="9e9f5915-46f6-cd85-9f6c-72e491a731ea" testName="BodyCam.RealTests.Pipeline.ToolRegistrationTests.AllThirteenToolsRegistered" computerName="LT-25-195" duration="00:00:00.0432713" startTime="2026-04-20T17:33:03.9663365+02:00" endTime="2026-04-20T17:33:04.0145433+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ec9ce858-2638-4b0a-bd50-5e5b01a91355">
+      <Output>
+        <StdOut>Registered tools (16):&#xD;
+  describe_scene: Capture and produce a comprehensive structured analysis of t...&#xD;
+  deep_analysis: Perform deep analysis using a reasoning model. Use for compl...&#xD;
+  read_text: Read and extract text visible in the camera view. Use when t...&#xD;
+  take_photo: Take a photo with the camera and save it. Use when the user ...&#xD;
+  save_memory: Save information to persistent memory for later recall. Use ...&#xD;
+  recall_memory: Search and recall previously saved memories. Use when the us...&#xD;
+  set_translation_mode: Activate or deactivate live translation mode. When active, s...&#xD;
+  make_phone_call: Make a phone call to a contact or number. Use when the user ...&#xD;
+  send_message: Send a text message via SMS or WhatsApp. Use when the user a...&#xD;
+  lookup_address: Look up an address, business, or place. Use your knowledge t...&#xD;
+  find_object: Search for a specific object in the camera view. Continuousl...&#xD;
+  navigate_to: Start navigation to a destination. Opens the default maps ap...&#xD;
+  start_scene_watch: Start watching the camera for a specific condition. Checks p...&#xD;
+  scan_qr_code: Capture a photo and scan for QR codes or barcodes. Returns d...&#xD;
+  recall_last_scan: Recall the most recent QR code or barcode scan result. Use w...&#xD;
+  look: Look at what the camera sees. Automatically scans for QR cod...</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="3f2cdc92-365c-4392-aa97-faa34420a249" testId="26c13258-9615-3f7e-6900-624658143335" testName="BodyCam.RealTests.Pipeline.QrCodeScanTests.AskToScan_WithQrCode_TriggersScanTool" computerName="LT-25-195" duration="00:00:01.0007923" startTime="2026-04-20T17:33:15.8467608+02:00" endTime="2026-04-20T17:33:16.8468800+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="3f2cdc92-365c-4392-aa97-faa34420a249">
+      <Output>
+        <StdOut>[TranscriptDelta] Sure&#xD;
+[TranscriptDelta] ,&#xD;
+[TranscriptDelta]  I'll&#xD;
+[TranscriptDelta]  start&#xD;
+[TranscriptDelta]  scanning&#xD;
+[TranscriptDelta]  now&#xD;
+[TranscriptDelta] .&#xD;
+[TranscriptDelta]  Just&#xD;
+[TranscriptDelta]  hold&#xD;
+[TranscriptDelta]  it&#xD;
+[TranscriptDelta]  steady&#xD;
+[TranscriptDelta] .&#xD;
+[TranscriptCompleted] AI:Sure, I'll start scanning now. Just hold it steady.&#xD;
+Debug logs: &#xD;
+Completions: AI:Sure, I'll start scanning now. Just hold it steady.</StdOut>
+        <ErrorInfo>
+          <Message>Expected completion "AI:Sure, I'll start scanning now. Just hold it steady." to contain the equivalent of "example.com" at least 1 time because response should mention the decoded URL content, but found it 0 times.</Message>
+          <StackTrace>   at FluentAssertions.Primitives.StringAssertions`1.ContainEquivalentOf(String expected, String because, Object[] becauseArgs)&#xD;
+   at BodyCam.RealTests.Pipeline.QrCodeScanTests.AskToScan_WithQrCode_TriggersScanTool() in E:\repos\Private\BodyCam\src\BodyCam.RealTests\Pipeline\QrCodeScanTests.cs:line 55&#xD;
+--- End of stack trace from previous location ---</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="3cbffc4f-d791-45a4-91a3-1d75535702f6" testId="4fcda63c-31c2-d2ea-8d6b-c4360a4de04d" testName="BodyCam.RealTests.Pipeline.QrCodeScanTests.RecallLastScan_AfterScan_ReturnsContent" computerName="LT-25-195" duration="00:00:03.0845249" startTime="2026-04-20T17:33:11.6036162+02:00" endTime="2026-04-20T17:33:14.6933484+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="3cbffc4f-d791-45a4-91a3-1d75535702f6">
+      <Output>
+        <StdOut>[TranscriptDelta] Sure&#xD;
+[TranscriptDelta] ,&#xD;
+[TranscriptDelta]  let&#xD;
+[TranscriptDelta]  me&#xD;
+[TranscriptDelta]  know&#xD;
+[TranscriptDelta]  when&#xD;
+[TranscriptDelta]  the&#xD;
+[TranscriptDelta]  camera&#xD;
+[TranscriptDelta]  is&#xD;
+[TranscriptDelta]  ready&#xD;
+[TranscriptDelta]  or&#xD;
+[TranscriptDelta]  adjust&#xD;
+[TranscriptDelta]  the&#xD;
+[TranscriptDelta]  camera&#xD;
+[TranscriptDelta]  angle&#xD;
+[TranscriptDelta] ,&#xD;
+[TranscriptDelta]  and&#xD;
+[TranscriptDelta]  I&#xD;
+[TranscriptDelta]  can&#xD;
+[TranscriptDelta]  scan&#xD;
+[TranscriptDelta]  it&#xD;
+[TranscriptDelta] .&#xD;
+[TranscriptDelta]  Once&#xD;
+[TranscriptDelta]  the&#xD;
+[TranscriptDelta]  camera&#xD;
+[TranscriptDelta] 's&#xD;
+[TranscriptDelta]  working&#xD;
+[TranscriptDelta] ,&#xD;
+[TranscriptDelta]  I'll&#xD;
+[TranscriptDelta]  proceed&#xD;
+[TranscriptDelta] .&#xD;
+[TranscriptCompleted] AI:Sure, let me know when the camera is ready or adjust the camera angle, and I can scan it. Once the camera's working, I'll proceed.&#xD;
+Turn 1 logs: &#xD;
+[Debug] Tool: recall_last_scan&#xD;
+[TranscriptDelta] The&#xD;
+[TranscriptDelta]  QR&#xD;
+[TranscriptDelta]  code&#xD;
+[TranscriptDelta]  contained&#xD;
+[TranscriptDelta]  the&#xD;
+[TranscriptDelta]  URL&#xD;
+[TranscriptDelta] :&#xD;
+[TranscriptDelta]  https&#xD;
+[TranscriptDelta] ://&#xD;
+[TranscriptDelta] test&#xD;
+[TranscriptDelta] .example&#xD;
+[TranscriptDelta] .&#xD;
+[TranscriptDelta] org&#xD;
+[TranscriptDelta] /page&#xD;
+[TranscriptDelta] .&#xD;
+[TranscriptDelta]  Would&#xD;
+[TranscriptDelta]  you&#xD;
+[TranscriptDelta]  like&#xD;
+[TranscriptDelta]  to&#xD;
+[TranscriptDelta]  open&#xD;
+[TranscriptDelta]  that&#xD;
+[TranscriptDelta]  now&#xD;
+[TranscriptDelta] ?&#xD;
+Turn 2 logs: Tool: recall_last_scan&#xD;
+Turn 2 completions: AI:The QR code contained the URL: https://test.example.org/page. Would you like to open that now?&#xD;
+[TranscriptCompleted] AI:The QR code contained the URL: https://test.example.org/page. Would you like to open that now?</StdOut>
+        <ErrorInfo>
+          <Message>Expected completion "AI:The QR code contained the URL: https://test.example.org/page. Would you like to open that now?" to contain the equivalent of "recall-test" at least 1 time because model should recall the previously scanned URL, but found it 0 times.</Message>
+          <StackTrace>   at FluentAssertions.Primitives.StringAssertions`1.ContainEquivalentOf(String expected, String because, Object[] becauseArgs)&#xD;
+   at BodyCam.RealTests.Pipeline.QrCodeScanTests.RecallLastScan_AfterScan_ReturnsContent() in E:\repos\Private\BodyCam\src\BodyCam.RealTests\Pipeline\QrCodeScanTests.cs:line 123&#xD;
+--- End of stack trace from previous location ---</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="fd06f640-44b3-4f24-a294-6c2114a38d66" testId="2c46164f-6873-59ed-76c3-8a1799073b81" testName="BodyCam.RealTests.Pipeline.LookPipelineTests.Look_NoQrCode_FallsToVision" computerName="LT-25-195" duration="00:00:03.0782801" startTime="2026-04-20T17:33:04.5954451+02:00" endTime="2026-04-20T17:33:07.6759165+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="fd06f640-44b3-4f24-a294-6c2114a38d66">
+      <Output>
+        <StdOut>[Debug] Tool: describe_scene&#xD;
+[TranscriptDelta] It&#xD;
+[TranscriptDelta]  looks&#xD;
+[TranscriptDelta]  like&#xD;
+[TranscriptDelta]  the&#xD;
+[TranscriptDelta]  view&#xD;
+[TranscriptDelta]  is&#xD;
+[TranscriptDelta]  mostly&#xD;
+[TranscriptDelta]  blank&#xD;
+[TranscriptDelta]  with&#xD;
+[TranscriptDelta]  a&#xD;
+[TranscriptDelta]  white&#xD;
+[TranscriptDelta]  surface&#xD;
+[TranscriptDelta]  and&#xD;
+[TranscriptDelta]  a&#xD;
+[TranscriptDelta]  thin&#xD;
+[TranscriptDelta]  black&#xD;
+[TranscriptDelta]  border&#xD;
+[TranscriptDelta]  on&#xD;
+[TranscriptDelta]  the&#xD;
+[TranscriptDelta]  right&#xD;
+[TranscriptDelta]  and&#xD;
+[TranscriptDelta]  bottom&#xD;
+[TranscriptDelta] .&#xD;
+[TranscriptDelta]  There&#xD;
+[TranscriptDelta]  aren&#xD;
+[TranscriptDelta] ’t&#xD;
+[TranscriptDelta]  any&#xD;
+[TranscriptDelta]  objects&#xD;
+[TranscriptDelta]  or&#xD;
+[TranscriptDelta]  text&#xD;
+[TranscriptDelta]  visible&#xD;
+[TranscriptDelta] .&#xD;
+[TranscriptDelta]  Could&#xD;
+[TranscriptDelta]  you&#xD;
+[TranscriptDelta]  adjust&#xD;
+[TranscriptDelta]  the&#xD;
+[TranscriptDelta]  angle&#xD;
+[TranscriptDelta]  or&#xD;
+[TranscriptDelta]  tell&#xD;
+[TranscriptDelta]  me&#xD;
+[TranscriptDelta]  what&#xD;
+[TranscriptDelta]  you&#xD;
+[TranscriptDelta] ’re&#xD;
+[TranscriptDelta]  focusing&#xD;
+[TranscriptDelta]  on&#xD;
+[TranscriptDelta] ?&#xD;
+[TranscriptCompleted] AI:It looks like the view is mostly blank with a white surface and a thin black border on the right and bottom. There aren’t any objects or text visible. Could you adjust the angle or tell me what you’re focusing on?&#xD;
+Debug logs: Tool: describe_scene&#xD;
+Completions: AI:It looks like the view is mostly blank with a white surface and a thin black border on the right and bottom. There aren’t any objects or text visible. Could you adjust the angle or tell me what you’re focusing on?</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="6aff53b5-fdcb-461f-a68f-d0991ce74c4e" testId="dce7927c-17e2-2098-b8a8-edb3bce667f4" testName="BodyCam.RealTests.Pipeline.LookPipelineTests.DescribeScene_ReturnsStructuredAnalysis" computerName="LT-25-195" duration="00:00:01.7329130" startTime="2026-04-20T17:33:07.6831194+02:00" endTime="2026-04-20T17:33:09.4102013+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6aff53b5-fdcb-461f-a68f-d0991ce74c4e">
+      <Output>
+        <StdOut>[Debug] Tool: describe_scene&#xD;
+[TranscriptDelta] The&#xD;
+[TranscriptDelta]  scene&#xD;
+[TranscriptDelta]  is&#xD;
+[TranscriptDelta]  mostly&#xD;
+[TranscriptDelta]  a&#xD;
+[TranscriptDelta]  blank&#xD;
+[TranscriptDelta]  white&#xD;
+[TranscriptDelta]  area&#xD;
+[TranscriptDelta]  with&#xD;
+[TranscriptDelta]  a&#xD;
+[TranscriptDelta]  thin&#xD;
+[TranscriptDelta]  black&#xD;
+[TranscriptDelta]  border&#xD;
+[TranscriptDelta]  along&#xD;
+[TranscriptDelta]  the&#xD;
+[TranscriptDelta]  right&#xD;
+[TranscriptDelta]  and&#xD;
+[TranscriptDelta]  bottom&#xD;
+[TranscriptDelta]  edges&#xD;
+[TranscriptDelta] .&#xD;
+[TranscriptDelta]  There&#xD;
+[TranscriptDelta]  aren&#xD;
+[TranscriptDelta] ’t&#xD;
+[TranscriptDelta]  any&#xD;
+[TranscriptDelta]  other&#xD;
+[TranscriptDelta]  objects&#xD;
+[TranscriptDelta]  or&#xD;
+[TranscriptDelta]  details&#xD;
+[TranscriptDelta]  visible&#xD;
+[TranscriptDelta] .&#xD;
+[TranscriptDelta]  If&#xD;
+[TranscriptDelta]  you&#xD;
+[TranscriptDelta]  need&#xD;
+[TranscriptDelta]  a&#xD;
+[TranscriptDelta]  closer&#xD;
+[TranscriptDelta]  look&#xD;
+[TranscriptDelta]  or&#xD;
+[TranscriptDelta]  a&#xD;
+[TranscriptDelta]  different&#xD;
+[TranscriptDelta]  angle&#xD;
+[TranscriptDelta] ,&#xD;
+[TranscriptDelta]  let&#xD;
+[TranscriptDelta]  me&#xD;
+[TranscriptDelta]  know&#xD;
+[TranscriptDelta] .&#xD;
+[TranscriptCompleted] AI:The scene is mostly a blank white area with a thin black border along the right and bottom edges. There aren’t any other objects or details visible. If you need a closer look or a different angle, let me know.&#xD;
+Debug logs: Tool: describe_scene&#xD;
+Completions: AI:The scene is mostly a blank white area with a thin black border along the right and bottom edges. There aren’t any other objects or details visible. If you need a closer look or a different angle, let me know.</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="e5ad7fcf-279c-453e-a6f8-2afaad3a0677" testId="3a6f5455-c2c4-9d07-e7e8-ec2cd193b64e" testName="BodyCam.RealTests.Pipeline.ToolRegistrationTests.ToolDefinitions_HaveValidSchemas" computerName="LT-25-195" duration="00:00:00.0049167" startTime="2026-04-20T17:33:04.0253586+02:00" endTime="2026-04-20T17:33:04.0255337+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e5ad7fcf-279c-453e-a6f8-2afaad3a0677">
+      <Output>
+        <StdOut>describe_scene: schema OK (117 chars)&#xD;
+deep_analysis: schema OK (227 chars)&#xD;
+read_text: schema OK (131 chars)&#xD;
+take_photo: schema OK (124 chars)&#xD;
+save_memory: schema OK (227 chars)&#xD;
+recall_memory: schema OK (134 chars)&#xD;
+set_translation_mode: schema OK (285 chars)&#xD;
+make_phone_call: schema OK (136 chars)&#xD;
+send_message: schema OK (286 chars)&#xD;
+lookup_address: schema OK (138 chars)&#xD;
+find_object: schema OK (169 chars)&#xD;
+navigate_to: schema OK (239 chars)&#xD;
+start_scene_watch: schema OK (305 chars)&#xD;
+scan_qr_code: schema OK (118 chars)&#xD;
+recall_last_scan: schema OK (33 chars)&#xD;
+look: schema OK (120 chars)</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="394a817c-4a89-418d-8a6e-bfad430e53f3" testId="c6b3bcbb-b29c-5423-215e-0773156cb1e1" testName="BodyCam.RealTests.Pipeline.QrCodeScanTests.ScanQrCode_CameraUnavailable_HandledGracefully" computerName="LT-25-195" duration="00:00:01.7923563" startTime="2026-04-20T17:33:09.8105253+02:00" endTime="2026-04-20T17:33:11.6034503+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="394a817c-4a89-418d-8a6e-bfad430e53f3">
+      <Output>
+        <StdOut>[Debug] Tool: look&#xD;
+[TranscriptDelta] It&#xD;
+[TranscriptDelta]  seems&#xD;
+[TranscriptDelta]  the&#xD;
+[TranscriptDelta]  camera&#xD;
+[TranscriptDelta]  isn't&#xD;
+[TranscriptDelta]  available&#xD;
+[TranscriptDelta]  right&#xD;
+[TranscriptDelta]  now&#xD;
+[TranscriptDelta] .&#xD;
+[TranscriptDelta]  Could&#xD;
+[TranscriptDelta]  you&#xD;
+[TranscriptDelta]  adjust&#xD;
+[TranscriptDelta]  your&#xD;
+[TranscriptDelta]  angle&#xD;
+[TranscriptDelta]  or&#xD;
+[TranscriptDelta]  check&#xD;
+[TranscriptDelta]  your&#xD;
+[TranscriptDelta]  device&#xD;
+[TranscriptDelta] 's&#xD;
+[TranscriptDelta]  camera&#xD;
+[TranscriptDelta]  settings&#xD;
+[TranscriptDelta] ?&#xD;
+[TranscriptDelta]  Once&#xD;
+[TranscriptDelta]  it&#xD;
+[TranscriptDelta] ’s&#xD;
+[TranscriptDelta]  up&#xD;
+[TranscriptDelta] ,&#xD;
+[TranscriptDelta]  we&#xD;
+[TranscriptDelta]  can&#xD;
+[TranscriptDelta]  try&#xD;
+[TranscriptDelta]  scanning&#xD;
+[TranscriptDelta]  again&#xD;
+[TranscriptDelta] .&#xD;
+[TranscriptCompleted] AI:It seems the camera isn't available right now. Could you adjust your angle or check your device's camera settings? Once it’s up, we can try scanning again.&#xD;
+Debug logs: Tool: look&#xD;
+Completions: AI:It seems the camera isn't available right now. Could you adjust your angle or check your device's camera settings? Once it’s up, we can try scanning again.</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="2c7b162d-59df-47c8-a3cd-5ebcc8465353" testId="7e141b09-656f-2e58-dd9b-9073d382eeb0" testName="BodyCam.RealTests.Pipeline.QrCodeScanTests.AskToScan_WithQrCode_AddsToHistory" computerName="LT-25-195" duration="00:00:01.7192636" startTime="2026-04-20T17:33:08.0905091+02:00" endTime="2026-04-20T17:33:09.8102650+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2c7b162d-59df-47c8-a3cd-5ebcc8465353">
+      <Output>
+        <StdOut>[Debug] Tool: scan_qr_code&#xD;
+[TranscriptDelta] I&#xD;
+[TranscriptDelta]  found&#xD;
+[TranscriptDelta]  a&#xD;
+[TranscriptDelta]  QR&#xD;
+[TranscriptDelta]  code&#xD;
+[TranscriptDelta] .&#xD;
+[TranscriptDelta]  The&#xD;
+[TranscriptDelta]  content&#xD;
+[TranscriptDelta]  is&#xD;
+[TranscriptDelta]  a&#xD;
+[TranscriptDelta]  URL&#xD;
+[TranscriptDelta] :&#xD;
+[TranscriptDelta]  https&#xD;
+[TranscriptDelta] ://&#xD;
+[TranscriptDelta] test&#xD;
+[TranscriptDelta] .exam&#xD;
+[TranscriptDelta] ple&#xD;
+[TranscriptDelta] .org&#xD;
+[TranscriptDelta] /page&#xD;
+[TranscriptDelta] .&#xD;
+[TranscriptDelta]  Would&#xD;
+[TranscriptDelta]  you&#xD;
+[TranscriptDelta]  like&#xD;
+[TranscriptDelta]  to&#xD;
+[TranscriptDelta]  open&#xD;
+[TranscriptDelta]  it&#xD;
+[TranscriptDelta]  in&#xD;
+[TranscriptDelta]  the&#xD;
+[TranscriptDelta]  browser&#xD;
+[TranscriptDelta]  or&#xD;
+[TranscriptDelta]  save&#xD;
+[TranscriptDelta]  it&#xD;
+[TranscriptDelta] ?&#xD;
+[TranscriptCompleted] AI:I found a QR code. The content is a URL: https://test.example.org/page. Would you like to open it in the browser or save it?&#xD;
+Debug logs: Tool: scan_qr_code</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="db40c48d-cb88-45a8-a60f-e7f3c80f4ba5" testId="bc9b87a2-386e-347e-343b-4bbc4856734a" testName="BodyCam.RealTests.Pipeline.LookPipelineTests.Look_WithQrCode_ReturnsQrResult" computerName="LT-25-195" duration="00:00:01.0538730" startTime="2026-04-20T17:33:11.2237419+02:00" endTime="2026-04-20T17:33:12.2781052+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="db40c48d-cb88-45a8-a60f-e7f3c80f4ba5">
+      <Output>
+        <StdOut>[TranscriptDelta] That&#xD;
+[TranscriptDelta] ’s&#xD;
+[TranscriptDelta]  a&#xD;
+[TranscriptDelta]  QR&#xD;
+[TranscriptDelta]  code&#xD;
+[TranscriptDelta]  with&#xD;
+[TranscriptDelta]  a&#xD;
+[TranscriptDelta]  URL&#xD;
+[TranscriptDelta] :&#xD;
+[TranscriptDelta]  pipeline&#xD;
+[TranscriptDelta] -test&#xD;
+[TranscriptDelta] .example&#xD;
+[TranscriptDelta] .com&#xD;
+[TranscriptDelta] .&#xD;
+[TranscriptDelta]  Would&#xD;
+[TranscriptDelta]  you&#xD;
+[TranscriptDelta]  like&#xD;
+[TranscriptDelta]  to&#xD;
+[TranscriptDelta]  open&#xD;
+[TranscriptDelta]  it&#xD;
+[TranscriptDelta] ?&#xD;
+[TranscriptCompleted] AI:That’s a QR code with a URL: pipeline-test.example.com. Would you like to open it?&#xD;
+Debug logs: &#xD;
+Completions: AI:That’s a QR code with a URL: pipeline-test.example.com. Would you like to open it?</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="d00a8925-2818-4dc6-92b3-48cc162d64e0" testId="c8a24536-e10e-856c-c370-beb4fcad6596" testName="BodyCam.RealTests.Pipeline.LookPipelineTests.Look_WithQrCode_AddsToHistory" computerName="LT-25-195" duration="00:00:01.8131100" startTime="2026-04-20T17:33:09.4103432+02:00" endTime="2026-04-20T17:33:11.2236390+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d00a8925-2818-4dc6-92b3-48cc162d64e0">
+      <Output>
+        <StdOut>[Debug] Tool: look&#xD;
+[TranscriptDelta] I&#xD;
+[TranscriptDelta]  see&#xD;
+[TranscriptDelta]  a&#xD;
+[TranscriptDelta]  QR&#xD;
+[TranscriptDelta]  code&#xD;
+[TranscriptDelta]  containing&#xD;
+[TranscriptDelta]  a&#xD;
+[TranscriptDelta]  URL&#xD;
+[TranscriptDelta] :&#xD;
+[TranscriptDelta]  https&#xD;
+[TranscriptDelta] ://&#xD;
+[TranscriptDelta] pipeline&#xD;
+[TranscriptDelta] -test&#xD;
+[TranscriptDelta] .example&#xD;
+[TranscriptDelta] .&#xD;
+[TranscriptDelta] com&#xD;
+[TranscriptDelta] .&#xD;
+[TranscriptDelta]  Would&#xD;
+[TranscriptDelta]  you&#xD;
+[TranscriptDelta]  like&#xD;
+[TranscriptDelta]  to&#xD;
+[TranscriptDelta]  open&#xD;
+[TranscriptDelta]  it&#xD;
+[TranscriptDelta]  in&#xD;
+[TranscriptDelta]  your&#xD;
+[TranscriptDelta]  browser&#xD;
+[TranscriptDelta]  or&#xD;
+[TranscriptDelta]  save&#xD;
+[TranscriptDelta]  it&#xD;
+[TranscriptDelta] ?&#xD;
+[TranscriptCompleted] AI:I see a QR code containing a URL: https://pipeline-test.example.com. Would you like to open it in your browser or save it?&#xD;
+Debug logs: Tool: look</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="8f70784c-33c9-49ed-986f-672696cd5050" testId="222b0975-ca98-0863-cc18-6f3872af49d6" testName="BodyCam.RealTests.Pipeline.QrCodeScanTests.ScanWifiQrCode_ParsesCredentials" computerName="LT-25-195" duration="00:00:01.1515254" startTime="2026-04-20T17:33:14.6975181+02:00" endTime="2026-04-20T17:33:15.8451765+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="8f70784c-33c9-49ed-986f-672696cd5050">
+      <Output>
+        <StdOut>[TranscriptDelta] I&#xD;
+[TranscriptDelta]  currently&#xD;
+[TranscriptDelta]  can't&#xD;
+[TranscriptDelta]  see&#xD;
+[TranscriptDelta]  the&#xD;
+[TranscriptDelta]  QR&#xD;
+[TranscriptDelta]  code&#xD;
+[TranscriptDelta] .&#xD;
+[TranscriptDelta]  Could&#xD;
+[TranscriptDelta]  you&#xD;
+[TranscriptDelta]  adjust&#xD;
+[TranscriptDelta]  the&#xD;
+[TranscriptDelta]  camera&#xD;
+[TranscriptDelta]  angle&#xD;
+[TranscriptDelta]  so&#xD;
+[TranscriptDelta]  it's&#xD;
+[TranscriptDelta]  clearly&#xD;
+[TranscriptDelta]  visible&#xD;
+[TranscriptDelta] ?&#xD;
+[TranscriptDelta]  Then&#xD;
+[TranscriptDelta]  I&#xD;
+[TranscriptDelta]  can&#xD;
+[TranscriptDelta]  scan&#xD;
+[TranscriptDelta]  it&#xD;
+[TranscriptDelta]  for&#xD;
+[TranscriptDelta]  you&#xD;
+[TranscriptDelta] .&#xD;
+[TranscriptCompleted] AI:I currently can't see the QR code. Could you adjust the camera angle so it's clearly visible? Then I can scan it for you.&#xD;
+Debug logs: &#xD;
+Completions: AI:I currently can't see the QR code. Could you adjust the camera angle so it's clearly visible? Then I can scan it for you.</StdOut>
+        <ErrorInfo>
+          <Message>Expected completion "AI:I currently can't see the QR code. Could you adjust the camera angle so it's clearly visible? Then I can scan it for you." to contain the equivalent of "MyNetwork" at least 1 time because response should mention the WiFi network name, but found it 0 times.</Message>
+          <StackTrace>   at FluentAssertions.Primitives.StringAssertions`1.ContainEquivalentOf(String expected, String because, Object[] becauseArgs)&#xD;
+   at BodyCam.RealTests.Pipeline.QrCodeScanTests.ScanWifiQrCode_ParsesCredentials() in E:\repos\Private\BodyCam\src\BodyCam.RealTests\Pipeline\QrCodeScanTests.cs:line 141&#xD;
+--- End of stack trace from previous location ---</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="a489266e-94b7-4f5e-9e32-93279815603e" testId="20f357af-a85c-1590-9adb-3fce6d6dede4" testName="BodyCam.RealTests.Pipeline.QrCodeScanTests.AskToScan_NoQrCode_RespondGracefully" computerName="LT-25-195" duration="00:00:03.4936154" startTime="2026-04-20T17:33:04.5954973+02:00" endTime="2026-04-20T17:33:08.0903073+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a489266e-94b7-4f5e-9e32-93279815603e">
+      <Output>
+        <StdOut>[Debug] Tool: look&#xD;
+[TranscriptDelta] I&#xD;
+[TranscriptDelta]  didn't&#xD;
+[TranscriptDelta]  detect&#xD;
+[TranscriptDelta]  any&#xD;
+[TranscriptDelta]  QR&#xD;
+[TranscriptDelta]  codes&#xD;
+[TranscriptDelta]  or&#xD;
+[TranscriptDelta]  bar&#xD;
+[TranscriptDelta] codes&#xD;
+[TranscriptDelta]  in&#xD;
+[TranscriptDelta]  the&#xD;
+[TranscriptDelta]  view&#xD;
+[TranscriptDelta] .&#xD;
+[TranscriptDelta]  Let&#xD;
+[TranscriptDelta]  me&#xD;
+[TranscriptDelta]  know&#xD;
+[TranscriptDelta]  if&#xD;
+[TranscriptDelta]  there&#xD;
+[TranscriptDelta] ’s&#xD;
+[TranscriptDelta]  something&#xD;
+[TranscriptDelta]  else&#xD;
+[TranscriptDelta]  you&#xD;
+[TranscriptDelta] ’d&#xD;
+[TranscriptDelta]  like&#xD;
+[TranscriptDelta]  to&#xD;
+[TranscriptDelta]  try&#xD;
+[TranscriptDelta]  or&#xD;
+[TranscriptDelta]  adjust&#xD;
+[TranscriptDelta] .&#xD;
+[TranscriptCompleted] AI:I didn't detect any QR codes or barcodes in the view. Let me know if there’s something else you’d like to try or adjust.&#xD;
+Debug logs: Tool: look&#xD;
+Completions: AI:I didn't detect any QR codes or barcodes in the view. Let me know if there’s something else you’d like to try or adjust.</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="011e6959-12b1-43af-8189-2b9fee3035fc" testId="c512f14c-d9ad-3e23-e44e-5e57baa670c2" testName="BodyCam.RealTests.Pipeline.LookPipelineTests.Look_CameraUnavailable_HandledGracefully" computerName="LT-25-195" duration="00:00:01.4005389" startTime="2026-04-20T17:33:12.2782115+02:00" endTime="2026-04-20T17:33:13.6793571+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="011e6959-12b1-43af-8189-2b9fee3035fc">
+      <Output>
+        <StdOut>[Debug] Tool: look&#xD;
+[TranscriptDelta] It&#xD;
+[TranscriptDelta]  seems&#xD;
+[TranscriptDelta]  the&#xD;
+[TranscriptDelta]  camera&#xD;
+[TranscriptDelta]  isn't&#xD;
+[TranscriptDelta]  available&#xD;
+[TranscriptDelta]  right&#xD;
+[TranscriptDelta]  now&#xD;
+[TranscriptDelta] .&#xD;
+[TranscriptDelta]  Could&#xD;
+[TranscriptDelta]  you&#xD;
+[TranscriptDelta]  adjust&#xD;
+[TranscriptDelta]  it&#xD;
+[TranscriptDelta]  or&#xD;
+[TranscriptDelta]  let&#xD;
+[TranscriptDelta]  me&#xD;
+[TranscriptDelta]  know&#xD;
+[TranscriptDelta]  what&#xD;
+[TranscriptDelta]  you&#xD;
+[TranscriptDelta] ’d&#xD;
+[TranscriptDelta]  like&#xD;
+[TranscriptDelta]  to&#xD;
+[TranscriptDelta]  do&#xD;
+[TranscriptDelta]  next&#xD;
+[TranscriptDelta] ?&#xD;
+[TranscriptCompleted] AI:It seems the camera isn't available right now. Could you adjust it or let me know what you’d like to do next?&#xD;
+Debug logs: Tool: look&#xD;
+Completions: AI:It seems the camera isn't available right now. Could you adjust it or let me know what you’d like to do next?</StdOut>
+      </Output>
+    </UnitTestResult>
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="BodyCam.RealTests.Pipeline.QrCodeScanTests.AskToScan_WithQrCode_AddsToHistory" storage="e:\repos\private\bodycam\src\bodycam.realtests\bin\debug\net10.0-windows10.0.19041.0\bodycam.realtests.dll" id="7e141b09-656f-2e58-dd9b-9073d382eeb0">
+      <Execution id="2c7b162d-59df-47c8-a3cd-5ebcc8465353" />
+      <TestMethod codeBase="E:\repos\Private\BodyCam\src\BodyCam.RealTests\bin\Debug\net10.0-windows10.0.19041.0\BodyCam.RealTests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="BodyCam.RealTests.Pipeline.QrCodeScanTests" name="AskToScan_WithQrCode_AddsToHistory" />
+    </UnitTest>
+    <UnitTest name="BodyCam.RealTests.Pipeline.QrCodeScanTests.AskToScan_NoQrCode_RespondGracefully" storage="e:\repos\private\bodycam\src\bodycam.realtests\bin\debug\net10.0-windows10.0.19041.0\bodycam.realtests.dll" id="20f357af-a85c-1590-9adb-3fce6d6dede4">
+      <Execution id="a489266e-94b7-4f5e-9e32-93279815603e" />
+      <TestMethod codeBase="E:\repos\Private\BodyCam\src\BodyCam.RealTests\bin\Debug\net10.0-windows10.0.19041.0\BodyCam.RealTests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="BodyCam.RealTests.Pipeline.QrCodeScanTests" name="AskToScan_NoQrCode_RespondGracefully" />
+    </UnitTest>
+    <UnitTest name="BodyCam.RealTests.Pipeline.LookPipelineTests.DescribeScene_ReturnsStructuredAnalysis" storage="e:\repos\private\bodycam\src\bodycam.realtests\bin\debug\net10.0-windows10.0.19041.0\bodycam.realtests.dll" id="dce7927c-17e2-2098-b8a8-edb3bce667f4">
+      <Execution id="6aff53b5-fdcb-461f-a68f-d0991ce74c4e" />
+      <TestMethod codeBase="E:\repos\Private\BodyCam\src\BodyCam.RealTests\bin\Debug\net10.0-windows10.0.19041.0\BodyCam.RealTests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="BodyCam.RealTests.Pipeline.LookPipelineTests" name="DescribeScene_ReturnsStructuredAnalysis" />
+    </UnitTest>
+    <UnitTest name="BodyCam.RealTests.Pipeline.LookPipelineTests.Look_WithQrCode_ReturnsQrResult" storage="e:\repos\private\bodycam\src\bodycam.realtests\bin\debug\net10.0-windows10.0.19041.0\bodycam.realtests.dll" id="bc9b87a2-386e-347e-343b-4bbc4856734a">
+      <Execution id="db40c48d-cb88-45a8-a60f-e7f3c80f4ba5" />
+      <TestMethod codeBase="E:\repos\Private\BodyCam\src\BodyCam.RealTests\bin\Debug\net10.0-windows10.0.19041.0\BodyCam.RealTests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="BodyCam.RealTests.Pipeline.LookPipelineTests" name="Look_WithQrCode_ReturnsQrResult" />
+    </UnitTest>
+    <UnitTest name="BodyCam.RealTests.Pipeline.ToolRegistrationTests.ToolDefinitions_HaveValidSchemas" storage="e:\repos\private\bodycam\src\bodycam.realtests\bin\debug\net10.0-windows10.0.19041.0\bodycam.realtests.dll" id="3a6f5455-c2c4-9d07-e7e8-ec2cd193b64e">
+      <Execution id="e5ad7fcf-279c-453e-a6f8-2afaad3a0677" />
+      <TestMethod codeBase="E:\repos\Private\BodyCam\src\BodyCam.RealTests\bin\Debug\net10.0-windows10.0.19041.0\BodyCam.RealTests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="BodyCam.RealTests.Pipeline.ToolRegistrationTests" name="ToolDefinitions_HaveValidSchemas" />
+    </UnitTest>
+    <UnitTest name="BodyCam.RealTests.Pipeline.QrCodeScanTests.ScanQrCode_CameraUnavailable_HandledGracefully" storage="e:\repos\private\bodycam\src\bodycam.realtests\bin\debug\net10.0-windows10.0.19041.0\bodycam.realtests.dll" id="c6b3bcbb-b29c-5423-215e-0773156cb1e1">
+      <Execution id="394a817c-4a89-418d-8a6e-bfad430e53f3" />
+      <TestMethod codeBase="E:\repos\Private\BodyCam\src\BodyCam.RealTests\bin\Debug\net10.0-windows10.0.19041.0\BodyCam.RealTests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="BodyCam.RealTests.Pipeline.QrCodeScanTests" name="ScanQrCode_CameraUnavailable_HandledGracefully" />
+    </UnitTest>
+    <UnitTest name="BodyCam.RealTests.Pipeline.LookPipelineTests.Look_CameraUnavailable_HandledGracefully" storage="e:\repos\private\bodycam\src\bodycam.realtests\bin\debug\net10.0-windows10.0.19041.0\bodycam.realtests.dll" id="c512f14c-d9ad-3e23-e44e-5e57baa670c2">
+      <Execution id="011e6959-12b1-43af-8189-2b9fee3035fc" />
+      <TestMethod codeBase="E:\repos\Private\BodyCam\src\BodyCam.RealTests\bin\Debug\net10.0-windows10.0.19041.0\BodyCam.RealTests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="BodyCam.RealTests.Pipeline.LookPipelineTests" name="Look_CameraUnavailable_HandledGracefully" />
+    </UnitTest>
+    <UnitTest name="BodyCam.RealTests.Pipeline.ToolRegistrationTests.AllThirteenToolsRegistered" storage="e:\repos\private\bodycam\src\bodycam.realtests\bin\debug\net10.0-windows10.0.19041.0\bodycam.realtests.dll" id="9e9f5915-46f6-cd85-9f6c-72e491a731ea">
+      <Execution id="ec9ce858-2638-4b0a-bd50-5e5b01a91355" />
+      <TestMethod codeBase="E:\repos\Private\BodyCam\src\BodyCam.RealTests\bin\Debug\net10.0-windows10.0.19041.0\BodyCam.RealTests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="BodyCam.RealTests.Pipeline.ToolRegistrationTests" name="AllThirteenToolsRegistered" />
+    </UnitTest>
+    <UnitTest name="BodyCam.RealTests.Pipeline.LookPipelineTests.Look_WithQrCode_AddsToHistory" storage="e:\repos\private\bodycam\src\bodycam.realtests\bin\debug\net10.0-windows10.0.19041.0\bodycam.realtests.dll" id="c8a24536-e10e-856c-c370-beb4fcad6596">
+      <Execution id="d00a8925-2818-4dc6-92b3-48cc162d64e0" />
+      <TestMethod codeBase="E:\repos\Private\BodyCam\src\BodyCam.RealTests\bin\Debug\net10.0-windows10.0.19041.0\BodyCam.RealTests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="BodyCam.RealTests.Pipeline.LookPipelineTests" name="Look_WithQrCode_AddsToHistory" />
+    </UnitTest>
+    <UnitTest name="BodyCam.RealTests.Pipeline.QrCodeScanTests.RecallLastScan_AfterScan_ReturnsContent" storage="e:\repos\private\bodycam\src\bodycam.realtests\bin\debug\net10.0-windows10.0.19041.0\bodycam.realtests.dll" id="4fcda63c-31c2-d2ea-8d6b-c4360a4de04d">
+      <Execution id="3cbffc4f-d791-45a4-91a3-1d75535702f6" />
+      <TestMethod codeBase="E:\repos\Private\BodyCam\src\BodyCam.RealTests\bin\Debug\net10.0-windows10.0.19041.0\BodyCam.RealTests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="BodyCam.RealTests.Pipeline.QrCodeScanTests" name="RecallLastScan_AfterScan_ReturnsContent" />
+    </UnitTest>
+    <UnitTest name="BodyCam.RealTests.Pipeline.LookPipelineTests.Look_NoQrCode_FallsToVision" storage="e:\repos\private\bodycam\src\bodycam.realtests\bin\debug\net10.0-windows10.0.19041.0\bodycam.realtests.dll" id="2c46164f-6873-59ed-76c3-8a1799073b81">
+      <Execution id="fd06f640-44b3-4f24-a294-6c2114a38d66" />
+      <TestMethod codeBase="E:\repos\Private\BodyCam\src\BodyCam.RealTests\bin\Debug\net10.0-windows10.0.19041.0\BodyCam.RealTests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="BodyCam.RealTests.Pipeline.LookPipelineTests" name="Look_NoQrCode_FallsToVision" />
+    </UnitTest>
+    <UnitTest name="BodyCam.RealTests.Pipeline.QrCodeScanTests.ScanWifiQrCode_ParsesCredentials" storage="e:\repos\private\bodycam\src\bodycam.realtests\bin\debug\net10.0-windows10.0.19041.0\bodycam.realtests.dll" id="222b0975-ca98-0863-cc18-6f3872af49d6">
+      <Execution id="8f70784c-33c9-49ed-986f-672696cd5050" />
+      <TestMethod codeBase="E:\repos\Private\BodyCam\src\BodyCam.RealTests\bin\Debug\net10.0-windows10.0.19041.0\BodyCam.RealTests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="BodyCam.RealTests.Pipeline.QrCodeScanTests" name="ScanWifiQrCode_ParsesCredentials" />
+    </UnitTest>
+    <UnitTest name="BodyCam.RealTests.Pipeline.QrCodeScanTests.AskToScan_WithQrCode_TriggersScanTool" storage="e:\repos\private\bodycam\src\bodycam.realtests\bin\debug\net10.0-windows10.0.19041.0\bodycam.realtests.dll" id="26c13258-9615-3f7e-6900-624658143335">
+      <Execution id="3f2cdc92-365c-4392-aa97-faa34420a249" />
+      <TestMethod codeBase="E:\repos\Private\BodyCam\src\BodyCam.RealTests\bin\Debug\net10.0-windows10.0.19041.0\BodyCam.RealTests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="BodyCam.RealTests.Pipeline.QrCodeScanTests" name="AskToScan_WithQrCode_TriggersScanTool" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="9e9f5915-46f6-cd85-9f6c-72e491a731ea" executionId="ec9ce858-2638-4b0a-bd50-5e5b01a91355" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="26c13258-9615-3f7e-6900-624658143335" executionId="3f2cdc92-365c-4392-aa97-faa34420a249" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="4fcda63c-31c2-d2ea-8d6b-c4360a4de04d" executionId="3cbffc4f-d791-45a4-91a3-1d75535702f6" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="2c46164f-6873-59ed-76c3-8a1799073b81" executionId="fd06f640-44b3-4f24-a294-6c2114a38d66" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="dce7927c-17e2-2098-b8a8-edb3bce667f4" executionId="6aff53b5-fdcb-461f-a68f-d0991ce74c4e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3a6f5455-c2c4-9d07-e7e8-ec2cd193b64e" executionId="e5ad7fcf-279c-453e-a6f8-2afaad3a0677" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c6b3bcbb-b29c-5423-215e-0773156cb1e1" executionId="394a817c-4a89-418d-8a6e-bfad430e53f3" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="7e141b09-656f-2e58-dd9b-9073d382eeb0" executionId="2c7b162d-59df-47c8-a3cd-5ebcc8465353" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="bc9b87a2-386e-347e-343b-4bbc4856734a" executionId="db40c48d-cb88-45a8-a60f-e7f3c80f4ba5" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c8a24536-e10e-856c-c370-beb4fcad6596" executionId="d00a8925-2818-4dc6-92b3-48cc162d64e0" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="222b0975-ca98-0863-cc18-6f3872af49d6" executionId="8f70784c-33c9-49ed-986f-672696cd5050" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="20f357af-a85c-1590-9adb-3fce6d6dede4" executionId="a489266e-94b7-4f5e-9e32-93279815603e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c512f14c-d9ad-3e23-e44e-5e57baa670c2" executionId="011e6959-12b1-43af-8189-2b9fee3035fc" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Failed">
+    <Counters total="13" executed="13" passed="10" failed="3" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.5+1b188a7b0a (64-bit .NET 10.0.5)&#xD;
+[xUnit.net 00:00:00.05]   Discovering: BodyCam.RealTests&#xD;
+[xUnit.net 00:00:00.08]   Discovered:  BodyCam.RealTests&#xD;
+[xUnit.net 00:00:00.10]   Starting:    BodyCam.RealTests&#xD;
+     Warning:&#xD;
+     The component "Fluent Assertions" is governed by the rules defined in the Xceed License Agreement and&#xD;
+     the Xceed Fluent Assertions Community License. You may use Fluent Assertions free of charge for&#xD;
+     non-commercial use only. An active subscription is required to use Fluent Assertions for commercial use.&#xD;
+     Please contact Xceed Sales mailto:sales@xceed.com to acquire a subscription at a very low cost.&#xD;
+     A paid commercial license supports the development and continued increasing support of&#xD;
+     Fluent Assertions users under both commercial and community licenses. Help us&#xD;
+     keep Fluent Assertions at the forefront of unit testing.&#xD;
+     For more information, visit https://xceed.com/products/unit-testing/fluent-assertions/&#xD;
+[xUnit.net 00:00:10.84]       Expected completion "AI:The QR code contained the URL: https://test.example.org/page. Would you like to open that now?" to contain the equivalent of "recall-test" at least 1 time because model should recall the previously scanned URL, but found it 0 times.&#xD;
+[xUnit.net 00:00:10.84]       Stack Trace:&#xD;
+[xUnit.net 00:00:10.84]            at FluentAssertions.Primitives.StringAssertions`1.ContainEquivalentOf(String expected, String because, Object[] becauseArgs)&#xD;
+[xUnit.net 00:00:10.84]         E:\repos\Private\BodyCam\src\BodyCam.RealTests\Pipeline\QrCodeScanTests.cs(123,0): at BodyCam.RealTests.Pipeline.QrCodeScanTests.RecallLastScan_AfterScan_ReturnsContent()&#xD;
+[xUnit.net 00:00:10.84]         --- End of stack trace from previous location ---&#xD;
+[xUnit.net 00:00:10.84]       Output:&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta] Sure&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta] ,&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta]  let&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta]  me&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta]  know&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta]  when&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta]  the&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta]  camera&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta]  is&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta]  ready&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta]  or&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta]  adjust&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta]  the&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta]  camera&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta]  angle&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta] ,&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta]  and&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta]  I&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta]  can&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta]  scan&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta]  it&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta] .&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta]  Once&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta]  the&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta]  camera&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta] 's&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta]  working&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta] ,&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta]  I'll&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta]  proceed&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta] .&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptCompleted] AI:Sure, let me know when the camera is ready or adjust the camera angle, and I can scan it. Once the camera's working, I'll proceed.&#xD;
+[xUnit.net 00:00:10.84]         Turn 1 logs: &#xD;
+[xUnit.net 00:00:10.84]         [Debug] Tool: recall_last_scan&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta] The&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta]  QR&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta]  code&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta]  contained&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta]  the&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta]  URL&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta] :&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta]  https&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta] ://&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta] test&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta] .example&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta] .&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta] org&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta] /page&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta] .&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta]  Would&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta]  you&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta]  like&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta]  to&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta]  open&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta]  that&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta]  now&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptDelta] ?&#xD;
+[xUnit.net 00:00:10.84]         Turn 2 logs: Tool: recall_last_scan&#xD;
+[xUnit.net 00:00:10.84]         Turn 2 completions: AI:The QR code contained the URL: https://test.example.org/page. Would you like to open that now?&#xD;
+[xUnit.net 00:00:10.84]         [TranscriptCompleted] AI:The QR code contained the URL: https://test.example.org/page. Would you like to open that now?&#xD;
+[xUnit.net 00:00:11.99]       Expected completion "AI:I currently can't see the QR code. Could you adjust the camera angle so it's clearly visible? Then I can scan it for you." to contain the equivalent of "MyNetwork" at least 1 time because response should mention the WiFi network name, but found it 0 times.&#xD;
+[xUnit.net 00:00:11.99]       Stack Trace:&#xD;
+[xUnit.net 00:00:11.99]            at FluentAssertions.Primitives.StringAssertions`1.ContainEquivalentOf(String expected, String because, Object[] becauseArgs)&#xD;
+[xUnit.net 00:00:11.99]         E:\repos\Private\BodyCam\src\BodyCam.RealTests\Pipeline\QrCodeScanTests.cs(141,0): at BodyCam.RealTests.Pipeline.QrCodeScanTests.ScanWifiQrCode_ParsesCredentials()&#xD;
+[xUnit.net 00:00:11.99]         --- End of stack trace from previous location ---&#xD;
+[xUnit.net 00:00:11.99]       Output:&#xD;
+[xUnit.net 00:00:11.99]         [TranscriptDelta] I&#xD;
+[xUnit.net 00:00:11.99]         [TranscriptDelta]  currently&#xD;
+[xUnit.net 00:00:11.99]         [TranscriptDelta]  can't&#xD;
+[xUnit.net 00:00:11.99]         [TranscriptDelta]  see&#xD;
+[xUnit.net 00:00:11.99]         [TranscriptDelta]  the&#xD;
+[xUnit.net 00:00:11.99]         [TranscriptDelta]  QR&#xD;
+[xUnit.net 00:00:11.99]         [TranscriptDelta]  code&#xD;
+[xUnit.net 00:00:11.99]         [TranscriptDelta] .&#xD;
+[xUnit.net 00:00:11.99]         [TranscriptDelta]  Could&#xD;
+[xUnit.net 00:00:11.99]         [TranscriptDelta]  you&#xD;
+[xUnit.net 00:00:11.99]         [TranscriptDelta]  adjust&#xD;
+[xUnit.net 00:00:11.99]         [TranscriptDelta]  the&#xD;
+[xUnit.net 00:00:11.99]         [TranscriptDelta]  camera&#xD;
+[xUnit.net 00:00:11.99]         [TranscriptDelta]  angle&#xD;
+[xUnit.net 00:00:11.99]         [TranscriptDelta]  so&#xD;
+[xUnit.net 00:00:11.99]         [TranscriptDelta]  it's&#xD;
+[xUnit.net 00:00:11.99]         [TranscriptDelta]  clearly&#xD;
+[xUnit.net 00:00:11.99]         [TranscriptDelta]  visible&#xD;
+[xUnit.net 00:00:11.99]         [TranscriptDelta] ?&#xD;
+[xUnit.net 00:00:11.99]         [TranscriptDelta]  Then&#xD;
+[xUnit.net 00:00:11.99]         [TranscriptDelta]  I&#xD;
+[xUnit.net 00:00:11.99]         [TranscriptDelta]  can&#xD;
+[xUnit.net 00:00:11.99]         [TranscriptDelta]  scan&#xD;
+[xUnit.net 00:00:11.99]         [TranscriptDelta]  it&#xD;
+[xUnit.net 00:00:11.99]         [TranscriptDelta]  for&#xD;
+[xUnit.net 00:00:11.99]         [TranscriptDelta]  you&#xD;
+[xUnit.net 00:00:11.99]         [TranscriptDelta] .&#xD;
+[xUnit.net 00:00:11.99]         [TranscriptCompleted] AI:I currently can't see the QR code. Could you adjust the camera angle so it's clearly visible? Then I can scan it for you.&#xD;
+[xUnit.net 00:00:11.99]         Debug logs: &#xD;
+[xUnit.net 00:00:11.99]         Completions: AI:I currently can't see the QR code. Could you adjust the camera angle so it's clearly visible? Then I can scan it for you.&#xD;
+[xUnit.net 00:00:12.99]       Expected completion "AI:Sure, I'll start scanning now. Just hold it steady." to contain the equivalent of "example.com" at least 1 time because response should mention the decoded URL content, but found it 0 times.&#xD;
+[xUnit.net 00:00:12.99]       Stack Trace:&#xD;
+[xUnit.net 00:00:12.99]            at FluentAssertions.Primitives.StringAssertions`1.ContainEquivalentOf(String expected, String because, Object[] becauseArgs)&#xD;
+[xUnit.net 00:00:12.99]         E:\repos\Private\BodyCam\src\BodyCam.RealTests\Pipeline\QrCodeScanTests.cs(55,0): at BodyCam.RealTests.Pipeline.QrCodeScanTests.AskToScan_WithQrCode_TriggersScanTool()&#xD;
+[xUnit.net 00:00:12.99]         --- End of stack trace from previous location ---&#xD;
+[xUnit.net 00:00:12.99]       Output:&#xD;
+[xUnit.net 00:00:12.99]         [TranscriptDelta] Sure&#xD;
+[xUnit.net 00:00:12.99]         [TranscriptDelta] ,&#xD;
+[xUnit.net 00:00:12.99]         [TranscriptDelta]  I'll&#xD;
+[xUnit.net 00:00:12.99]         [TranscriptDelta]  start&#xD;
+[xUnit.net 00:00:12.99]         [TranscriptDelta]  scanning&#xD;
+[xUnit.net 00:00:12.99]         [TranscriptDelta]  now&#xD;
+[xUnit.net 00:00:12.99]         [TranscriptDelta] .&#xD;
+[xUnit.net 00:00:12.99]         [TranscriptDelta]  Just&#xD;
+[xUnit.net 00:00:12.99]         [TranscriptDelta]  hold&#xD;
+[xUnit.net 00:00:12.99]         [TranscriptDelta]  it&#xD;
+[xUnit.net 00:00:12.99]         [TranscriptDelta]  steady&#xD;
+[xUnit.net 00:00:12.99]         [TranscriptDelta] .&#xD;
+[xUnit.net 00:00:12.99]         [TranscriptCompleted] AI:Sure, I'll start scanning now. Just hold it steady.&#xD;
+[xUnit.net 00:00:12.99]         Debug logs: &#xD;
+[xUnit.net 00:00:12.99]         Completions: AI:Sure, I'll start scanning now. Just hold it steady.&#xD;
+[xUnit.net 00:00:13.00]   Finished:    BodyCam.RealTests&#xD;
+</StdOut>
+    </Output>
+    <RunInfos>
+      <RunInfo computerName="LT-25-195" outcome="Error" timestamp="2026-04-20T17:33:14.6950661+02:00">
+        <Text>[xUnit.net 00:00:10.84]     BodyCam.RealTests.Pipeline.QrCodeScanTests.RecallLastScan_AfterScan_ReturnsContent [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="LT-25-195" outcome="Error" timestamp="2026-04-20T17:33:15.8455597+02:00">
+        <Text>[xUnit.net 00:00:11.99]     BodyCam.RealTests.Pipeline.QrCodeScanTests.ScanWifiQrCode_ParsesCredentials [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="LT-25-195" outcome="Error" timestamp="2026-04-20T17:33:16.8473154+02:00">
+        <Text>[xUnit.net 00:00:12.99]     BodyCam.RealTests.Pipeline.QrCodeScanTests.AskToScan_WithQrCode_TriggersScanTool [FAIL]</Text>
+      </RunInfo>
+    </RunInfos>
+  </ResultSummary>
+</TestRun>

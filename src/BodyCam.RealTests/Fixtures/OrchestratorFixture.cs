@@ -5,6 +5,9 @@ using BodyCam.Orchestration;
 using BodyCam.Services;
 using BodyCam.Services.Audio.WebRtcApm;
 using BodyCam.Services.Camera;
+using BodyCam.Services.QrCode;
+using BodyCam.Services.QrCode.Handlers;
+using BodyCam.Services.Vision;
 using BodyCam.Tools;
 using Microsoft.Extensions.AI;
 using OpenAI.Realtime;
@@ -34,6 +37,8 @@ public class OrchestratorFixture : IAsyncLifetime
     public PcmAudioSource AudioInput { get; } = new();
     public AudioCaptureSink AudioOutput { get; } = new();
     public TestFrameProvider FrameProvider { get; } = new();
+    public QrCodeService QrHistory { get; } = new();
+    public ZXingQrScanner QrScanner { get; } = new();
 
     // ── Captured events ──
     private readonly List<string> _transcriptDeltas = [];
@@ -90,7 +95,25 @@ public class OrchestratorFixture : IAsyncLifetime
         var voiceIn = new VoiceInputAgent(AudioInput, NullLogger<VoiceInputAgent>.Instance, aec);
         var voiceOut = new VoiceOutputAgent(AudioOutput, aec);
 
-        // Tools — all 13
+        // QR code services
+        var contentHandlers = new IQrContentHandler[]
+        {
+            new UrlContentHandler(),
+            new WifiContentHandler(),
+            new VCardContentHandler(),
+            new EmailContentHandler(),
+            new PhoneContentHandler(),
+            new PlainTextContentHandler(),
+        };
+        var contentResolver = new QrContentResolver(contentHandlers);
+
+        // Vision pipeline
+        var qrScanStage = new QrScanStage(QrScanner, QrHistory, contentResolver);
+        var textDetectionStage = new TextDetectionStage(vision);
+        var sceneDescriptionStage = new SceneDescriptionStage(vision);
+        var visionPipeline = new VisionPipeline([qrScanStage, textDetectionStage, sceneDescriptionStage]);
+
+        // Tools — all 16
         var memoryStore = new MemoryStore(_tempMemoryPath);
         var tools = new ITool[]
         {
@@ -107,6 +130,9 @@ public class OrchestratorFixture : IAsyncLifetime
             new FindObjectTool(vision),
             new NavigateToTool(),
             new StartSceneWatchTool(vision),
+            new ScanQrCodeTool(QrScanner, QrHistory, contentResolver),
+            new RecallLastScanTool(QrHistory, contentResolver),
+            new LookTool(visionPipeline),
         };
         var dispatcher = new ToolDispatcher(tools);
 
@@ -120,7 +146,12 @@ public class OrchestratorFixture : IAsyncLifetime
             voiceIn, conversation, voiceOut, vision,
             realtimeClient, settingsService, Settings, dispatcher,
             wakeWord, micCoordinator, cameraManager, aec,
+            contentResolver,
             NullLogger<AgentOrchestrator>.Instance);
+
+        // Route frame capture through TestFrameProvider directly
+        // (CameraManager requires activation which is platform-specific)
+        Orchestrator.FrameCaptureFunc = ct => FrameProvider.CaptureFrameAsync(ct);
 
         // Wire event capture
         Orchestrator.TranscriptDelta += (_, delta) =>
@@ -172,6 +203,9 @@ public class OrchestratorFixture : IAsyncLifetime
         }
         _transcriptCompletionTcs = new TaskCompletionSource();
         AudioOutput.Clear();
+
+        // Restore default frame capture (tests may override to null for "camera unavailable")
+        Orchestrator.FrameCaptureFunc = ct => FrameProvider.CaptureFrameAsync(ct);
     }
 
     /// <summary>Waits until at least one <see cref="TranscriptCompletions"/> event arrives.</summary>

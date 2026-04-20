@@ -5,6 +5,9 @@ using BodyCam.Services.Audio;
 using BodyCam.Services.Audio.WebRtcApm;
 using BodyCam.Services.Camera;
 using BodyCam.Services.Input;
+using BodyCam.Services.QrCode;
+using BodyCam.Services.QrCode.Handlers;
+using BodyCam.Services.Vision;
 using BodyCam.Services.WakeWord;
 using BodyCam.Tools;
 using BodyCam.ViewModels;
@@ -88,7 +91,37 @@ public static class ServiceExtensions
 		services.AddSingleton<ITool, FindObjectTool>();
 		services.AddSingleton<ITool, NavigateToTool>();
 		services.AddSingleton<ITool, StartSceneWatchTool>();
+		services.AddSingleton<ITool, ScanQrCodeTool>();
+		services.AddSingleton<ITool, RecallLastScanTool>();
+		services.AddSingleton<ITool, LookTool>();
 		services.AddSingleton<ToolDispatcher>();
+
+		return services;
+	}
+
+	public static IServiceCollection AddQrCodeServices(this IServiceCollection services)
+	{
+		services.AddSingleton<IQrCodeScanner, ZXingQrScanner>();
+		services.AddSingleton<QrCodeService>();
+
+		// Content handlers — order matters, PlainTextContentHandler must be last (catch-all)
+		services.AddSingleton<IQrContentHandler, UrlContentHandler>();
+		services.AddSingleton<IQrContentHandler, WifiContentHandler>();
+		services.AddSingleton<IQrContentHandler, VCardContentHandler>();
+		services.AddSingleton<IQrContentHandler, EmailContentHandler>();
+		services.AddSingleton<IQrContentHandler, PhoneContentHandler>();
+		services.AddSingleton<IQrContentHandler, PlainTextContentHandler>();
+		services.AddSingleton<QrContentResolver>();
+
+		return services;
+	}
+
+	public static IServiceCollection AddVisionPipeline(this IServiceCollection services)
+	{
+		services.AddSingleton<IVisionPipelineStage, QrScanStage>();
+		services.AddSingleton<IVisionPipelineStage, TextDetectionStage>();
+		services.AddSingleton<IVisionPipelineStage, SceneDescriptionStage>();
+		services.AddSingleton<VisionPipeline>();
 
 		return services;
 	}

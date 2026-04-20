@@ -1,4 +1,4 @@
-# M18 Phase 2 — Barcode Support + Scan History
+# M18 Phase 3 — Barcode Support + Scan History
 
 **Status:** NOT STARTED  
 **Depends on:** M18 Phase 1

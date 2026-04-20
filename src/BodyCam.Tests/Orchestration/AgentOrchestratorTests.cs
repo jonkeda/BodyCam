@@ -6,6 +6,7 @@ using BodyCam.Services;
 using BodyCam.Services.Audio.WebRtcApm;
 using BodyCam.Services.Camera;
 using BodyCam.Services.Logging;
+using BodyCam.Services.QrCode;
 using BodyCam.Tools;
 using FluentAssertions;
 using Microsoft.Extensions.AI;
@@ -57,7 +58,7 @@ public class AgentOrchestratorTests
         var logger = loggerFactory.CreateLogger<AgentOrchestrator>();
         var realtimeClient = new StubRealtimeClient();
 
-        return new AgentOrchestrator(voiceIn, conversation, voiceOut, vision, realtimeClient, settingsService, new AppSettings(), dispatcher, wakeWord, micCoordinator, cameraManager, aec, logger);
+        return new AgentOrchestrator(voiceIn, conversation, voiceOut, vision, realtimeClient, settingsService, new AppSettings(), dispatcher, wakeWord, micCoordinator, cameraManager, aec, new QrContentResolver([]), logger);
     }
 
     [Fact]

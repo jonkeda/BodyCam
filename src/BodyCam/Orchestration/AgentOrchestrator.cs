@@ -3,6 +3,7 @@ using BodyCam.Models;
 using BodyCam.Services;
 using BodyCam.Services.Audio.WebRtcApm;
 using BodyCam.Services.Camera;
+using BodyCam.Services.QrCode;
 using BodyCam.Tools;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
@@ -28,6 +29,7 @@ public class AgentOrchestrator
     private readonly IWakeWordService _wakeWord;
     private readonly CameraManager _cameraManager;
     private readonly AecProcessor _aec;
+    private readonly QrContentResolver _contentResolver;
     private readonly ILogger<AgentOrchestrator> _logger;
 
     public VisionAgent Vision => _vision;
@@ -41,6 +43,7 @@ public class AgentOrchestrator
     public event EventHandler<string>? TranscriptDelta;
     public event EventHandler<string>? TranscriptCompleted;
     public event EventHandler<string>? DebugLog;
+    public event EventHandler<ScanResultEventArgs>? ScanResultReady;
 
     /// <summary>Delegate injected by UI to capture camera frames for vision.</summary>
     public Func<CancellationToken, Task<byte[]?>>? FrameCaptureFunc { get; set; }
@@ -65,6 +68,7 @@ public class AgentOrchestrator
         IMicrophoneCoordinator micCoordinator,
         CameraManager cameraManager,
         AecProcessor aec,
+        QrContentResolver contentResolver,
         ILogger<AgentOrchestrator> logger)
     {
         _voiceIn = voiceIn;
@@ -79,6 +83,7 @@ public class AgentOrchestrator
         _micCoordinator = micCoordinator;
         _cameraManager = cameraManager;
         _aec = aec;
+        _contentResolver = contentResolver;
         _logger = logger;
     }
 
@@ -383,6 +388,10 @@ public class AgentOrchestrator
                 var context = CreateToolContext();
                 var result = await _dispatcher.ExecuteAsync(name, args, context, ct);
 
+                // Fire scan result event for UI overlay
+                if (name is "scan_qr_code" or "look")
+                    TryFireScanResult(result);
+
                 // Send tool result back via raw SDK command
                 var outputItem = OpenAI.Realtime.RealtimeItem.CreateFunctionCallOutputItem(
                     callId: callId, functionOutput: result);
@@ -557,6 +566,27 @@ public class AgentOrchestrator
         Session = Session,
         Log = msg => DebugLog?.Invoke(this, msg),
     };
+
+    private void TryFireScanResult(string resultJson)
+    {
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(resultJson);
+            var root = doc.RootElement;
+            if (root.TryGetProperty("found", out var found) && found.GetBoolean()
+                && root.TryGetProperty("content", out var contentProp))
+            {
+                var content = contentProp.GetString()!;
+                var handler = _contentResolver.Resolve(content);
+                var parsed = handler.Parse(content);
+                ScanResultReady?.Invoke(this, new ScanResultEventArgs(handler, parsed, content));
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to fire scan result event");
+        }
+    }
 
     public async Task SendTextInputAsync(string text, CancellationToken ct = default)
     {

@@ -92,19 +92,26 @@ Phase 1 focuses on QR codes only. Barcode support is Phase 2.
 
 - `IQrCodeScanner` interface + `ZXingQrScanner` implementation
 - `QrScanResult` model (content, format, raw bytes)
-- `ScanQrCodeTool` (ITool) — captures frame, decodes, returns content to AI
+- `ScanQrCodeTool` (`ToolBase<ScanQrCodeArgs>`) — captures frame, decodes, returns content to AI
 - AI reads content aloud and asks what to do
 - Unit tests (decode from test images)
-- DI registration
+- DI registration (`services.AddSingleton<ITool, ScanQrCodeTool>()`)
 
-### Phase 2: Barcode Support + History
+### Phase 2: Scan UI
+
+- Add a **Scan** button to `QuickActionsView` (6th button, row 1 col 2)
+- `ScanCommand` on `MainViewModel` — fires `SendVisionCommandAsync("Scan for QR codes in front of me and tell me what you find.")`
+- Button enabled only when a session is connected
+- No new tools — reuses `ScanQrCodeTool` via the AI tool-call flow
+
+### Phase 3: Barcode Support + History
 
 - Extend scanner for EAN-13, UPC-A, Code 128, Data Matrix
 - `QrCodeService` with scan history (last N results)
 - `RecallLastScanTool` — "what was that QR code again?"
 - Save-to-memory integration (auto-save scanned URLs/contacts)
 
-### Phase 3: Content-Aware Actions
+### Phase 4: Content-Aware Actions
 
 - URL detection → offer to open in browser
 - WiFi QR → offer to connect to network
@@ -112,7 +119,7 @@ Phase 1 focuses on QR codes only. Barcode support is Phase 2.
 - Plain text → offer to save to memory
 - Action dispatch through AI conversation (user chooses by voice)
 
-### Phase 4: iOS Platform Support
+### Phase 5: iOS Platform Support
 
 - Verify ZXing.Net works on iOS (.NET AOT)
 - Test with iOS camera provider
@@ -147,10 +154,10 @@ Phase 1 focuses on QR codes only. Barcode support is Phase 2.
 | System | Integration |
 |--------|-------------|
 | **CameraManager** | `CaptureFrameAsync()` for frame capture |
-| **ToolDispatcher** | Register `ScanQrCodeTool` as function call |
-| **AgentOrchestrator** | AI reads result aloud, asks for action |
+| **AgentOrchestrator** | Tool registered via `AIFunctionFactory.Create()`, dispatched manually via `RawRepresentation` |
+| **IRealtimeClientSession** | AI reads result aloud, asks for action |
 | **MemoryStore** | Optional save of scanned content |
-| **ButtonInputManager** | Map gesture to scan action |
+| **QuickActionsView** | Scan button triggers `ScanCommand` on `MainViewModel` |
 | **WakeWordService** | "scan that" keyword binding |
 
 ---

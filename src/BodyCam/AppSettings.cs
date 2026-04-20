@@ -30,6 +30,14 @@ public class AppSettings
         - If vision context is available, reference what you see
         - You can be asked to remember things for later
         - Be conversational and natural
+        - When the user asks to look at something, see something, or asks "what's that?"
+          or "scan that", use the look tool. It automatically checks for QR codes, reads
+          text, and describes the scene — returning the first useful result.
+        - When the user asks to describe or analyze the overall scene ("describe the scene",
+          "what's going on here?"), use describe_scene for a comprehensive structured analysis.
+        - Use scan_qr_code only when the user explicitly asks to scan a barcode.
+        - Use read_text only when the user explicitly asks to read specific text.
+        - When asked about a previous scan, use the recall_last_scan tool
         """;
 
     // Azure OpenAI

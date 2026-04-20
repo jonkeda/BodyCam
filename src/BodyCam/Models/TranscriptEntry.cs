@@ -60,6 +60,8 @@ public class TranscriptEntry : ObservableObject
         ("You", false) => Color.FromArgb("#81C784"),
         ("AI", true)   => Color.FromArgb("#1565C0"),
         ("AI", false)  => Color.FromArgb("#64B5F6"),
+        ("Scan", true) => Color.FromArgb("#E65100"),
+        ("Scan", false) => Color.FromArgb("#FFB74D"),
         (_, true)      => Color.FromArgb("#616161"),
         (_, false)     => Color.FromArgb("#BDBDBD"),
     };

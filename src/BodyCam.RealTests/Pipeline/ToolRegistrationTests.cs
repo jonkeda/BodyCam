@@ -1,6 +1,9 @@
 using System.Text.Json;
 using BodyCam.Agents;
 using BodyCam.Services;
+using BodyCam.Services.QrCode;
+using BodyCam.Services.QrCode.Handlers;
+using BodyCam.Services.Vision;
 using BodyCam.Tools;
 using FluentAssertions;
 using Microsoft.Extensions.AI;
@@ -31,6 +34,24 @@ public class ToolRegistrationTests
         var conversation = new ConversationAgent(stubChat, settings);
         var memoryStore = new MemoryStore(Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid():N}.json"));
 
+        var qrScanner = new ZXingQrScanner();
+        var qrHistory = new QrCodeService();
+        var contentHandlers = new IQrContentHandler[]
+        {
+            new UrlContentHandler(),
+            new WifiContentHandler(),
+            new VCardContentHandler(),
+            new EmailContentHandler(),
+            new PhoneContentHandler(),
+            new PlainTextContentHandler(),
+        };
+        var contentResolver = new QrContentResolver(contentHandlers);
+
+        var qrScanStage = new QrScanStage(qrScanner, qrHistory, contentResolver);
+        var textDetectionStage = new TextDetectionStage(vision);
+        var sceneDescriptionStage = new SceneDescriptionStage(vision);
+        var visionPipeline = new VisionPipeline([qrScanStage, textDetectionStage, sceneDescriptionStage]);
+
         var tools = new ITool[]
         {
             new DescribeSceneTool(vision),
@@ -46,6 +67,9 @@ public class ToolRegistrationTests
             new FindObjectTool(vision),
             new NavigateToTool(),
             new StartSceneWatchTool(vision),
+            new ScanQrCodeTool(qrScanner, qrHistory, contentResolver),
+            new RecallLastScanTool(qrHistory, contentResolver),
+            new LookTool(visionPipeline),
         };
 
         _dispatcher = new ToolDispatcher(tools);
@@ -60,7 +84,7 @@ public class ToolRegistrationTests
         foreach (var d in defs)
             _output.WriteLine($"  {d.Name}: {d.Description[..Math.Min(60, d.Description.Length)]}...");
 
-        defs.Should().HaveCount(13);
+        defs.Should().HaveCount(16);
 
         var names = defs.Select(d => d.Name).ToList();
         names.Should().Contain("describe_scene");
@@ -76,6 +100,9 @@ public class ToolRegistrationTests
         names.Should().Contain("find_object");
         names.Should().Contain("navigate_to");
         names.Should().Contain("start_scene_watch");
+        names.Should().Contain("scan_qr_code");
+        names.Should().Contain("recall_last_scan");
+        names.Should().Contain("look");
     }
 
     [Fact]
