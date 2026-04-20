@@ -179,14 +179,14 @@ This makes the AI "hear" the text as if the user spoke it, and triggers a spoken
 
 ### Function Invocation
 
-The MAF middleware (`.UseFunctionInvocation()`) handles function calls automatically:
-1. Realtime API sends a function call in the response
-2. MAF intercepts it, looks up the tool in the DI-registered `AIFunction` list
-3. Calls the tool
-4. Sends the result back as function call output
-5. API generates next response incorporating the result
+The Realtime API sends function calls as part of response output items. Since MAF does not have a `FunctionInvokingRealtimeClient` for realtime, tool dispatch is manual:
 
-The `ToolDispatcher` is registered but the actual interception happens in the MAF pipeline, not in the orchestrator directly.
+1. `ResponseDone` message arrives in the message loop
+2. Orchestrator accesses `msg.RawRepresentation` to get the SDK's `RealtimeServerUpdateResponseDone`
+3. Iterates `response.OutputItems` looking for `RealtimeFunctionCallItem`
+4. For each function call, resolves the tool from the registered `AIFunction` list and invokes it
+5. Sends the result back via `RealtimeItem.CreateFunctionCallOutputItem` through the SDK session
+6. Triggers a new response with `CreateResponseRealtimeClientMessage`
 
 ## SessionContext
 

@@ -1,12 +1,24 @@
 # Azure OpenAI — GA Endpoint Migration
 
+> **Status: COMPLETED (April 2026).** The codebase now uses the GA `/openai/v1/` endpoint with `Microsoft.Extensions.AI` (`IRealtimeClient`). The preview endpoint and raw WebSocket parsing have been removed. This document is kept for historical reference.
+
 How to create an Azure OpenAI resource that supports the GA `/openai/v1/` endpoint path, enabling native SDK event handling (no raw WebSocket workarounds).
+
+## Current Architecture
+
+The app uses **Microsoft.Extensions.AI (MAF)** as the abstraction layer:
+- `IRealtimeClient` / `IRealtimeClientSession` — MAF interfaces
+- `OpenAIRealtimeClient` — MAF adapter wrapping the OpenAI SDK's `RealtimeClient`
+- `AzureRealtimeClient` — subclass of SDK `RealtimeClient` that injects `api-key` header
+- GA endpoint: `wss://{resource}.cognitiveservices.azure.com/openai/v1/realtime`
+- Transcription model: `whisper-1` on Azure (`gpt-4o-mini-transcribe` is not available on Azure)
+- Tool dispatch is manual via `RawRepresentation` (MAF doesn't have `FunctionInvokingRealtimeClient` for realtime)
 
 ---
 
-## Why Migrate?
+## Historical Context
 
-The current Cognitive Services resource (`*.cognitiveservices.azure.com`) only supports the **preview** endpoint:
+The previous Cognitive Services resource (`*.cognitiveservices.azure.com`) only supported the **preview** endpoint:
 
 ```
 wss://{resource}.cognitiveservices.azure.com/openai/realtime?api-version=2025-04-01-preview&deployment=...

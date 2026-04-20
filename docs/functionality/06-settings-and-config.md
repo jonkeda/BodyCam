@@ -22,10 +22,10 @@ In-memory settings object populated at startup from `ISettingsService` + `.env` 
 | Category | Properties | Defaults |
 |----------|-----------|----------|
 | **Provider** | `Provider` | `OpenAi` |
-| **Models** | `RealtimeModel`, `ChatModel`, `VisionModel`, `TranscriptionModel` | `gpt-realtime-1.5`, `gpt-5.4-mini`, `gpt-5.4`, `gpt-4o-mini-transcribe` |
+| **Models** | `RealtimeModel`, `ChatModel`, `VisionModel`, `TranscriptionModel` | `gpt-realtime-1.5`, `gpt-5.4-mini`, `gpt-5.4`, `gpt-4o-mini-transcribe` (Azure auto-falls back to `whisper-1`) |
 | **Voice** | `Voice`, `TurnDetection`, `NoiseReduction` | `marin`, `semantic_vad`, `near_field` |
 | **System** | `SystemInstructions` | BodyCam persona prompt |
-| **Azure** | `AzureEndpoint`, `AzureRealtimeDeploymentName`, `AzureChatDeploymentName`, `AzureVisionDeploymentName`, `AzureApiVersion` | null, `2025-04-01-preview` |
+| **Azure** | `AzureEndpoint`, `AzureRealtimeDeploymentName`, `AzureChatDeploymentName`, `AzureVisionDeploymentName`, `AzureApiVersion` | null, `2024-10-01` (GA) |
 | **Audio** | `SampleRate`, `ChunkDurationMs`, `AecEnabled` | 24000, 50, true |
 | **Mic** | `MicReleaseDelayMs` | 50 |
 | **Endpoints** | `RealtimeApiEndpoint`, `ChatApiEndpoint`, `TranscriptionApiEndpoint` | OpenAI defaults |
@@ -94,7 +94,7 @@ Static lists for settings UI pickers:
 | Realtime | gpt-realtime-1.5, gpt-realtime-mini |
 | Chat | gpt-5.4, gpt-5.4-mini, gpt-5.4-nano |
 | Vision | gpt-5.4, gpt-5.4-mini |
-| Transcription | gpt-4o-mini-transcribe, gpt-4o-transcribe |
+| Transcription | gpt-4o-mini-transcribe, gpt-4o-transcribe, whisper-1 |
 | Voices | alloy, ash, ballad, coral, echo, fable, marin, sage, shimmer, verse |
 | Turn Detection | semantic_vad, server_vad |
 | Noise Reduction | near_field, far_field |

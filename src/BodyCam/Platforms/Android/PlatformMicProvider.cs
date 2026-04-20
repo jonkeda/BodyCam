@@ -12,6 +12,8 @@ public sealed class PlatformMicProvider : IAudioInputProvider, IDisposable
 {
     private readonly AppSettings _settings;
     private AudioRecord? _audioRecord;
+    private AcousticEchoCanceler? _aec;
+    private NoiseSuppressor? _ns;
     private CancellationTokenSource? _recordCts;
     private Task? _recordTask;
 
@@ -19,6 +21,9 @@ public sealed class PlatformMicProvider : IAudioInputProvider, IDisposable
     public string ProviderId => "platform";
     public bool IsAvailable => true;
     public bool IsCapturing { get; private set; }
+
+    /// <summary>Audio session ID for the active AudioRecord. Used by PhoneSpeakerProvider to share the session.</summary>
+    public int AudioSessionId => _audioRecord?.AudioSessionId ?? 0;
 
     public event EventHandler<byte[]>? AudioChunkAvailable;
     public event EventHandler? Disconnected;
@@ -52,12 +57,19 @@ public sealed class PlatformMicProvider : IAudioInputProvider, IDisposable
             Encoding.Pcm16bit,
             bufferSize);
 
-        // Enable hardware echo cancellation and noise suppression
+        // Enable hardware echo cancellation and noise suppression.
+        // Must keep references alive for the duration of the recording session.
         if (AcousticEchoCanceler.IsAvailable)
-            AcousticEchoCanceler.Create(_audioRecord.AudioSessionId)?.SetEnabled(true);
+        {
+            _aec = AcousticEchoCanceler.Create(_audioRecord.AudioSessionId);
+            _aec?.SetEnabled(true);
+        }
 
         if (NoiseSuppressor.IsAvailable)
-            NoiseSuppressor.Create(_audioRecord.AudioSessionId)?.SetEnabled(true);
+        {
+            _ns = NoiseSuppressor.Create(_audioRecord.AudioSessionId);
+            _ns?.SetEnabled(true);
+        }
 
         _audioRecord.StartRecording();
         IsCapturing = true;
@@ -101,6 +113,10 @@ public sealed class PlatformMicProvider : IAudioInputProvider, IDisposable
     public void Dispose()
     {
         _recordCts?.Cancel();
+        _aec?.Release();
+        _aec = null;
+        _ns?.Release();
+        _ns = null;
         _audioRecord?.Stop();
         _audioRecord?.Release();
         _audioRecord = null;

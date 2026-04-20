@@ -79,14 +79,116 @@ When user starts speaking during AI playback:
 
 ## Echo Cancellation (AEC)
 
-**File:** `Services/Audio/WebRtcApm/AecProcessor.cs`
+Prevents the AI from hearing its own voice through the speakers. Each platform uses a different AEC strategy optimized for its audio hardware.
 
-Prevents the AI from hearing its own voice through the speakers:
+### Architecture Overview
 
-1. `Initialize(mobile)` — configure for near-field (phone) or far-field
-2. Speaker output feeds render reference: `ProcessRender(speakerPcm)`
-3. Mic input is cleaned: `ProcessCapture(micPcm)` → returns echo-cancelled PCM
-4. Configurable via `AppSettings.AecEnabled` (default: true)
+```
+                        ┌──────────────────────────────────────┐
+                        │          AgentOrchestrator            │
+                        │  decides which AEC to activate:      │
+                        │  • Desktop → WebRTC APM              │
+                        │  • Android/iOS → Platform AEC        │
+                        └──────────────────────────────────────┘
+
+  ┌─────────────────────────────────┐    ┌────────────────────────────────────────┐
+  │       Windows (Desktop)          │    │         Android / iOS (Mobile)          │
+  │                                  │    │                                        │
+  │  NAudio WaveInEvent (mic)        │    │  AudioRecord                           │
+  │         │                        │    │  AudioSource.VoiceCommunication         │
+  │         ▼                        │    │         │                              │
+  │  VoiceInputAgent                 │    │  AcousticEchoCanceler (HAL)            │
+  │   └─ AecProcessor.ProcessCapture│    │  NoiseSuppressor (HAL)                 │
+  │         │                        │    │         │                              │
+  │    24kHz→48kHz resample          │    │  VoiceInputAgent (passthrough)         │
+  │    WebRTC APM (AEC3 + NS + AGC) │    │         │                              │
+  │    48kHz→24kHz resample          │    │         ▼                              │
+  │         │                        │    │  session.SendAsync()                   │
+  │         ▼                        │    │                                        │
+  │  session.SendAsync()             │    │  AudioTrack                            │
+  │                                  │    │  AudioUsageKind.VoiceCommunication     │
+  │  NAudio WaveOutEvent (speaker)   │    │  Shared AudioSessionId with AudioRecord│
+  │         ▲                        │    │  Routed to loudspeaker                 │
+  │  VoiceOutputAgent                │    │         ▲                              │
+  │   └─ AecProcessor.FeedReference  │    │  VoiceOutputAgent (no AEC feed)        │
+  └─────────────────────────────────┘    └────────────────────────────────────────┘
+```
+
+### Windows — WebRTC APM
+
+**Files:**
+- `Services/Audio/WebRtcApm/AecProcessor.cs` — managed wrapper
+- `Services/Audio/WebRtcApm/WebRtcApmInterop.cs` — P/Invoke declarations
+- `runtimes/win-x64/native/webrtc-apm.dll` — native library (from SoundFlow.Extensions.WebRtc.Apm, MIT + BSD-3)
+
+**How it works:**
+
+1. On session start, `AgentOrchestrator` calls `AecProcessor.Initialize(mobileMode: false)` (desktop only)
+2. The native WebRTC APM is created with:
+   - **AEC3** — echo cancellation (desktop mode)
+   - **Noise suppression** — level High
+   - **High-pass filter** — removes DC offset
+   - **AGC** — adaptive digital gain, target -3 dBFS
+3. **Speaker → AEC reference:** `VoiceOutputAgent.PlayAudioDeltaAsync()` calls `AecProcessor.FeedRenderReference(pcmData)` before playing each chunk. This feeds the render stream so the AEC knows what's being played.
+4. **Mic → AEC processing:** `VoiceInputAgent.OnAudioChunk()` calls `AecProcessor.ProcessCapture(chunk)`. Internally:
+   - Resamples 24kHz → 48kHz (APM requires 48kHz)
+   - Splits into 10ms frames (480 samples at 48kHz)
+   - Processes each frame through `webrtc_apm_process_stream()`
+   - Resamples 48kHz → 24kHz
+5. Stream delay is set to **40ms** (typical desktop speaker-to-mic latency)
+6. All native calls are serialized under a lock (WebRTC APM is not thread-safe)
+
+**Latency overhead:** ~4-6ms per 50ms chunk (resampling + native processing)
+
+**Toggle:** `AppSettings.AecEnabled` (default: true). When disabled, mic audio passes through unprocessed.
+
+### Android — Platform AcousticEchoCanceler
+
+**Files:**
+- `Platforms/Android/PlatformMicProvider.cs` — mic capture with hardware AEC
+- `Platforms/Android/PhoneSpeakerProvider.cs` — speaker output with shared session
+
+**How it works:**
+
+1. `PlatformMicProvider` creates an `AudioRecord` with `AudioSource.VoiceCommunication` — this tells Android the audio is for two-way communication (not just recording)
+2. After creating the `AudioRecord`, it attaches:
+   - `AcousticEchoCanceler.Create(audioSessionId)` — hardware AEC integrated into the audio HAL
+   - `NoiseSuppressor.Create(audioSessionId)` — hardware noise suppression
+   - Both references are held alive for the duration of recording
+3. `PhoneSpeakerProvider` creates an `AudioTrack` with:
+   - `AudioUsageKind.VoiceCommunication` — routes through the communication audio path where AEC operates
+   - **Shared `AudioSessionId`** from `PlatformMicProvider` — allows the platform AEC to correlate speaker output with mic input
+4. Audio is routed to the **loudspeaker** (not the earpiece):
+   - Android 12+: `AudioManager.SetCommunicationDevice(BuiltinSpeaker)`
+   - Older: `AudioManager.SpeakerphoneOn = true`
+5. Routing is restored on stop/dispose via `ClearCommunicationDevice()` / `SpeakerphoneOn = false`
+
+**Why platform AEC, not WebRTC APM on Android:**
+- The platform AEC runs in the audio HAL with **exact knowledge of device timing** — no need to guess stream delay
+- WebRTC APM requires precise timing alignment between render reference and mic capture, which is unreliable on Android's variable-latency audio pipeline
+- Running both causes double-processing artifacts and voice distortion
+- Zero CPU overhead in managed code — all processing happens in native audio firmware
+
+**Key requirement:** The `AudioRecord` must start **before** the `AudioTrack` so the session ID is available. The orchestrator's `StartAsync()` sequence ensures this: mic pipeline starts, then audio output starts.
+
+### iOS — Platform AEC (planned)
+
+iOS uses `AVAudioSession` with category `.playAndRecord` and mode `.voiceChat`, which enables the built-in AEC automatically. Similar to Android — no WebRTC APM needed.
+
+### Configuring AEC
+
+| Setting | Default | Effect |
+|---------|---------|--------|
+| `AppSettings.AecEnabled` | `true` | Enables/disables WebRTC APM (desktop only). Android always uses platform AEC. |
+
+### Troubleshooting
+
+| Symptom | Likely cause | Fix |
+|---------|-------------|-----|
+| AI responds to itself (echo loop) | AEC not correlating speaker/mic | Verify shared audio session ID, check `VoiceCommunication` usage |
+| Audio very quiet on Android | Routed to earpiece | Verify `SetCommunicationDevice(BuiltinSpeaker)` or `SpeakerphoneOn` |
+| Voice sounds distorted | Double AEC processing | Ensure WebRTC APM is disabled on Android (`IsEnabled = false`) |
+| Echo on Bluetooth | BT has different latency | Bluetooth providers use separate audio path; platform AEC handles BT natively |
 
 ## Microphone Coordination
 

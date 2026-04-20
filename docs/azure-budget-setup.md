@@ -15,7 +15,7 @@ Azure OpenAI uses **deployments** — you deploy a specific model under a name y
 | Voice (Realtime) | `gpt-realtime-mini` | ~50x cheaper audio than `gpt-realtime-1.5` |
 | Chat | `gpt-5.4-nano` | Cheapest text model ($0.20/$1.25 per 1M tokens) |
 | Vision | `gpt-5.4-mini` | Cheapest with vision support ($0.75/$4.50) |
-| Transcription | `gpt-4o-mini-transcribe` | Half the price of `gpt-4o-transcribe` |
+| Transcription | `whisper-1` | Standard Azure transcription model |
 
 **Estimated cost:** ~$5–10/hr of casual use (vs ~$115/hr with premium models).
 
@@ -35,7 +35,7 @@ In the [Azure AI Foundry portal](https://ai.azure.com) (or Azure Portal → your
 | `bodycam-realtime` | gpt-realtime-mini | 2025-12-15 | Global Standard |
 | `bodycam-chat` | gpt-5.4-nano | 2026-03-17 | Global Standard |
 | `bodycam-vision` | gpt-5.4-mini | 2026-03-17 | Global Standard |
-| `bodycam-transcribe` | gpt-4o-mini-transcribe | 2025-12-15 | Global Standard |
+| `bodycam-transcribe` | whisper-1 | — | Global Standard |
 
 > You can name deployments whatever you like. The names above are suggestions.
 
@@ -47,7 +47,7 @@ In the [Azure AI Foundry portal](https://ai.azure.com) (or Azure Portal → your
 2. Set **Provider** to `azure`
 3. Fill in:
    - **Resource Name** — your Azure resource name (e.g., `my-openai-eastus2`)
-   - **API Version** — `2025-04-01-preview`
+   - **API Version** — `2024-10-01` (GA)
    - **Realtime Deployment** — `bodycam-realtime`
    - **Chat Deployment** — `bodycam-chat`
    - **Vision Deployment** — `bodycam-vision`
@@ -64,7 +64,7 @@ AZURE_OPENAI_DEPLOYMENT=bodycam-realtime
 AZURE_OPENAI_CHAT_DEPLOYMENT=bodycam-chat
 AZURE_OPENAI_VISION_DEPLOYMENT=bodycam-vision
 AZURE_OPENAI_TRANSCRIPTION_DEPLOYMENT=bodycam-transcribe
-AZURE_OPENAI_API_VERSION=2025-04-01-preview
+AZURE_OPENAI_API_VERSION=2024-10-01
 ```
 
 ## Region Availability
@@ -89,4 +89,4 @@ To switch individual models without changing your whole setup, just create a new
 | Voice | `gpt-realtime-mini` → `gpt-realtime-1.5` |
 | Chat | `gpt-5.4-nano` → `gpt-5.4-mini` or `gpt-5.4` |
 | Vision | `gpt-5.4-mini` → `gpt-5.4` |
-| Transcription | `gpt-4o-mini-transcribe` → `gpt-4o-transcribe` |
+| Transcription | `whisper-1` → `gpt-4o-transcribe` |

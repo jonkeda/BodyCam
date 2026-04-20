@@ -183,13 +183,14 @@ public class AgentOrchestrator
         });
         _voiceIn.SetConnected(true);
 
-        // Initialize echo cancellation
-        if (_settings.AecEnabled)
+        // Initialize echo cancellation.
+        // Android/iOS use the platform's built-in AcousticEchoCanceler (configured in PlatformMicProvider),
+        // so WebRTC APM is only needed on desktop where there's no OS-level AEC.
+        if (_settings.AecEnabled && !OperatingSystem.IsAndroid() && !OperatingSystem.IsIOS())
         {
             try
             {
-                bool mobile = OperatingSystem.IsAndroid() || OperatingSystem.IsIOS();
-                _aec.Initialize(mobile);
+                _aec.Initialize(mobileMode: false);
             }
             catch (Exception ex)
             {

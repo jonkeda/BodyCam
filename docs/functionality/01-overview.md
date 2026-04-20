@@ -53,7 +53,7 @@ The `IRealtimeClient` is built at DI time from `AppSettings.Provider`. MAF middl
 | Realtime voice | `gpt-realtime-1.5` | Yes |
 | Chat/reasoning | `gpt-5.4-mini` | Yes |
 | Vision | `gpt-5.4` | Yes |
-| Transcription | `gpt-4o-mini-transcribe` | Yes |
+| Transcription | `whisper-1` (Azure) / `gpt-4o-mini-transcribe` (OpenAI) | Yes |
 
 ## Key Technologies
 

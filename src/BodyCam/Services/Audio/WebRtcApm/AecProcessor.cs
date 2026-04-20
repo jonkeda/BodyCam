@@ -13,7 +13,8 @@ public sealed class AecProcessor : IDisposable
     private const int AppRate = 24000;
     private const int Channels = 1;
     private const int FrameSamples = 480; // 10ms at 48kHz
-    private const int StreamDelayMs = 40;
+    private const int DesktopStreamDelayMs = 40;
+    private const int MobileStreamDelayMs = 150; // Android/iOS have higher speaker-to-mic latency
 
     private readonly ILogger<AecProcessor> _logger;
     private readonly object _lock = new();
@@ -79,10 +80,11 @@ public sealed class AecProcessor : IDisposable
             if (initErr != 0)
                 _logger.LogWarning("APM Initialize returned error {Error}", initErr);
 
-            WebRtcApmInterop.SetStreamDelayMs(_apm, StreamDelayMs);
+            int delayMs = mobileMode ? MobileStreamDelayMs : DesktopStreamDelayMs;
+            WebRtcApmInterop.SetStreamDelayMs(_apm, delayMs);
 
             _initialized = true;
-            _logger.LogInformation("WebRTC APM initialized (mobileMode={Mobile})", mobileMode);
+            _logger.LogInformation("WebRTC APM initialized (mobileMode={Mobile}, streamDelay={Delay}ms)", mobileMode, delayMs);
         }
     }
 

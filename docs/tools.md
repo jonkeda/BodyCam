@@ -41,7 +41,6 @@ Passed to every tool execution:
 - `CaptureFrame` — delegate to capture a JPEG from the camera
 - `Session` — current `SessionContext` (conversation history)
 - `Log` — debug logging callback
-- `RealtimeClient` — for tools that need to send data back to the API
 
 ### SchemaGenerator
 

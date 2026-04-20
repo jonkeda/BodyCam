@@ -22,7 +22,8 @@ public static class ServiceExtensions
 		services.AddSingleton<IAudioInputProvider, BodyCam.Platforms.Windows.PlatformMicProvider>();
 		services.AddSingleton<BodyCam.Platforms.Windows.Audio.WindowsBluetoothEnumerator>();
 #elif ANDROID
-		services.AddSingleton<IAudioInputProvider, BodyCam.Platforms.Android.PlatformMicProvider>();
+		services.AddSingleton<BodyCam.Platforms.Android.PlatformMicProvider>();
+		services.AddSingleton<IAudioInputProvider>(sp => sp.GetRequiredService<BodyCam.Platforms.Android.PlatformMicProvider>());
 		services.AddSingleton<BodyCam.Platforms.Android.Audio.AndroidBluetoothEnumerator>();
 #endif
 		services.AddSingleton<AudioInputManager>();

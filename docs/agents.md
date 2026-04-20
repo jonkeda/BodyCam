@@ -7,7 +7,7 @@ Four agents handle the real-time AI pipeline. They are plain C# classes (not MAF
 **File:** `Agents/VoiceInputAgent.cs`
 **Dependencies:** `IAudioInputService`, `IRealtimeClient`
 
-Bridges the platform microphone to the Realtime API. Subscribes to `AudioChunkAvailable` events from the audio input service and forwards each PCM chunk via `IRealtimeClient.SendAudioChunkAsync()`.
+Bridges the platform microphone to the Realtime API. Subscribes to `AudioChunkAvailable` events from the audio input service and forwards each PCM chunk to the session via the audio sink callback set by the orchestrator.
 
 - `StartAsync(ct)` — subscribes to audio chunks
 - `StopAsync()` — unsubscribes
@@ -55,7 +55,7 @@ Sends JPEG camera frames to GPT Vision (via Chat Completions with image content)
 Microphone
     │ PCM chunks (24kHz, 16-bit)
     ▼
-VoiceInputAgent ──► RealtimeClient ──► OpenAI Realtime API
+VoiceInputAgent ──► session.SendAsync() ──► OpenAI Realtime API
                                               │
                                     ┌─────────┼─────────┐
                                     ▼         ▼         ▼

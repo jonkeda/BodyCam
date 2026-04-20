@@ -4,30 +4,35 @@ Platform services are abstracted behind interfaces for testability and cross-pla
 
 ## RealtimeClient
 
-**Interface:** `IRealtimeClient` (`IAsyncDisposable`)
-**Implementation:** `RealtimeClient`
-**Dependencies:** `IApiKeyService`, `AppSettings`, `ToolDispatcher`
+**Interface:** `IRealtimeClient` (from `Microsoft.Extensions.AI`)
+**Implementation:** `OpenAIRealtimeClient` (wraps OpenAI SDK's `RealtimeClient`)
+**Registration:** Singleton in `ServiceExtensions.cs`
 
-WebSocket client for the OpenAI Realtime API. Handles both OpenAI and Azure OpenAI endpoints.
+MAF abstraction over the OpenAI Realtime WebSocket API. Handles both OpenAI and Azure OpenAI endpoints.
 
-**Connection:**
-- `ConnectAsync(ct)` — opens WebSocket to `AppSettings.GetRealtimeUri()`, starts receive loop
-- `DisconnectAsync()` — graceful close
-- `UpdateSessionAsync(ct)` — sends `session.update` with model, voice, tools, instructions
+**Session lifecycle:**
+- `CreateSessionAsync(RealtimeSessionOptions, ct)` — opens WebSocket, returns `IRealtimeClientSession`
+- Session options include model, voice, tools, transcription config, VAD settings
+- Session is `IAsyncDisposable` — disposed when the orchestrator stops
 
-**Audio:**
-- `SendAudioChunkAsync(pcm16Data, ct)` — sends base64-encoded PCM as `input_audio_buffer.append`
-- `TruncateResponseAudioAsync(itemId, audioEndMs, ct)` — tells API to truncate output (interruption)
+**Audio (via session):**
+- `session.SendAsync(InputAudioBufferAppendRealtimeClientMessage)` — sends PCM audio
+- `session.SendAsync(CreateConversationItemRealtimeClientMessage)` — injects text input
+- `session.SendAsync(CreateResponseRealtimeClientMessage)` — triggers a response
 
-**Function calling:**
-- `SendFunctionCallOutputAsync(callId, output, ct)` — returns tool result to the API
+**Events (via session):**
+- `session.GetStreamingResponseAsync(ct)` → `IAsyncEnumerable<RealtimeServerMessage>`
+- Message types: `OutputAudioDelta`, `OutputAudioTranscriptionDelta`, `InputAudioTranscriptionCompleted`, `ResponseDone`, `Error`, etc.
 
-**Text:**
-- `SendTextInputAsync(text, ct)` — sends user text input
+**Tool dispatch:**
+- MAF does not have `FunctionInvokingRealtimeClient` — tool dispatch is manual
+- The orchestrator accesses `RawRepresentation` (SDK `RealtimeFunctionCallItem`) to extract function call details
+- Results are sent back via SDK's `RealtimeItem.CreateFunctionCallOutputItem`
 
-**Events (server → client):**
-- `AudioDelta` — PCM audio chunk from TTS
-- `OutputTranscriptDelta` / `OutputTranscriptCompleted` — streaming AI transcript
+**Azure support:**
+- `AzureRealtimeClient` subclasses `OpenAI.Realtime.RealtimeClient` to inject the `api-key` header
+- GA endpoint: `wss://{resource}.cognitiveservices.azure.com/openai/v1/realtime`
+- Wrapped in `OpenAIRealtimeClient` for MAF interface
 - `InputTranscriptCompleted` — finalized user speech transcript
 - `SpeechStarted` / `SpeechStopped` — VAD events
 - `FunctionCallReceived` — tool invocation request
