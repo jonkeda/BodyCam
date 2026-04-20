@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:BodyCam.ViewModels"
+             xmlns:converters="clr-namespace:BodyCam.Converters"
+             xmlns:views="clr-namespace:BodyCam.Pages.Main.Views"
+             x:Class="BodyCam.Pages.Main.MainPage"
+             x:DataType="vm:MainViewModel"
+             Title="{Binding Title}">
+
+    <ContentPage.Resources>
+        <converters:InvertBoolConverter x:Key="InvertBool" />
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="Auto,*,Auto,Auto">
+
+        <!-- Row 0: Status bar -->
+        <views:StatusBarView Grid.Row="0" />
+
+        <!-- Row 1: Content area (transcript OR camera) -->
+        <Grid Grid.Row="1">
+
+            <!-- Transcript tab -->
+            <views:TranscriptView x:Name="TranscriptPanel" />
+
+            <!-- Camera tab -->
+            <views:CameraTabView x:Name="CameraPanel" />
+
+            <!-- Scan result overlay (floats above both tabs) -->
+            <views:ScanResultOverlay />
+
+            <!-- Debug overlay -->
+            <views:DebugOverlayView />
+        </Grid>
+
+        <!-- Row 2: Tab selector -->
+        <Grid Grid.Row="2" ColumnDefinitions="*,*" HeightRequest="40"
+              BackgroundColor="{AppThemeBinding Light=#F0F0F0, Dark=#222222}">
+            <Button AutomationId="TranscriptTabButton"
+                    Text="📝 Transcript"
+                    Command="{Binding SwitchToTranscriptCommand}"
+                    BackgroundColor="{Binding TranscriptTabBackground}"
+                    TextColor="{Binding TranscriptTabTextColor}"
+                    FontSize="14" />
+            <Button Grid.Column="1" AutomationId="CameraTabButton"
+                    Text="📷 Camera"
+                    Command="{Binding SwitchToCameraCommand}"
+                    BackgroundColor="{Binding CameraTabBackground}"
+                    TextColor="{Binding CameraTabTextColor}"
+                    FontSize="14" />
+        </Grid>
+
+        <!-- Row 3: Quick action bar -->
+        <views:QuickActionsView Grid.Row="3" />
+    </Grid>
+</ContentPage>

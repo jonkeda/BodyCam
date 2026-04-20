@@ -139,7 +139,9 @@ All milestones sorted by number. Each task corresponds to one phase from the mil
 
 **Plan:** [m20-barcode/](m20-barcode/)
 
-- [ ] API clients + `ProductLookupTool` + voice read-aloud
+- [x] Phase 1 — API Clients & Lookup Service
+- [x] Phase 2 — Lookup Tool & DI Registration
+- [x] Phase 3 — Unit Tests
 
 ### M21 — Accessibility Improvements
 
@@ -200,12 +202,12 @@ All milestones sorted by number. Each task corresponds to one phase from the mil
 
 **Plan:** [m28-ui-frames/](m28-ui-frames/)
 
-- [ ] Wave 1 — Fix Navigation
+- [x] Wave 1 — Fix Navigation
 - [x] Wave 2 — Split SettingsViewModel
-- [ ] Wave 3 — Move Pages to Folders
-- [ ] Wave 4 — Extract ContentViews
+- [x] Wave 3 — Move Pages to Folders
+- [x] Wave 4 — Extract ContentViews
 - [x] Wave 5 — Settings Card Template
-- [ ] Wave 6 — Test Coverage
+- [x] Wave 6 — Test Coverage
 
 ### M30 — Polish & Optimization
 

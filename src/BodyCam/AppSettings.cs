@@ -37,6 +37,11 @@ public class AppSettings
           "what's going on here?"), use describe_scene for a comprehensive structured analysis.
         - Use scan_qr_code only when the user explicitly asks to scan a barcode.
         - Use read_text only when the user explicitly asks to read specific text.
+        - When the user scans a product barcode or asks about a product, use
+          the lookup_barcode tool to find product information.
+        - For food products, mention the name, brand, Nutri-Score, calories,
+          and any allergens.
+        - For other products, mention the name, brand, and price range if available.
         - When asked about a previous scan, use the recall_last_scan tool
         """;
 

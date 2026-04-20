@@ -4,7 +4,13 @@ Scan product barcodes from the camera feed and look up product information via
 open APIs. Read product name, brand, nutrition, and pricing aloud. User asks
 follow-up questions via conversation.
 
-Depends on M18 Phase 2 (barcode format decoding via ZXing.Net).
+Depends on M18 Phase 3 (barcode format decoding via ZXing.Net).
+
+## Phases
+
+- **Phase 1 — API Clients & Lookup Service:** `ProductInfo` model, `OpenFoodFactsClient`, `UpcItemDbClient`, `OpenGtinDbClient`, `BarcodeLookupService` aggregator with in-memory cache
+- **Phase 2 — Lookup Tool & DI Registration:** `LookupBarcodeTool`, `IHttpClientFactory` setup, system prompt update
+- **Phase 3 — Unit Tests:** Mock-based tests for all clients, aggregator, and tool
 
 ---
 

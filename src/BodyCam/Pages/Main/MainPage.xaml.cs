@@ -5,7 +5,7 @@ using BodyCam.Services.Camera;
 using BodyCam.ViewModels;
 using Microsoft.Maui.Controls.Shapes;
 
-namespace BodyCam.Pages;
+namespace BodyCam.Pages.Main;
 
 public partial class MainPage : ContentPage
 {
@@ -15,10 +15,10 @@ public partial class MainPage : ContentPage
 	{
 		InitializeComponent();
 		BindingContext = viewModel;
-		phoneCamera.SetCameraView(CameraPreview);
-		viewModel.SetCameraView(CameraPreview);
+		phoneCamera.SetCameraView(CameraPanel.CameraPreviewControl);
+		viewModel.SetCameraView(CameraPanel.CameraPreviewControl);
 
-		TranscriptList.Scrolled += (_, e) =>
+		TranscriptPanel.List.Scrolled += (_, e) =>
 		{
 			// If the last visible item index is at or near the end, we're "at the bottom"
 			_isNearBottom = e.LastVisibleItemIndex >= ((BindingContext as MainViewModel)?.Entries.Count ?? 1) - 2;
@@ -65,7 +65,7 @@ public partial class MainPage : ContentPage
 					// Dispatch to let CollectionView finish layout before scrolling
 					Dispatcher.Dispatch(() =>
 					{
-						TranscriptList.ScrollTo(vm.Entries.Count - 1, position: ScrollToPosition.End, animate: false);
+						TranscriptPanel.List.ScrollTo(vm.Entries.Count - 1, position: ScrollToPosition.End, animate: false);
 					});
 				}
 			};
@@ -73,7 +73,7 @@ public partial class MainPage : ContentPage
 			vm.PropertyChanged += (_, e) =>
 			{
 				if (e.PropertyName == nameof(MainViewModel.ShowSnapshot) && vm.ShowSnapshot)
-					DismissSnapshotButton.Focus();
+					CameraPanel.DismissButton.Focus();
 			};
 		}
 	}

@@ -2,7 +2,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:BodyCam.ViewModels"
-             x:Class="BodyCam.Pages.SetupPage"
+             x:Class="BodyCam.Pages.Setup.SetupPage"
              x:DataType="vm:SetupViewModel"
              Shell.TabBarIsVisible="False"
              Shell.NavBarIsVisible="False"

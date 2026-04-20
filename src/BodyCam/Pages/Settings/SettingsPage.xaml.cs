@@ -1,6 +1,6 @@
 using BodyCam.ViewModels;
 
-namespace BodyCam.Pages;
+namespace BodyCam.Pages.Settings;
 
 public partial class SettingsPage : ContentPage
 {

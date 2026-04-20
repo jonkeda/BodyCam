@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:BodyCam.ViewModels"
              xmlns:views="clr-namespace:BodyCam.Views"
-             x:Class="BodyCam.Pages.SettingsPage"
+             x:Class="BodyCam.Pages.Settings.SettingsPage"
              x:DataType="vm:SettingsViewModel"
              Title="{Binding Title}">
 

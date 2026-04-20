@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:BodyCam.Models"
+             x:Class="BodyCam.Pages.Main.Views.TranscriptView">
+
+    <Frame IsVisible="{Binding ShowTranscriptTab}"
+           BorderColor="{AppThemeBinding Light=#E0E0E0, Dark=#333}" Padding="8" CornerRadius="4">
+        <CollectionView x:Name="TranscriptList"
+                        AutomationId="TranscriptList"
+                        ItemsSource="{Binding Entries}">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="models:TranscriptEntry">
+                    <VerticalStackLayout Padding="4,2">
+                        <Label Text="{Binding DisplayText}"
+                               FontSize="14"
+                               FontFamily="OpenSansRegular"
+                               TextColor="{Binding RoleColor}" />
+                        <Image Source="{Binding Image}"
+                               IsVisible="{Binding HasImage}"
+                               HeightRequest="200"
+                               Aspect="AspectFit"
+                               Margin="0,4" />
+                        <Label Text="{Binding ImageCaption}"
+                               IsVisible="{Binding HasImage}"
+                               FontSize="12"
+                               TextColor="Gray"
+                               FontAttributes="Italic" />
+                        <!-- Inline action buttons -->
+                        <HorizontalStackLayout IsVisible="{Binding HasActions}"
+                                               BindableLayout.ItemsSource="{Binding Actions}"
+                                               Spacing="8" Margin="0,4,0,0">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="models:ContentAction">
+                                    <Button Text="{Binding Label}"
+                                            Command="{Binding Command}"
+                                            FontSize="12"
+                                            HeightRequest="32"
+                                            Padding="8,0"
+                                            CornerRadius="4"
+                                            BackgroundColor="{AppThemeBinding Light=#E3F2FD, Dark=#1A3A5C}"
+                                            TextColor="{AppThemeBinding Light=#1565C0, Dark=#64B5F6}" />
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </HorizontalStackLayout>
+                    </VerticalStackLayout>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+    </Frame>
+
+</ContentView>

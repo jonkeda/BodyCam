@@ -5,6 +5,7 @@ using BodyCam.Services.Audio;
 using BodyCam.Services.Audio.WebRtcApm;
 using BodyCam.Services.Camera;
 using BodyCam.Services.Input;
+using BodyCam.Services.Barcode;
 using BodyCam.Services.QrCode;
 using BodyCam.Services.QrCode.Handlers;
 using BodyCam.Services.Vision;
@@ -93,8 +94,33 @@ public static class ServiceExtensions
 		services.AddSingleton<ITool, StartSceneWatchTool>();
 		services.AddSingleton<ITool, ScanQrCodeTool>();
 		services.AddSingleton<ITool, RecallLastScanTool>();
+		services.AddSingleton<ITool, LookupBarcodeTool>();
 		services.AddSingleton<ITool, LookTool>();
 		services.AddSingleton<ToolDispatcher>();
+
+		return services;
+	}
+
+	public static IServiceCollection AddBarcodeServices(this IServiceCollection services)
+	{
+		services.AddHttpClient<OpenFoodFactsClient>(client =>
+		{
+			client.DefaultRequestHeaders.UserAgent.ParseAdd("BodyCam/1.0");
+			client.Timeout = TimeSpan.FromSeconds(5);
+		});
+		services.AddHttpClient<UpcItemDbClient>(client =>
+		{
+			client.Timeout = TimeSpan.FromSeconds(5);
+		});
+		services.AddHttpClient<OpenGtinDbClient>(client =>
+		{
+			client.Timeout = TimeSpan.FromSeconds(5);
+		});
+
+		services.AddSingleton<IBarcodeApiClient>(sp => sp.GetRequiredService<OpenFoodFactsClient>());
+		services.AddSingleton<IBarcodeApiClient>(sp => sp.GetRequiredService<UpcItemDbClient>());
+		services.AddSingleton<IBarcodeApiClient>(sp => sp.GetRequiredService<OpenGtinDbClient>());
+		services.AddSingleton<IBarcodeLookupService, BarcodeLookupService>();
 
 		return services;
 	}
@@ -182,9 +208,9 @@ public static class ServiceExtensions
 		services.AddTransient<ViewModels.Settings.VoiceViewModel>();
 		services.AddTransient<ViewModels.Settings.DeviceViewModel>();
 		services.AddTransient<ViewModels.Settings.AdvancedViewModel>();
-		services.AddTransient<Pages.SetupPage>();
-		services.AddTransient<Pages.MainPage>();
-		services.AddTransient<Pages.SettingsPage>();
+		services.AddTransient<Pages.Setup.SetupPage>();
+		services.AddTransient<Pages.Main.MainPage>();
+		services.AddTransient<Pages.Settings.SettingsPage>();
 		services.AddTransient<Pages.Settings.ConnectionSettingsPage>();
 		services.AddTransient<Pages.Settings.VoiceSettingsPage>();
 		services.AddTransient<Pages.Settings.DeviceSettingsPage>();

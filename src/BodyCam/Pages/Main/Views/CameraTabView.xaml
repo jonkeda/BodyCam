@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:BodyCam.ViewModels"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             x:Class="BodyCam.Pages.Main.Views.CameraTabView"
+             x:DataType="vm:MainViewModel">
+
+    <Grid IsVisible="{Binding ShowCameraTab}">
+        <Label AutomationId="CameraPlaceholder"
+               Text="Camera initializing..."
+               HorizontalOptions="Center" VerticalOptions="Center"
+               TextColor="Gray" />
+        <toolkit:CameraView x:Name="CameraPreview" AutomationId="CameraPreview" />
+
+        <!-- Snapshot overlay -->
+        <Grid IsVisible="{Binding ShowSnapshot}"
+              BackgroundColor="#80000000"
+              Padding="16">
+            <Border StrokeShape="RoundRectangle 8"
+                    BackgroundColor="{AppThemeBinding Light=White, Dark=#2A2A2A}"
+                    Padding="8"
+                    VerticalOptions="Center"
+                    HorizontalOptions="Center"
+                    MaximumWidthRequest="400">
+                <VerticalStackLayout Spacing="8">
+                    <Image AutomationId="SnapshotImage"
+                           Source="{Binding SnapshotImage}"
+                           HeightRequest="300"
+                           Aspect="AspectFit" />
+                    <Label AutomationId="SnapshotCaption"
+                           Text="{Binding SnapshotCaption}"
+                           FontSize="14"
+                           HorizontalTextAlignment="Center" />
+                    <Button x:Name="DismissSnapshotButton" AutomationId="DismissSnapshotButton"
+                            Text="Dismiss"
+                            Command="{Binding DismissSnapshotCommand}"
+                            HorizontalOptions="Center"
+                            BackgroundColor="{AppThemeBinding Light=#E0E0E0, Dark=#333}" />
+                </VerticalStackLayout>
+            </Border>
+        </Grid>
+    </Grid>
+
+</ContentView>

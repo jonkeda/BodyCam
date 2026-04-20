@@ -78,6 +78,7 @@ public static class MauiProgram
 			.AddCameraServices()
 			.AddAgents()
 			.AddQrCodeServices()
+			.AddBarcodeServices()
 			.AddVisionPipeline()
 			.AddTools()
 			.AddOrchestration()

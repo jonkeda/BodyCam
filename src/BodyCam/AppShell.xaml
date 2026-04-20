@@ -4,7 +4,9 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:local="clr-namespace:BodyCam"
-    xmlns:pages="clr-namespace:BodyCam.Pages"
+    xmlns:mainPages="clr-namespace:BodyCam.Pages.Main"
+    xmlns:settingsPages="clr-namespace:BodyCam.Pages.Settings"
+    xmlns:setupPages="clr-namespace:BodyCam.Pages.Setup"
     Title="BodyCam">
 
     <Shell.TitleView>
@@ -28,21 +30,21 @@
             <ShellContent
                 AutomationId="SetupTab"
                 Title="Setup"
-                ContentTemplate="{DataTemplate pages:SetupPage}"
+                ContentTemplate="{DataTemplate setupPages:SetupPage}"
                 Route="SetupPage" />
         </Tab>
         <Tab>
             <ShellContent
                 AutomationId="HomeTab"
                 Title="Home"
-                ContentTemplate="{DataTemplate pages:MainPage}"
+                ContentTemplate="{DataTemplate mainPages:MainPage}"
                 Route="MainPage" />
         </Tab>
         <Tab>
             <ShellContent
                 AutomationId="SettingsTab"
                 Title="Settings"
-                ContentTemplate="{DataTemplate pages:SettingsPage}"
+                ContentTemplate="{DataTemplate settingsPages:SettingsPage}"
                 Route="SettingsPage" />
         </Tab>
     </TabBar>
