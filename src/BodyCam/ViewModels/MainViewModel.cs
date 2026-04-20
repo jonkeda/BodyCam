@@ -253,12 +253,16 @@ public class MainViewModel : ViewModelBase
                 OnPropertyChanged(nameof(StateColor));
                 OnPropertyChanged(nameof(StatusText));
                 OnPropertyChanged(nameof(CanAct));
-                OnPropertyChanged(nameof(SleepSegmentColor));
-                OnPropertyChanged(nameof(SleepSegmentTextColor));
-                OnPropertyChanged(nameof(ListenSegmentColor));
-                OnPropertyChanged(nameof(ListenSegmentTextColor));
-                OnPropertyChanged(nameof(ActiveSegmentColor));
-                OnPropertyChanged(nameof(ActiveSegmentTextColor));
+                OnPropertyChanged(nameof(SelectedStateText));
+                OnPropertyChanged(nameof(OffSegmentColor));
+                OnPropertyChanged(nameof(OffSegmentTextColor));
+                OnPropertyChanged(nameof(OnSegmentColor));
+                OnPropertyChanged(nameof(OnSegmentTextColor));
+                OnPropertyChanged(nameof(ListeningSegmentColor));
+                OnPropertyChanged(nameof(ListeningSegmentTextColor));
+                OnPropertyChanged(nameof(OffIcon));
+                OnPropertyChanged(nameof(OnIcon));
+                OnPropertyChanged(nameof(ListeningIcon));
             }
         }
     }
@@ -338,21 +342,33 @@ public class MainViewModel : ViewModelBase
         _ => Color.FromArgb("#666666")
     };
 
-    public Color SleepSegmentColor => CurrentLayer == ListeningLayer.Sleep ? ActiveBg : InactiveBg;
-    public Color ListenSegmentColor => CurrentLayer == ListeningLayer.WakeWord ? ActiveBg : InactiveBg;
-    public Color ActiveSegmentColor => CurrentLayer == ListeningLayer.ActiveSession ? ActiveBg : InactiveBg;
-    public Color SleepSegmentTextColor => CurrentLayer == ListeningLayer.Sleep ? ActiveTextColor : InactiveTextColor;
-    public Color ListenSegmentTextColor => CurrentLayer == ListeningLayer.WakeWord ? ActiveTextColor : InactiveTextColor;
-    public Color ActiveSegmentTextColor => CurrentLayer == ListeningLayer.ActiveSession ? ActiveTextColor : InactiveTextColor;
+    public Color OffSegmentColor => CurrentLayer == ListeningLayer.Sleep ? ActiveBg : InactiveBg;
+    public Color OnSegmentColor => CurrentLayer == ListeningLayer.WakeWord ? ActiveBg : InactiveBg;
+    public Color ListeningSegmentColor => CurrentLayer == ListeningLayer.ActiveSession ? ActiveBg : InactiveBg;
+    public Color OffSegmentTextColor => CurrentLayer == ListeningLayer.Sleep ? ActiveTextColor : InactiveTextColor;
+    public Color OnSegmentTextColor => CurrentLayer == ListeningLayer.WakeWord ? ActiveTextColor : InactiveTextColor;
+    public Color ListeningSegmentTextColor => CurrentLayer == ListeningLayer.ActiveSession ? ActiveTextColor : InactiveTextColor;
+
+    public string OffIcon => CurrentLayer == ListeningLayer.Sleep ? "mic_off_w.png" : "mic_off.png";
+    public string OnIcon => CurrentLayer == ListeningLayer.WakeWord ? "mic_on_w.png" : "mic_on.png";
+    public string ListeningIcon => CurrentLayer == ListeningLayer.ActiveSession ? "mic_active_w.png" : "mic_active.png";
+
+    public string SelectedStateText => CurrentLayer switch
+    {
+        ListeningLayer.Sleep => "Off",
+        ListeningLayer.WakeWord => "On",
+        ListeningLayer.ActiveSession => "Listening",
+        _ => "Off"
+    };
 
     private async Task ToggleAsync()
     {
         DebugVisible = _settingsService.DebugMode;
 
         if (IsRunning)
-            await SetLayerAsync("Sleep");
+            await SetLayerAsync("Off");
         else
-            await SetLayerAsync("Active");
+            await SetLayerAsync("Listening");
     }
 
     private async Task SetLayerAsync(string segment)
@@ -368,6 +384,10 @@ public class MainViewModel : ViewModelBase
         {
             var target = segment switch
             {
+                "Off" => ListeningLayer.Sleep,
+                "On" => ListeningLayer.WakeWord,
+                "Listening" => ListeningLayer.ActiveSession,
+                // Legacy support
                 "Sleep" => ListeningLayer.Sleep,
                 "Listen" => ListeningLayer.WakeWord,
                 "Active" => ListeningLayer.ActiveSession,

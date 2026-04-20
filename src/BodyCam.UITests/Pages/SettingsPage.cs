@@ -9,9 +9,6 @@ public class SettingsPage : PageObjectBase<SettingsPage>
     public override bool IsLoaded(int? timeoutMs = null)
         => ConnectionSettingsCard.WaitExists(true, timeoutMs);
 
-    // Shell navigation
-    public Button<SettingsPage> NavIcon => Button("NavIcon");
-
     // Category cards (Frame with TapGestureRecognizer — use Button wrapper for Click support)
     public Button<SettingsPage> ConnectionSettingsCard => Button("ConnectionSettingsCard");
     public Button<SettingsPage> VoiceSettingsCard => Button("VoiceSettingsCard");

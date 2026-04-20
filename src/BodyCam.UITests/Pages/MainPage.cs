@@ -13,10 +13,9 @@ public class MainPage : PageObjectBase<MainPage>
     public Button<MainPage> NavIcon => Button("NavIcon");
 
     // Status bar
-    public Button<MainPage> SleepButton => Button("SleepButton");
-    public Button<MainPage> ListenButton => Button("ListenButton");
-    public Button<MainPage> ActiveButton => Button("ActiveButton");
-    public Button<MainPage> DebugToggleButton => Button("DebugToggleButton");
+    public Button<MainPage> OffButton => Button("OffButton");
+    public Button<MainPage> OnButton => Button("OnButton");
+    public Button<MainPage> ListeningButton => Button("ListeningButton");
     public Button<MainPage> ClearButton => Button("ClearButton");
 
     // Tab switcher

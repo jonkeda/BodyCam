@@ -5,70 +5,56 @@
              x:Class="BodyCam.Pages.Main.Views.StatusBarView"
              x:DataType="vm:MainViewModel">
 
-    <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto" Padding="12,8"
+    <Grid ColumnDefinitions="Auto,Auto,*,Auto" Padding="12,8"
           BackgroundColor="{AppThemeBinding Light=#FAFAFA, Dark=#1A1A1A}">
 
-        <Ellipse AutomationId="StatusDot"
-                 WidthRequest="12" HeightRequest="12"
-                 Fill="{Binding StateColor}"
-                 VerticalOptions="Center" />
-
-        <Border Grid.Column="1" StrokeShape="RoundRectangle 16"
+        <Border StrokeShape="RoundRectangle 16"
                 Stroke="{AppThemeBinding Light=#E0E0E0, Dark=#333333}"
-                Padding="2" Margin="8,0"
+                Padding="2"
                 HorizontalOptions="Start"
                 HeightRequest="36">
             <Grid ColumnDefinitions="Auto,Auto,Auto" ColumnSpacing="0">
-                <Button AutomationId="SleepButton"
-                        Text="😴"
+                <Button AutomationId="OffButton"
                         Command="{Binding SetStateCommand}"
-                        CommandParameter="Sleep"
-                        BackgroundColor="{Binding SleepSegmentColor}"
-                        TextColor="{Binding SleepSegmentTextColor}"
+                        CommandParameter="Off"
+                        BackgroundColor="{Binding OffSegmentColor}"
+                        ImageSource="{Binding OffIcon}"
                         CornerRadius="14"
-                        HeightRequest="32" MinimumWidthRequest="56"
-                        FontSize="14" Padding="8,0" />
-                <Button Grid.Column="1" AutomationId="ListenButton"
-                        Text="👂"
+                        HeightRequest="32" MinimumWidthRequest="44"
+                        Padding="6,0" />
+                <Button Grid.Column="1" AutomationId="OnButton"
                         Command="{Binding SetStateCommand}"
-                        CommandParameter="Listen"
-                        BackgroundColor="{Binding ListenSegmentColor}"
-                        TextColor="{Binding ListenSegmentTextColor}"
+                        CommandParameter="On"
+                        BackgroundColor="{Binding OnSegmentColor}"
+                        ImageSource="{Binding OnIcon}"
                         CornerRadius="14"
-                        HeightRequest="32" MinimumWidthRequest="56"
-                        FontSize="14" Padding="8,0" />
-                <Button Grid.Column="2" AutomationId="ActiveButton"
-                        Text="💬"
+                        HeightRequest="32" MinimumWidthRequest="44"
+                        Padding="6,0" />
+                <Button Grid.Column="2" AutomationId="ListeningButton"
                         Command="{Binding SetStateCommand}"
-                        CommandParameter="Active"
-                        BackgroundColor="{Binding ActiveSegmentColor}"
-                        TextColor="{Binding ActiveSegmentTextColor}"
+                        CommandParameter="Listening"
+                        BackgroundColor="{Binding ListeningSegmentColor}"
+                        ImageSource="{Binding ListeningIcon}"
                         CornerRadius="14"
-                        HeightRequest="32" MinimumWidthRequest="56"
-                        FontSize="14" Padding="8,0" />
+                        HeightRequest="32" MinimumWidthRequest="44"
+                        Padding="6,0" />
             </Grid>
         </Border>
 
-        <ActivityIndicator AutomationId="BusyIndicator" Grid.Column="2"
-                           IsRunning="{Binding IsRunning}"
-                           IsVisible="{Binding IsRunning}"
-                           WidthRequest="20" HeightRequest="20"
-                           VerticalOptions="Center" Margin="4,0,0,0"
-                           Color="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource White}}" />
+        <Label Grid.Column="1" AutomationId="StateLabel"
+               Text="{Binding SelectedStateText}"
+               FontSize="13" FontAttributes="Bold"
+               VerticalOptions="Center" Margin="8,0,0,0"
+               TextColor="{AppThemeBinding Light=#333, Dark=#E0E0E0}" />
 
-        <Button Grid.Column="3" AutomationId="DebugToggleButton"
-                Text="🐛"
-                Command="{Binding ToggleDebugCommand}"
-                WidthRequest="40" HeightRequest="32"
-                FontSize="16" Padding="0"
-                BackgroundColor="Transparent" />
-
-        <Button Grid.Column="4" AutomationId="ClearButton"
-                Text="Clear"
+        <Button Grid.Column="3" AutomationId="ClearButton"
                 Command="{Binding ClearCommand}"
-                WidthRequest="60" HeightRequest="32"
-                FontSize="12"
-                BackgroundColor="{AppThemeBinding Light=#E0E0E0, Dark=#333}"
-                TextColor="{AppThemeBinding Light=#333, Dark=#E0E0E0}" />
+                WidthRequest="40" HeightRequest="32"
+                Padding="0"
+                BackgroundColor="Transparent">
+            <Button.ImageSource>
+                <FileImageSource File="trash.png" />
+            </Button.ImageSource>
+        </Button>
     </Grid>
 </ContentView>

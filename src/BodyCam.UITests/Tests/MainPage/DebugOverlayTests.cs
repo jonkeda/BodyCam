@@ -17,15 +17,6 @@ public class DebugOverlayTests
     }
 
     [Fact]
-    public void DebugToggleButton_Click_TogglesDebugOverlay()
-    {
-        // Click debug toggle to show overlay
-        Page.DebugToggleButton.Click();
-        // Click again to hide
-        Page.DebugToggleButton.Click();
-    }
-
-    [Fact]
     public void ClearButton_Click_DoesNotThrow()
     {
         Page.ClearButton.Click();

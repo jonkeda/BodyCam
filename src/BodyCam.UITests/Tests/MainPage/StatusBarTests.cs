@@ -17,48 +17,42 @@ public class StatusBarTests
     }
 
     [Fact]
-    public void SleepButton_Exists()
+    public void OffButton_Exists()
     {
-        Page.SleepButton.AssertExists();
+        Page.OffButton.AssertExists();
     }
 
     [Fact]
-    public void ListenButton_Exists()
+    public void OnButton_Exists()
     {
-        Page.ListenButton.AssertExists();
+        Page.OnButton.AssertExists();
     }
 
     [Fact]
-    public void ActiveButton_Exists()
+    public void ListeningButton_Exists()
     {
-        Page.ActiveButton.AssertExists();
+        Page.ListeningButton.AssertExists();
     }
 
     [Fact]
-    public void SleepButton_IsClickable()
+    public void OffButton_IsClickable()
     {
-        Page.SleepButton.AssertVisible(true);
-        Page.SleepButton.AssertEnabled(true);
+        Page.OffButton.AssertVisible(true);
+        Page.OffButton.AssertEnabled(true);
     }
 
     [Fact]
-    public void ListenButton_IsClickable()
+    public void OnButton_IsClickable()
     {
-        Page.ListenButton.AssertVisible(true);
-        Page.ListenButton.AssertEnabled(true);
+        Page.OnButton.AssertVisible(true);
+        Page.OnButton.AssertEnabled(true);
     }
 
     [Fact]
-    public void ActiveButton_IsClickable()
+    public void ListeningButton_IsClickable()
     {
-        Page.ActiveButton.AssertVisible(true);
-        Page.ActiveButton.AssertEnabled(true);
-    }
-
-    [Fact]
-    public void DebugToggleButton_Exists()
-    {
-        Page.DebugToggleButton.AssertExists();
+        Page.ListeningButton.AssertVisible(true);
+        Page.ListeningButton.AssertEnabled(true);
     }
 
     [Fact]

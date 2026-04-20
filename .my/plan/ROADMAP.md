@@ -142,6 +142,7 @@ All milestones sorted by number. Each task corresponds to one phase from the mil
 - [x] Phase 1 — API Clients & Lookup Service
 - [x] Phase 2 — Lookup Tool & DI Registration
 - [x] Phase 3 — Unit Tests
+- [ ] Phase 4 — Real API Integration Tests
 
 ### M21 — Accessibility Improvements
 
@@ -197,6 +198,20 @@ All milestones sorted by number. Each task corresponds to one phase from the mil
 
 - [x] Settings hub + sub-pages (Connection, Voice, Device, Advanced)
 - [x] Shell push navigation + UITest page objects
+
+### M29 — UI Navigation
+
+**Plan:** [m29-ui-navigation/](m29-ui-navigation/)
+
+- [x] Phase 1 — Shell Navigation Refactor (remove TabBar, push-based nav)
+- [x] Phase 2 — UI Test Navigation Updates
+- [x] Phase 3 — Settings Page Header Icon
+
+### M31 — State Redesign
+
+**Plan:** [m31-state-redesign/](m31-state-redesign/)
+
+- [x] Phase 1 — Status bar redesign (icons, rename, cleanup)
 
 ### M28 — UI Frames Refactoring
 

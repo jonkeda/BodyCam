@@ -16,6 +16,6 @@ public partial class SetupPage : ContentPage
 		if (sender is SetupViewModel vm)
 			vm.SetupFinished -= OnSetupFinished;
 
-		await Shell.Current.GoToAsync("//MainPage");
+		await Shell.Current.GoToAsync("..");
 	}
 }

@@ -5,7 +5,15 @@
              xmlns:views="clr-namespace:BodyCam.Views"
              x:Class="BodyCam.Pages.Settings.SettingsPage"
              x:DataType="vm:SettingsViewModel"
-             Title="{Binding Title}">
+             Title="Settings">
+
+    <Shell.TitleView>
+        <HorizontalStackLayout VerticalOptions="Center" Spacing="6" Padding="4,0">
+            <Label Text="⚙" FontSize="20" VerticalOptions="Center" />
+            <Label Text="Settings" FontSize="20" FontAttributes="Bold"
+                   VerticalOptions="Center" />
+        </HorizontalStackLayout>
+    </Shell.TitleView>
 
     <ScrollView>
         <VerticalStackLayout Padding="16" Spacing="12">

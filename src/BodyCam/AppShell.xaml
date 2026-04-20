@@ -5,8 +5,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:local="clr-namespace:BodyCam"
     xmlns:mainPages="clr-namespace:BodyCam.Pages.Main"
-    xmlns:settingsPages="clr-namespace:BodyCam.Pages.Settings"
-    xmlns:setupPages="clr-namespace:BodyCam.Pages.Setup"
+    FlyoutBehavior="Disabled"
     Title="BodyCam">
 
     <Shell.TitleView>
@@ -25,28 +24,10 @@
         </Grid>
     </Shell.TitleView>
 
-    <TabBar>
-        <Tab>
-            <ShellContent
-                AutomationId="SetupTab"
-                Title="Setup"
-                ContentTemplate="{DataTemplate setupPages:SetupPage}"
-                Route="SetupPage" />
-        </Tab>
-        <Tab>
-            <ShellContent
-                AutomationId="HomeTab"
-                Title="Home"
-                ContentTemplate="{DataTemplate mainPages:MainPage}"
-                Route="MainPage" />
-        </Tab>
-        <Tab>
-            <ShellContent
-                AutomationId="SettingsTab"
-                Title="Settings"
-                ContentTemplate="{DataTemplate settingsPages:SettingsPage}"
-                Route="SettingsPage" />
-        </Tab>
-    </TabBar>
+    <ShellContent
+        AutomationId="HomeTab"
+        Title="Home"
+        ContentTemplate="{DataTemplate mainPages:MainPage}"
+        Route="MainPage" />
 
 </Shell>

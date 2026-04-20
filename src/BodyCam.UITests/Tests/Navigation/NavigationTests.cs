@@ -5,11 +5,11 @@ namespace BodyCam.UITests.Tests.Navigation;
 [Collection("BodyCam")]
 [Trait("Category", "UITest")]
 [Trait("Feature", "Navigation")]
-public class TabNavigationTests
+public class NavigationTests
 {
     private readonly BodyCamFixture _fixture;
 
-    public TabNavigationTests(BodyCamFixture fixture)
+    public NavigationTests(BodyCamFixture fixture)
     {
         _fixture = fixture;
     }
@@ -22,7 +22,7 @@ public class TabNavigationTests
     }
 
     [Fact]
-    public void NavigateToHome_ShowsMainPage()
+    public void NavigateBackFromSettings_ShowsMainPage()
     {
         _fixture.NavigateToSettings();
         _fixture.NavigateToHome();
@@ -30,7 +30,7 @@ public class TabNavigationTests
     }
 
     [Fact]
-    public void TabSwitching_RoundTrip_AllPagesLoad()
+    public void Navigation_RoundTrip_AllPagesLoad()
     {
         _fixture.NavigateToHome();
         Assert.True(_fixture.MainPage.IsLoaded());

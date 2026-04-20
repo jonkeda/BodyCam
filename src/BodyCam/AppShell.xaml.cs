@@ -2,7 +2,6 @@
 
 public partial class AppShell : Shell
 {
-	private bool _onSettings;
 	private bool _checkedSetup;
 
 	public AppShell()
@@ -10,6 +9,8 @@ public partial class AppShell : Shell
 		InitializeComponent();
 		Navigated += OnShellNavigated;
 
+		Routing.RegisterRoute(nameof(Pages.Setup.SetupPage), typeof(Pages.Setup.SetupPage));
+		Routing.RegisterRoute(nameof(Pages.Settings.SettingsPage), typeof(Pages.Settings.SettingsPage));
 		Routing.RegisterRoute(nameof(Pages.Settings.ConnectionSettingsPage), typeof(Pages.Settings.ConnectionSettingsPage));
 		Routing.RegisterRoute(nameof(Pages.Settings.VoiceSettingsPage), typeof(Pages.Settings.VoiceSettingsPage));
 		Routing.RegisterRoute(nameof(Pages.Settings.DeviceSettingsPage), typeof(Pages.Settings.DeviceSettingsPage));
@@ -26,8 +27,11 @@ public partial class AppShell : Shell
 	private async void OnShellNavigated(object? sender, ShellNavigatedEventArgs e)
 	{
 		var loc = e.Current?.Location?.OriginalString ?? "";
-		_onSettings = loc.Contains("SettingsPage");
-		NavIcon.Text = _onSettings ? "✕" : "⚙";
+
+		// Show ⚙ only on MainPage root; pushed pages use Shell back arrow
+		// Root: "//MainPage", pushed: "//MainPage/SettingsPage"
+		var segments = loc.Trim('/').Split('/');
+		NavIcon.IsVisible = segments.Length <= 1;
 
 		if (!_checkedSetup)
 		{
@@ -35,22 +39,15 @@ public partial class AppShell : Shell
 			var settings = Handler?.MauiContext?.Services.GetService<Services.ISettingsService>();
 			if (settings is not null && !settings.SetupCompleted)
 			{
-				// Defer to avoid "Pending Navigations still processing" during Shell init
-				Dispatcher.Dispatch(async () => await GoToAsync("//SetupPage"));
+				Dispatcher.Dispatch(async () =>
+					await GoToAsync(nameof(Pages.Setup.SetupPage)));
 				return;
-			}
-			if (loc.Contains("SetupPage"))
-			{
-				Dispatcher.Dispatch(async () => await GoToAsync("//MainPage"));
 			}
 		}
 	}
 
 	private async void OnNavIconTapped(object? sender, EventArgs e)
 	{
-		if (_onSettings)
-			await Current.GoToAsync("//MainPage");
-		else
-			await Current.GoToAsync("//SettingsPage");
+		await Current.GoToAsync(nameof(Pages.Settings.SettingsPage));
 	}
 }
