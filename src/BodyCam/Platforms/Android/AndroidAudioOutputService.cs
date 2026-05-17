@@ -63,6 +63,12 @@ public class AndroidAudioOutputService : IAudioOutputService, IDisposable
         _audioTrack?.Flush();
     }
 
+    public Task FadeOutAndClearAsync(int fadeMs = 30, CancellationToken ct = default)
+    {
+        ClearBuffer();
+        return Task.CompletedTask;
+    }
+
     public void Dispose()
     {
         _audioTrack?.Stop();

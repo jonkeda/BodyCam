@@ -66,3 +66,52 @@ dotnet test src/BodyCam.RealTests --filter "FullyQualifiedName~ToolRegistrationT
 - Use `FluentAssertions` for assertions (`result.Should().Be(...)`)
 - Mock interfaces with `NSubstitute` or manual fakes
 - Real tests are filtered by class name to avoid running the full suite
+
+## Real Hardware Tests
+
+Some tests require physical hardware and are gated by environment variables:
+
+### HeyCyan Glasses Latency Benchmarks
+
+Located in `BodyCam.RealTests/HeyCyanCameraLatencyTests.cs`. These tests measure camera capture latency on real HeyCyan smart glasses.
+
+**Requirements:**
+- HeyCyan glasses paired and powered on
+- Android device or emulator with glasses connected
+- `BODYCAM_REAL_HEYCYAN=1` environment variable
+- `BODYCAM_REAL_HEYCYAN_MAC=XX:XX:XX:XX:XX:XX` environment variable
+
+**Running:**
+
+```powershell
+# PowerShell script (sets environment variables automatically)
+.\src\BodyCam.RealTests\run-heycyan-latency.ps1 -Mac "A1:B2:C3:D4:E5:F6"
+
+# Or manually
+$env:BODYCAM_REAL_HEYCYAN = '1'
+$env:BODYCAM_REAL_HEYCYAN_MAC = 'A1:B2:C3:D4:E5:F6'
+dotnet test src\BodyCam.RealTests --filter "FullyQualifiedName~HeyCyanCameraLatencyTests"
+```
+
+**Tests:**
+- `CaptureFrameAsync_ColdLatency_IsUnderSixSeconds` — Cold capture (after idle) must complete in ≤ 6s
+- `CaptureFrameAsync_WarmLatency_IsUnderTwoSeconds` — Warm capture (within 8s window) must complete in ≤ 2s
+- `CaptureFrameAsync_LatencyDistribution_RecordedToCsv` — Runs 10 cold + 10 warm captures, writes percentiles to `TestResults/heycyan-latency.csv`
+
+**CI Configuration:**
+
+When CI workflows are added, real hardware tests must be excluded from the default test run:
+
+```yaml
+# Example .github/workflows/test.yml
+- name: Run unit tests
+  run: dotnet test src/BodyCam.Tests --filter "Category!=RealHardware"
+
+- name: Run integration tests
+  run: dotnet test src/BodyCam.IntegrationTests --filter "Category!=RealHardware"
+
+# Real tests skipped — they require hardware
+```
+
+A separate manual-dispatch workflow can be added for real hardware tests when needed.
+

@@ -53,9 +53,28 @@ public class AppSettings
     public string AzureApiVersion { get; set; } = "2025-04-01-preview";
 
     // Audio
-    public int SampleRate { get; set; } = 24000;
+    public int InternalSampleRate { get; set; } = 48000; // Internal pipeline rate (native mic/speaker)
+    public int ApiSampleRate { get; set; } = 24000;      // OpenAI Realtime API rate
+    public int SampleRate => InternalSampleRate;          // Back-compat shim
     public int ChunkDurationMs { get; set; } = 50;
     public bool AecEnabled { get; set; } = true;
+    public bool EnableJitterBuffer { get; set; } = true;
+    public bool IosUsePlatformAecOnly { get; set; } = true; // Use iOS VoiceProcessingIO instead of WebRTC APM
+    public bool WindowsUseVoiceCaptureDmo { get; set; } = false; // Opt-in fallback to Windows DMO AEC
+
+    // AGC tuning (Phase 5.1)
+    public int AgcTargetLevelDbfs { get; set; } = -9;   // Target level in dB below full scale (-9 prevents clipping)
+    public int AgcCompressionGainDb { get; set; } = 6;  // Compression gain in dB (6 reduces pumping artifacts)
+
+    // Noise suppression (Phase 5.2)
+    public int NoiseSuppressionLevel { get; set; } = 1; // 0=Off, 1=Moderate, 2=High, 3=VeryHigh (1 avoids musical noise)
+
+    // Mic ducking (Phase 5.3)
+    public bool PauseMicWhilePlaying { get; set; } = false; // When true, mute mic during AI speech (kills barge-in)
+
+    // Observability (Phase 6)
+    public bool DisableAec { get; set; } = false; // When true, bypass AEC entirely (for A/B testing)
+    public bool DebugMode { get; set; } = false;  // When true, show debug overlay and enable WAV capture
 
     // Microphone coordination
     public int MicReleaseDelayMs { get; set; } = 50;

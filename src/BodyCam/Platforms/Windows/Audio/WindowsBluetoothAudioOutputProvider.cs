@@ -18,14 +18,16 @@ public class WindowsBluetoothAudioOutputProvider : IAudioOutputProvider, IDispos
     public string ProviderId { get; }
     public bool IsAvailable => _mmDevice.State == DeviceState.Active;
     public bool IsPlaying { get; private set; }
+    public int EstimatedOutputLatencyMs => 200; // Typical BT latency
 
     public event EventHandler? Disconnected;
+    public event EventHandler? OutputRouteChanged;
 
-    public WindowsBluetoothAudioOutputProvider(MMDevice device)
+    public WindowsBluetoothAudioOutputProvider(MMDevice device, string mac)
     {
         _mmDevice = device;
         DisplayName = $"BT: {device.FriendlyName}";
-        ProviderId = $"bt-out:{device.ID}";
+        ProviderId = $"bt:{mac}";
     }
 
     public Task StartAsync(int sampleRate, CancellationToken ct = default)
@@ -75,6 +77,12 @@ public class WindowsBluetoothAudioOutputProvider : IAudioOutputProvider, IDispos
     }
 
     public void ClearBuffer() => _buffer?.ClearBuffer();
+
+    public Task FadeOutAndClearAsync(int fadeMs = 30, CancellationToken ct = default)
+    {
+        ClearBuffer();
+        return Task.CompletedTask;
+    }
 
     private void OnPlaybackStopped(object? sender, StoppedEventArgs e)
     {

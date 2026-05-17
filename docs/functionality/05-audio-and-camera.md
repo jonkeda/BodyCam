@@ -264,3 +264,53 @@ When the orchestrator needs a camera frame (for tools):
 - Camera preview starts when entering Active session (`SetLayerAsync → Active`)
 - Camera preview stops when leaving Active session
 - Camera preview stops when switching to Transcript tab (if not in Active session)
+
+### Camera Latency Measurements
+
+Camera capture latency varies significantly by provider type:
+
+| Provider | Cold Latency (p95) | Warm Latency (p95) | Notes |
+|----------|-------------------|-------------------|-------|
+| **Phone Camera** | < 50 ms | < 50 ms | Near-instant capture from native camera APIs |
+| **HeyCyan Glasses** | ≤ 6,000 ms | ≤ 2,000 ms | File-based snapshot over WiFi-Direct |
+
+#### HeyCyan Glasses Camera
+
+The HeyCyan smart glasses implement a **file-based snapshot** capture flow, not a live camera stream:
+
+**Cold Capture Flow (first frame after idle):**
+1. Send BLE photo command (`TakePhotoAsync`) — ~200ms round-trip
+2. Glasses capture and save JPEG to internal storage — ~300ms
+3. Enter WiFi-Direct transfer mode (`EnterTransferModeAsync`):
+   - Send BLE transfer mode command — ~200ms
+   - Wait for glasses to open WiFi hotspot — ~1,500ms
+   - Phone joins P2P group and binds network — ~1,000ms
+4. HTTP `GET /files/media.config` — ~300ms
+5. HTTP `GET /files/<filename>.jpg` — ~500ms–1,000ms depending on resolution
+6. **Total: ~4–6 seconds** (p95: ≤ 6,000ms)
+
+**Warm Capture Flow (within 8s idle window):**
+1. Send BLE photo command — ~200ms
+2. Glasses capture and save JPEG — ~300ms
+3. Transfer mode already active (group formed, no reconnect needed)
+4. HTTP `GET /files/media.config` — ~150ms
+5. HTTP `GET /files/<filename>.jpg` — ~200–500ms
+6. **Total: ~700ms–1,500ms** (p95: ≤ 2,000ms)
+
+**Optimization:** The `HeyCyanMediaTransfer` component keeps the WiFi-Direct session "warm" across consecutive captures with an 8-second idle timeout. This amortizes the expensive group formation cost (~2–3s) over multiple frames.
+
+**Testing:** Real-hardware latency benchmarks are captured in `BodyCam.RealTests/HeyCyanCameraLatencyTests.cs`. Run via:
+```powershell
+.\src\BodyCam.RealTests\run-heycyan-latency.ps1 -Mac "XX:XX:XX:XX:XX:XX"
+```
+Results are written to `TestResults/heycyan-latency.csv` with p50/p95 percentiles. These tests require:
+- HeyCyan glasses paired and powered on
+- `BODYCAM_REAL_HEYCYAN=1` environment variable
+- `BODYCAM_REAL_HEYCYAN_MAC` environment variable with the glasses MAC address
+
+**Architectural Notes:**
+- The glasses are **not an RTSP/MJPEG live camera** — every frame is a discrete BLE-triggered file transfer
+- Video/audio recording uses the same BLE command flow but retrieves `.mp4` / `.opus` files post-hoc
+- WiFi-Direct group formation is the dominant cost (requires Android `bindProcessToNetwork` for correct routing on Samsung devices)
+- Cleartext HTTP is required (`192.168.49.0/24` range) — see `network_security_config.xml`
+

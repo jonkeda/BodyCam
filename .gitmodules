@@ -1,3 +1,6 @@
 [submodule "Brinell"]
 	path = Brinell
 	url = https://github.com/jonkeda/Brinell.git
+[submodule "Alternative-HeyCyan-App-and-SDK"]
+	path = Alternative-HeyCyan-App-and-SDK
+	url = https://github.com/FerSaiyan/Alternative-HeyCyan-App-and-SDK.git

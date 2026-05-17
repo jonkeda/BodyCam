@@ -12,8 +12,10 @@ public class TestSpeakerProvider : IAudioOutputProvider
     public bool IsAvailable => true;
     public bool IsPlaying { get; private set; }
     public int SampleRate { get; private set; }
+    public int EstimatedOutputLatencyMs => 50;
 
     public event EventHandler? Disconnected;
+    public event EventHandler? OutputRouteChanged;
 
     public IReadOnlyList<byte[]> CapturedChunks { get { lock (_lock) return _chunks.ToList(); } }
     public int TotalBytesPlayed { get { lock (_lock) return _chunks.Sum(c => c.Length); } }
@@ -47,6 +49,12 @@ public class TestSpeakerProvider : IAudioOutputProvider
     public void ClearBuffer()
     {
         lock (_lock) _chunks.Clear();
+    }
+
+    public Task FadeOutAndClearAsync(int fadeMs = 30, CancellationToken ct = default)
+    {
+        ClearBuffer();
+        return Task.CompletedTask;
     }
 
     public void SimulateDisconnect()

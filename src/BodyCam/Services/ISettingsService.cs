@@ -48,6 +48,9 @@ public interface ISettingsService
     string? SentryDsn { get; set; }
     bool SendUsageData { get; set; }
 
+    // HeyCyan Glasses
+    bool FeedVoiceNotesToDictation { get; set; }
+
     // Setup
     bool SetupCompleted { get; set; }
 }

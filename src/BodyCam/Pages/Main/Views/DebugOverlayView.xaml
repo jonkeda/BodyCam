@@ -9,14 +9,24 @@
           VerticalOptions="End"
           MaximumHeightRequest="250"
           BackgroundColor="{AppThemeBinding Light=#F5F5F5CC, Dark=#1A1A1ACC}">
-        <Frame Padding="8" CornerRadius="8">
-            <ScrollView AutomationId="DebugScroll">
-                <Label AutomationId="DebugLabel"
-                       Text="{Binding DebugLog}"
-                       FontSize="11"
-                       FontFamily="OpenSansRegular"
-                       TextColor="Gray" />
-            </ScrollView>
-        </Frame>
+        <VerticalStackLayout Spacing="4" Padding="8">
+            <!-- Phase 6.1: AEC metrics overlay -->
+            <Label x:Name="AecDebugLabel"
+                   Text="{Binding AecDebugText}"
+                   FontFamily="Consolas" FontSize="10"
+                   BackgroundColor="#80000000" TextColor="Lime"
+                   Padding="6,2"
+                   IsVisible="{Binding DebugVisible}" />
+
+            <Frame Padding="8" CornerRadius="8">
+                <ScrollView AutomationId="DebugScroll">
+                    <Label AutomationId="DebugLabel"
+                           Text="{Binding DebugLog}"
+                           FontSize="11"
+                           FontFamily="OpenSansRegular"
+                           TextColor="Gray" />
+                </ScrollView>
+            </Frame>
+        </VerticalStackLayout>
     </Grid>
 </ContentView>

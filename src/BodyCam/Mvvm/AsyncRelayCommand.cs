@@ -52,5 +52,11 @@ public class AsyncRelayCommand : ICommand
         }
     }
 
-    public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+    public void RaiseCanExecuteChanged()
+    {
+        if (MainThread.IsMainThread)
+            CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+        else
+            MainThread.BeginInvokeOnMainThread(() => CanExecuteChanged?.Invoke(this, EventArgs.Empty));
+    }
 }

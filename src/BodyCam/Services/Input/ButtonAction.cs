@@ -7,6 +7,8 @@ public enum ButtonAction
     Read,
     Find,
     ToggleSession,
+    ToggleConversation,
+    EndSession,
     Photo,
     ToggleSleepActive,
     PushToTalk,

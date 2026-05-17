@@ -24,7 +24,7 @@ All milestones sorted by number. Each task corresponds to one phase from the mil
 
 **Plan:** [m5-smart-features/](m5-smart-features/)
 
-- [x] Phase 1 — Porcupine Engine Integration
+- [ ] Phase 1 — Porcupine Engine Integration
 - [ ] Phase 2 — Quick Action & Session Flow
 - [ ] Phase 3 — Android & Cross-Platform
 - [ ] Phase 4 — iOS Platform Support
@@ -103,7 +103,6 @@ All milestones sorted by number. Each task corresponds to one phase from the mil
 - [ ] Phase 1 — Core Dictation Pipeline
 - [ ] Phase 2 — AI Cleanup & Formatting
 - [ ] Phase 3 — Android & Command Mode
-- [ ] Phase 4 — iOS Platform Support
 
 ### M17 — Glasses Integration
 
@@ -112,7 +111,6 @@ All milestones sorted by number. Each task corresponds to one phase from the mil
 - [ ] Phase 1 — Hardware Investigation & BT Audio
 - [ ] Phase 2 — Buttons & Camera
 - [ ] Phase 3 — Connection UI & Auto-Fallback
-- [ ] Phase 4 — iOS Platform Support
 
 ### M18 — QR Code & Barcode Scanning
 
@@ -122,7 +120,7 @@ All milestones sorted by number. Each task corresponds to one phase from the mil
 - [x] Phase 2 — Scan UI
 - [x] Phase 3 — Barcode Support + History
 - [x] Phase 4 — Content-Aware Actions
-- [ ] Phase 5 — iOS Platform Support
+- [ ] Phase 5 — Post-Scan UI & Voice Actions
 - [x] Phase 6 — Vision Pipeline
 
 ### M19 — Logging, Crash Reporting & Analytics
@@ -153,6 +151,7 @@ All milestones sorted by number. Each task corresponds to one phase from the mil
 - [ ] Phase 3 — Dynamic Type & Text Scaling
 - [ ] Phase 4 — Color Contrast & High Contrast
 - [ ] Phase 5 — Reduced Motion & Audio Cues
+- [ ] Phase 6 — iOS Platform Support
 
 ### M22 — Multilanguage Support
 
@@ -199,20 +198,6 @@ All milestones sorted by number. Each task corresponds to one phase from the mil
 - [x] Settings hub + sub-pages (Connection, Voice, Device, Advanced)
 - [x] Shell push navigation + UITest page objects
 
-### M29 — UI Navigation
-
-**Plan:** [m29-ui-navigation/](m29-ui-navigation/)
-
-- [x] Phase 1 — Shell Navigation Refactor (remove TabBar, push-based nav)
-- [x] Phase 2 — UI Test Navigation Updates
-- [x] Phase 3 — Settings Page Header Icon
-
-### M31 — State Redesign
-
-**Plan:** [m31-state-redesign/](m31-state-redesign/)
-
-- [x] Phase 1 — Status bar redesign (icons, rename, cleanup)
-
 ### M28 — UI Frames Refactoring
 
 **Plan:** [m28-ui-frames/](m28-ui-frames/)
@@ -223,6 +208,14 @@ All milestones sorted by number. Each task corresponds to one phase from the mil
 - [x] Wave 4 — Extract ContentViews
 - [x] Wave 5 — Settings Card Template
 - [x] Wave 6 — Test Coverage
+
+### M29 — UI Navigation
+
+**Plan:** [m29-ui-navigation/](m29-ui-navigation/)
+
+- [x] Phase 1 — Shell Navigation Refactor (remove TabBar, push-based nav)
+- [x] Phase 2 — UI Test Navigation Updates
+- [x] Phase 3 — Settings Page Header Icon
 
 ### M30 — Polish & Optimization
 
@@ -236,6 +229,44 @@ All milestones sorted by number. Each task corresponds to one phase from the mil
 - [ ] Phase 6 — Cost Tracking
 - [ ] Phase 7 — iOS Platform Polish
 
+### M31 — State Redesign
+
+**Plan:** [m31-state-redesign/](m31-state-redesign/)
+
+- [x] Phase 1 — Status bar redesign (icons, rename, cleanup)
+
+### M33 — HeyCyan Glasses SDK Integration
+
+**Plan:** [m33-heycyan-sdk/](m33-heycyan-sdk/)
+
+- [x] Phase 1 — Android AAR Binding & Core Session
+- [x] Phase 2 — Camera Provider (file-based snapshot via WiFi-Direct + HTTP)
+- [x] Phase 3 — BT Audio Providers (live A2DP/HFP routing)
+- [x] Phase 4 — Button Provider (notify-frame pre-recognized gestures)
+- [x] Phase 5 — Recorded Media Pipeline (OPUS / MP4 / JPG, optional M16 hook)
+- [x] Phase 6 — iOS QCSDK.framework Binding
+- [x] Phase 7 — `GlassesDeviceManager` Wiring & Connection UI
+
+### M34 — Audio Quality & Anti-Echo Improvements
+
+**Plan:** [m34-audio-quality/](m34-audio-quality/)
+
+- [ ] Phase 1 — Correctness Fixes
+- [ ] Phase 2 — Resampling
+- [ ] Phase 3 — Threading & Latency
+- [ ] Phase 4 — Platform Coverage
+- [ ] Phase 5 — Voice Quality Polish
+- [ ] Phase 6 — Observability
+
+### M35 — .NET 10 Update
+
+**Plan:** [m35-dotnet10-update/](m35-dotnet10-update/)
+
+- [ ] Phase 1 — Pin SDK with `global.json`
+- [ ] Phase 2 — Fix CS0618 Obsolete MAUI API Warnings
+- [ ] Phase 3 — NuGet Package Update
+- [ ] Phase 4 — Verify Build & Workload Notes
+
 ---
 
 ## Superseded
@@ -247,3 +278,7 @@ Split into M11 (Camera), M12 (Audio In), M13 (Audio Out), M14 (Buttons), M17 (Gl
 ### ~~M6 — Polish & Optimization~~
 
 Renamed to M30.
+
+### ~~M32 — Voice Quality~~
+
+Scope folded into M34.

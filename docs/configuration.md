@@ -75,6 +75,10 @@ When provider is `azure`:
 - `ShowTokenCounts` — display token usage
 - `ShowCostEstimate` — display cost tracking
 
+### HeyCyan Glasses
+
+- `FeedVoiceNotesToDictation` — (default: `false`) When enabled, imported `.opus` voice notes from HeyCyan glasses are automatically registered with the M16 dictation pipeline for post-hoc transcription. **Opt-in only.** If M16 is not present, this setting is ignored. Requires a restart to take effect.
+
 ### Tool Settings
 
 Each tool that implements `IToolSettings` exposes configurable parameters (e.g., `FindObjectTool` scan interval and timeout). These appear as per-tool sections on the Settings page.

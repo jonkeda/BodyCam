@@ -1,6 +1,7 @@
 using BodyCam.Services;
 using BodyCam.Services.Audio;
 using FluentAssertions;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 
 namespace BodyCam.Tests.Services;
@@ -11,7 +12,7 @@ public class AudioOutputManagerHotPlugTests
     private readonly AppSettings _appSettings = new();
 
     private AudioOutputManager CreateManager(params IAudioOutputProvider[] providers)
-        => new(providers, _settings, _appSettings);
+        => new(providers, _settings, _appSettings, NullLogger<AudioOutputManager>.Instance);
 
     [Fact]
     public void RegisterProvider_AddsToList()

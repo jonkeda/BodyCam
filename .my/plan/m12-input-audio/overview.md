@@ -8,6 +8,13 @@ at a time and automatic fallback.
 **Depends on:** M11 (Camera Architecture) for the provider pattern. M4 retains BT
 button mapping; M12 absorbs BT/WiFi audio routing from M4.
 
+**Related:** [M33 — HeyCyan Glasses SDK Integration](../m33-heycyan-sdk/overview.md)
+supplies `HeyCyanAudioInputProvider` (Phase 3) — a thin auto-routing wrapper over
+the generic `BluetoothAudioInputProvider` that selects the BT-classic A2DP/HFP
+input exposed by HeyCyan glasses when QCSDK reports them connected. The HeyCyan
+recorded-`.opus` flow is post-hoc (M33 Phase 5 / M16) and is **not** a live
+`IAudioInputProvider`.
+
 ---
 
 ## Why This Matters

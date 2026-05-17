@@ -3,6 +3,19 @@ using System.Runtime.InteropServices;
 namespace BodyCam.Services.Audio.WebRtcApm;
 
 /// <summary>
+/// Phase 6.1: AEC statistics reported by WebRTC APM.
+/// </summary>
+[StructLayout(LayoutKind.Sequential)]
+public struct ApmStatistics
+{
+    public float EchoReturnLossDb;
+    public float EchoReturnLossEnhancementDb;
+    public int DelayMs;
+    public float ResidualEchoLikelihood;        // 0..1
+    public float DivergentFilterFraction;       // 0..1
+}
+
+/// <summary>
 /// Minimal P/Invoke wrapper for the WebRTC Audio Processing Module native library.
 /// Only includes functions needed for AEC, noise suppression, and gain control.
 /// Native binaries sourced from SoundFlow.Extensions.WebRtc.Apm v1.4.0 (MIT + BSD-3-Clause).
@@ -83,4 +96,9 @@ internal static class WebRtcApmInterop
 
     [DllImport(Lib, EntryPoint = "webrtc_apm_get_frame_size", CallingConvention = CallingConvention.Cdecl)]
     public static extern nuint GetFrameSize(int sampleRateHz);
+
+    // ── Statistics ─────────────────────────────────────────────────────
+
+    [DllImport(Lib, EntryPoint = "webrtc_apm_get_statistics", CallingConvention = CallingConvention.Cdecl)]
+    public static extern int GetStatistics(IntPtr apm, out ApmStatistics statistics);
 }

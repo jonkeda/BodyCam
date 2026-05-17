@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using BodyCam.Services.Audio;
 using NAudio.CoreAudioApi;
 using NAudio.CoreAudioApi.Interfaces;
@@ -13,6 +14,7 @@ public sealed class WindowsBluetoothOutputEnumerator : IDisposable
     private readonly AudioOutputManager _manager;
     private readonly MMDeviceEnumerator _enumerator;
     private DeviceNotificationClient? _notificationClient;
+    private readonly ConcurrentDictionary<string, string> _deviceIdToProviderId = new();
 
     public WindowsBluetoothOutputEnumerator(AudioOutputManager manager)
     {
@@ -30,13 +32,25 @@ public sealed class WindowsBluetoothOutputEnumerator : IDisposable
 
         foreach (var device in devices)
         {
-            if (!IsBluetoothDevice(device)) continue;
+            string? mac;
+            if (IsBluetoothDevice(device))
+            {
+                mac = WindowsBluetoothEnumerator.ExtractMacFromDevice(device);
+            }
+            else
+            {
+                // Fallback: Intel SST routes BT audio through INTELAUDIO, not BTHENUM.
+                mac = WindowsBluetoothEnumerator.TryGetMacFromPairedDeviceCache(device.FriendlyName);
+            }
 
-            var providerId = $"bt-out:{device.ID}";
+            if (mac is null) continue;
+
+            var providerId = $"bt:{mac}";
             if (_manager.Providers.Any(p => p.ProviderId == providerId))
                 continue;
 
-            var provider = new WindowsBluetoothAudioOutputProvider(device);
+            _deviceIdToProviderId[device.ID] = providerId;
+            var provider = new WindowsBluetoothAudioOutputProvider(device, mac);
             _manager.RegisterProvider(provider);
         }
     }
@@ -64,9 +78,16 @@ public sealed class WindowsBluetoothOutputEnumerator : IDisposable
 
     private static bool IsBluetoothDevice(MMDevice device)
     {
-        var id = device.ID ?? string.Empty;
-        return id.Contains("BTHENUM", StringComparison.OrdinalIgnoreCase)
-            || id.Contains("Bluetooth", StringComparison.OrdinalIgnoreCase);
+        try
+        {
+            var key = new PropertyKey(new Guid("a45c254e-df1c-4efd-8020-67d146a850e0"), 24);
+            var value = device.Properties[key].Value?.ToString();
+            return string.Equals(value, "BTHENUM", StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     public void Dispose()
@@ -84,21 +105,27 @@ public sealed class WindowsBluetoothOutputEnumerator : IDisposable
 
         public void OnDeviceAdded(string deviceId)
         {
-            _owner.ScanAndRegister();
+            _ = RefreshAndScanAsync();
         }
 
         public void OnDeviceRemoved(string deviceId)
         {
-            var providerId = $"bt-out:{deviceId}";
-            _ = _owner._manager.UnregisterProviderAsync(providerId);
+            if (_owner._deviceIdToProviderId.TryRemove(deviceId, out var providerId))
+                _ = _owner._manager.UnregisterProviderAsync(providerId);
         }
 
         public void OnDeviceStateChanged(string deviceId, DeviceState newState)
         {
             if (newState == DeviceState.Active)
-                _owner.ScanAndRegister();
-            else
-                _ = _owner._manager.UnregisterProviderAsync($"bt-out:{deviceId}");
+                _ = RefreshAndScanAsync();
+            else if (_owner._deviceIdToProviderId.TryRemove(deviceId, out var providerId))
+                _ = _owner._manager.UnregisterProviderAsync(providerId);
+        }
+
+        private async Task RefreshAndScanAsync()
+        {
+            await WindowsBluetoothEnumerator.RefreshPairedDeviceCacheAsync().ConfigureAwait(false);
+            _owner.ScanAndRegister();
         }
 
         public void OnDefaultDeviceChanged(DataFlow flow, Role role, string defaultDeviceId)

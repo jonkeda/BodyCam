@@ -1,6 +1,9 @@
+using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
 using BodyCam.Services.Audio;
 using NAudio.CoreAudioApi;
 using NAudio.CoreAudioApi.Interfaces;
+using Windows.Devices.Bluetooth;
 
 namespace BodyCam.Platforms.Windows.Audio;
 
@@ -14,6 +17,13 @@ public sealed class WindowsBluetoothEnumerator : IDisposable
     private readonly AppSettings _settings;
     private readonly MMDeviceEnumerator _enumerator;
     private DeviceNotificationClient? _notificationClient;
+
+    // Maps MMDevice.ID → ProviderId so disconnect handlers can find the right provider
+    private readonly ConcurrentDictionary<string, string> _deviceIdToProviderId = new();
+
+    // Cache of paired BT device names → formatted MACs. Used as fallback when the audio
+    // endpoint is routed through Intel SST (INTELAUDIO) instead of BTHENUM.
+    private static readonly ConcurrentDictionary<string, string> s_pairedBtNameToMac = new();
 
     public WindowsBluetoothEnumerator(AudioInputManager manager, AppSettings settings)
     {
@@ -32,13 +42,26 @@ public sealed class WindowsBluetoothEnumerator : IDisposable
 
         foreach (var device in devices)
         {
-            if (!IsBluetoothDevice(device)) continue;
+            string? mac;
+            if (IsBluetoothDevice(device))
+            {
+                mac = ExtractMacFromDevice(device);
+            }
+            else
+            {
+                // Fallback: Intel SST routes BT audio through INTELAUDIO, not BTHENUM.
+                // Cross-reference FriendlyName against paired Bluetooth devices.
+                mac = TryGetMacFromPairedDeviceCache(device.FriendlyName);
+            }
 
-            var providerId = $"bt:{device.ID}";
+            if (mac is null) continue;
+
+            var providerId = $"bt:{mac}";
             if (_manager.Providers.Any(p => p.ProviderId == providerId))
                 continue;
 
-            var provider = new WindowsBluetoothAudioProvider(device, _settings);
+            _deviceIdToProviderId[device.ID] = providerId;
+            var provider = new WindowsBluetoothAudioProvider(device, _settings, mac);
             _manager.RegisterProvider(provider);
         }
     }
@@ -66,9 +89,90 @@ public sealed class WindowsBluetoothEnumerator : IDisposable
 
     private static bool IsBluetoothDevice(MMDevice device)
     {
-        var id = device.ID ?? string.Empty;
-        return id.Contains("BTHENUM", StringComparison.OrdinalIgnoreCase)
-            || id.Contains("Bluetooth", StringComparison.OrdinalIgnoreCase);
+        try
+        {
+            // DEVPKEY_Device_EnumeratorName — "BTHENUM" for Bluetooth devices.
+            // MMDevice.ID is a GUID on modern Windows and does NOT contain "BTHENUM".
+            var key = new PropertyKey(new Guid("a45c254e-df1c-4efd-8020-67d146a850e0"), 24);
+            var value = device.Properties[key].Value?.ToString();
+            return string.Equals(value, "BTHENUM", StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Extracts the Bluetooth MAC address from the MMDevice's BTHENUM instance path.
+    /// The instance path (property {b3f8fa53-...}#2) embeds the MAC as 12 hex digits,
+    /// e.g. <c>...&amp;D879B87FE6C9_C00000000</c>.
+    /// </summary>
+    /// <summary>
+    /// Refresh the cache of paired Bluetooth device names and their MAC addresses.
+    /// Called at startup and before device scans. The cache is used as a fallback when
+    /// BTHENUM detection fails (e.g. Intel SST audio pipeline).
+    /// </summary>
+    internal static async Task RefreshPairedDeviceCacheAsync()
+    {
+        try
+        {
+            var selector = BluetoothDevice.GetDeviceSelectorFromPairingState(true);
+            var devices = await global::Windows.Devices.Enumeration.DeviceInformation
+                .FindAllAsync(selector);
+            foreach (var di in devices)
+            {
+                try
+                {
+                    var btDev = await BluetoothDevice.FromIdAsync(di.Id);
+                    if (btDev is null) continue;
+                    var mac = FormatBluetoothAddress(btDev.BluetoothAddress);
+                    s_pairedBtNameToMac[di.Name] = mac;
+                }
+                catch { /* skip individual device failures */ }
+            }
+        }
+        catch { /* non-critical — BTHENUM path still works */ }
+    }
+
+    /// <summary>
+    /// Try to find a paired BT device MAC by matching the MMDevice's FriendlyName.
+    /// FriendlyName format: "Headphones (DeviceName)" or "Headset (DeviceName)".
+    /// </summary>
+    internal static string? TryGetMacFromPairedDeviceCache(string friendlyName)
+    {
+        var openParen = friendlyName.LastIndexOf('(');
+        var closeParen = friendlyName.LastIndexOf(')');
+        if (openParen < 0 || closeParen <= openParen) return null;
+
+        var deviceName = friendlyName.Substring(openParen + 1, closeParen - openParen - 1);
+        return s_pairedBtNameToMac.TryGetValue(deviceName, out var mac) ? mac : null;
+    }
+
+    private static string FormatBluetoothAddress(ulong address)
+    {
+        var bytes = BitConverter.GetBytes(address);
+        return $"{bytes[5]:X2}:{bytes[4]:X2}:{bytes[3]:X2}:{bytes[2]:X2}:{bytes[1]:X2}:{bytes[0]:X2}";
+    }
+
+    internal static string? ExtractMacFromDevice(MMDevice device)
+    {
+        try
+        {
+            var key = new PropertyKey(new Guid("b3f8fa53-0004-438e-9003-51a46e139bfc"), 2);
+            var instancePath = device.Properties[key].Value?.ToString();
+            if (instancePath is null) return null;
+
+            var match = Regex.Match(instancePath, @"&([0-9A-Fa-f]{12})_C");
+            if (!match.Success) return null;
+
+            var hex = match.Groups[1].Value.ToUpperInvariant();
+            return $"{hex[..2]}:{hex[2..4]}:{hex[4..6]}:{hex[6..8]}:{hex[8..10]}:{hex[10..12]}";
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     public void Dispose()
@@ -86,23 +190,28 @@ public sealed class WindowsBluetoothEnumerator : IDisposable
 
         public void OnDeviceAdded(string deviceId)
         {
-            // Rescan to pick up new BT devices
-            _owner.ScanAndRegister();
+            // Refresh paired BT cache (new device may have just paired) then rescan.
+            _ = RefreshAndScanAsync();
         }
 
         public void OnDeviceRemoved(string deviceId)
         {
-            // Check if this was a registered BT provider
-            var providerId = $"bt:{deviceId}";
-            _ = _owner._manager.UnregisterProviderAsync(providerId);
+            if (_owner._deviceIdToProviderId.TryRemove(deviceId, out var providerId))
+                _ = _owner._manager.UnregisterProviderAsync(providerId);
         }
 
         public void OnDeviceStateChanged(string deviceId, DeviceState newState)
         {
             if (newState == DeviceState.Active)
-                _owner.ScanAndRegister();
-            else
-                _ = _owner._manager.UnregisterProviderAsync($"bt:{deviceId}");
+                _ = RefreshAndScanAsync();
+            else if (_owner._deviceIdToProviderId.TryRemove(deviceId, out var providerId))
+                _ = _owner._manager.UnregisterProviderAsync(providerId);
+        }
+
+        private async Task RefreshAndScanAsync()
+        {
+            await RefreshPairedDeviceCacheAsync().ConfigureAwait(false);
+            _owner.ScanAndRegister();
         }
 
         public void OnDefaultDeviceChanged(DataFlow flow, Role role, string defaultDeviceId)

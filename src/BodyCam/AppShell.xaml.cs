@@ -4,9 +4,10 @@ public partial class AppShell : Shell
 {
 	private bool _checkedSetup;
 
-	public AppShell()
+	public AppShell(ViewModels.MainViewModel mainViewModel)
 	{
 		InitializeComponent();
+		BindingContext = mainViewModel;
 		Navigated += OnShellNavigated;
 
 		Routing.RegisterRoute(nameof(Pages.Setup.SetupPage), typeof(Pages.Setup.SetupPage));

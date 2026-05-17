@@ -69,6 +69,12 @@ public class WindowsAudioOutputService : IAudioOutputService, IDisposable
         _buffer?.ClearBuffer();
     }
 
+    public Task FadeOutAndClearAsync(int fadeMs = 30, CancellationToken ct = default)
+    {
+        ClearBuffer();
+        return Task.CompletedTask;
+    }
+
     public void Dispose()
     {
         _waveOut?.Stop();

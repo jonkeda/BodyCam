@@ -13,15 +13,31 @@ namespace BodyCam.Platforms.Android;
 public sealed class PhoneSpeakerProvider : IAudioOutputProvider, IDisposable
 {
     private readonly PlatformMicProvider _mic;
+    private readonly object _lock = new();
     private AudioTrack? _audioTrack;
     private AudioManager? _audioManager;
+    
+    // Phase 5.4: Track recent output for fade-out
+    private readonly Queue<byte> _recentSamples = new();
+    private const int MaxRecentSamplesMs = 50;
+    private int _sampleRate;
 
     public string DisplayName => "Phone Speaker";
     public string ProviderId => "phone-speaker";
     public bool IsAvailable => true;
     public bool IsPlaying { get; private set; }
+    public int EstimatedOutputLatencyMs
+    {
+        get
+        {
+            if (_audioTrack is null) return 80;
+            int bufferMs = _audioTrack.BufferSizeInFrames * 1000 / _audioTrack.SampleRate;
+            return bufferMs + 25; // Buffer + typical speaker/DAC delay
+        }
+    }
 
     public event EventHandler? Disconnected;
+    public event EventHandler? OutputRouteChanged;
 
     public PhoneSpeakerProvider(PlatformMicProvider mic)
     {
@@ -31,6 +47,8 @@ public sealed class PhoneSpeakerProvider : IAudioOutputProvider, IDisposable
     public Task StartAsync(int sampleRate, CancellationToken ct = default)
     {
         if (IsPlaying) return Task.CompletedTask;
+
+        _sampleRate = sampleRate;
 
         // Route communication audio to the loudspeaker instead of the earpiece
         _audioManager = (AudioManager?)Platform.AppContext.GetSystemService(Context.AudioService);
@@ -93,12 +111,67 @@ public sealed class PhoneSpeakerProvider : IAudioOutputProvider, IDisposable
     {
         if (_audioTrack is null || !IsPlaying) return Task.CompletedTask;
         _audioTrack.Write(pcmData, 0, pcmData.Length);
+
+        // Phase 5.4: Track recent samples for fade-out
+        lock (_lock)
+        {
+            foreach (byte b in pcmData)
+                _recentSamples.Enqueue(b);
+
+            int maxRecentBytes = _sampleRate * 2 * MaxRecentSamplesMs / 1000;
+            while (_recentSamples.Count > maxRecentBytes)
+                _recentSamples.Dequeue();
+        }
+
         return Task.CompletedTask;
     }
 
     public void ClearBuffer()
     {
         _audioTrack?.Flush();
+    }
+
+    /// <summary>
+    /// Phase 5.4: Fade out the last chunk to prevent audible click on interruption.
+    /// </summary>
+    public async Task FadeOutAndClearAsync(int fadeMs = 30, CancellationToken ct = default)
+    {
+        if (_audioTrack is null || !IsPlaying)
+        {
+            ClearBuffer();
+            return;
+        }
+
+        byte[] fadeChunk;
+        lock (_lock)
+        {
+            if (_recentSamples.Count == 0)
+            {
+                ClearBuffer();
+                return;
+            }
+
+            // Take up to fadeMs worth of recent samples
+            int fadeSamples = Math.Min(_sampleRate * fadeMs / 1000, _recentSamples.Count / 2);
+            int fadeBytes = fadeSamples * 2;
+            fadeChunk = _recentSamples.TakeLast(fadeBytes).ToArray();
+        }
+
+        // Apply linear fade-out
+        for (int i = 0; i < fadeChunk.Length / 2; i++)
+        {
+            short sample = BitConverter.ToInt16(fadeChunk, i * 2);
+            float gain = 1.0f - ((float)i / (fadeChunk.Length / 2));
+            short faded = (short)(sample * gain);
+            BitConverter.TryWriteBytes(fadeChunk.AsSpan(i * 2), faded);
+        }
+
+        // Write the fade chunk and wait
+        _audioTrack.Write(fadeChunk, 0, fadeChunk.Length);
+        await Task.Delay(fadeMs, ct);
+
+        // Now clear
+        ClearBuffer();
     }
 
     public ValueTask DisposeAsync()

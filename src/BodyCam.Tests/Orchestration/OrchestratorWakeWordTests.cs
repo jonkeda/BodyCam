@@ -48,7 +48,8 @@ public class OrchestratorWakeWordTests
         var deepTool = new DeepAnalysisTool(conversation);
         var dispatcher = new ToolDispatcher(new ITool[] { descTool, deepTool });
         var micCoordinator = Substitute.For<IMicrophoneCoordinator>();
-        var cameraManager = new CameraManager([], settingsService);
+        var selector = new DefaultCameraSelector();
+        var cameraManager = new CameraManager([], settingsService, selector, NullLogger<CameraManager>.Instance, null);
         var aec = new AecProcessor(NullLogger<AecProcessor>.Instance);
         var wakeWordInstance = wakeWord;
         var sink = new InAppLogSink();

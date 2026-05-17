@@ -1,5 +1,7 @@
 namespace BodyCam.Services.Input;
 
+using Microsoft.Extensions.Logging;
+
 /// <summary>
 /// Aggregates all button input providers, wires gesture recognition, and dispatches actions.
 /// Multiple providers can be active simultaneously.
@@ -9,16 +11,41 @@ public sealed class ButtonInputManager : IDisposable
     private readonly IReadOnlyList<IButtonInputProvider> _providers;
     private readonly GestureRecognizer _gestureRecognizer;
     private readonly ActionMap _actionMap;
+    private readonly ILogger<ButtonInputManager> _log;
 
     public event EventHandler<ButtonActionEvent>? ActionTriggered;
 
-    public ButtonInputManager(IEnumerable<IButtonInputProvider> providers)
+    public ButtonInputManager(
+        IEnumerable<IButtonInputProvider> providers,
+        ActionMap actionMap,
+        ILogger<ButtonInputManager> log)
     {
         _providers = providers.ToList();
         _gestureRecognizer = new GestureRecognizer();
-        _actionMap = new ActionMap();
+        _actionMap = actionMap;
+        _log = log;
 
         _gestureRecognizer.GestureRecognized += OnGestureRecognized;
+
+        // Seed HeyCyan button defaults (idempotent, preserves user overrides)
+        SeedHeyCyanDefaults();
+    }
+
+    private void SeedHeyCyanDefaults()
+    {
+        try
+        {
+#if ANDROID || IOS
+            BodyCam.Services.Glasses.HeyCyan.HeyCyanButtonDefaults.SeedDefaults(_actionMap);
+            _log.LogInformation(
+                "HeyCyan button defaults applied: SingleTap→ToggleConversation, " +
+                "DoubleTap→Photo, LongPress→EndSession (existing overrides preserved)");
+#endif
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "Failed to seed HeyCyan button defaults");
+        }
     }
 
     public IReadOnlyList<IButtonInputProvider> Providers => _providers;

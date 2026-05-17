@@ -29,9 +29,25 @@ public static class ServiceExtensions
 		services.AddSingleton<BodyCam.Platforms.Android.PlatformMicProvider>();
 		services.AddSingleton<IAudioInputProvider>(sp => sp.GetRequiredService<BodyCam.Platforms.Android.PlatformMicProvider>());
 		services.AddSingleton<BodyCam.Platforms.Android.Audio.AndroidBluetoothEnumerator>();
+#elif IOS
+		// Shared AVAudioEngine for mic+speaker (VoiceProcessingIO requires both in the same engine)
+		services.AddSingleton(sp => new AVFoundation.AVAudioEngine());
+		services.AddSingleton<BodyCam.Platforms.iOS.PlatformMicProvider>();
+		services.AddSingleton<IAudioInputProvider>(sp => sp.GetRequiredService<BodyCam.Platforms.iOS.PlatformMicProvider>());
 #endif
 		services.AddSingleton<AudioInputManager>();
 		services.AddSingleton<IAudioInputService>(sp => sp.GetRequiredService<AudioInputManager>());
+
+		// Generic Bluetooth audio input provider (MAC-aware selection)
+		services.AddSingleton<BluetoothAudioInputProvider>();
+		services.AddSingleton<IBluetoothAudioInputProvider>(sp => sp.GetRequiredService<BluetoothAudioInputProvider>());
+
+		// HeyCyan glasses audio input provider (wraps generic BT provider)
+		// Registered as concrete only — NOT as IAudioInputProvider — to avoid circular DI:
+		// AudioInputManager → IEnumerable<IAudioInputProvider> → HeyCyanAudioInputProvider
+		//   → IBluetoothAudioInputProvider → BluetoothAudioInputProvider → AudioInputManager
+		// HeyCyanAudioRouter dynamically registers/unregisters with the managers on connect/disconnect.
+		services.AddSingleton<Services.Glasses.HeyCyan.HeyCyanAudioInputProvider>();
 
 		// Audio output abstraction
 #if WINDOWS
@@ -40,12 +56,86 @@ public static class ServiceExtensions
 #elif ANDROID
 		services.AddSingleton<IAudioOutputProvider, BodyCam.Platforms.Android.PhoneSpeakerProvider>();
 		services.AddSingleton<BodyCam.Platforms.Android.Audio.AndroidBluetoothOutputEnumerator>();
+#elif IOS
+		services.AddSingleton<IAudioOutputProvider, BodyCam.Platforms.iOS.PhoneSpeakerProvider>();
 #endif
 		services.AddSingleton<AudioOutputManager>();
 		services.AddSingleton<IAudioOutputService>(sp => sp.GetRequiredService<AudioOutputManager>());
 
+		// Generic Bluetooth audio output provider (MAC-aware selection)
+		services.AddSingleton<BluetoothAudioOutputProvider>();
+		services.AddSingleton<IBluetoothAudioOutputProvider>(sp => sp.GetRequiredService<BluetoothAudioOutputProvider>());
+
+		// HeyCyan glasses audio output provider — concrete only (same circular DI reason as input)
+		services.AddSingleton<Services.Glasses.HeyCyan.HeyCyanAudioOutputProvider>();
+
+		// HeyCyan auto-routing service (watches session state, flips active providers)
+		services.AddSingleton<Services.Glasses.HeyCyan.HeyCyanAudioRouter>();
+
+		// HeyCyan audio diagnostics (codec verification)
+#if ANDROID
+		services.AddSingleton<Services.Glasses.HeyCyan.IHeyCyanCodecProbe, BodyCam.Platforms.Android.HeyCyan.HeyCyanCodecProbe>();
+#elif IOS
+		services.AddSingleton<Services.Glasses.HeyCyan.IHeyCyanCodecProbe, BodyCam.Platforms.iOS.HeyCyanCodecProbe>();
+#else
+		services.AddSingleton<Services.Glasses.HeyCyan.IHeyCyanCodecProbe, Services.Glasses.HeyCyan.NullCodecProbe>();
+#endif
+		services.AddSingleton<Services.Glasses.HeyCyan.HeyCyanAudioDiagnostics>();
+		services.AddSingleton<Services.Glasses.HeyCyan.IHeyCyanAudioDiagnostics>(sp =>
+			sp.GetRequiredService<Services.Glasses.HeyCyan.HeyCyanAudioDiagnostics>());
+
+		// Clock drift monitoring (Phase 6.2)
+		services.AddSingleton<Services.Audio.ClockDriftMonitor>();
+
 		// Echo cancellation
-		services.AddSingleton<AecProcessor>();
+#if WINDOWS
+		// Conditional: Windows Voice Capture DMO (deprecated, opt-in fallback)
+		services.AddSingleton<IAecProcessor>(sp =>
+		{
+			var settings = sp.GetRequiredService<AppSettings>();
+			var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+
+			if (settings.WindowsUseVoiceCaptureDmo)
+			{
+				var dmoLogger = loggerFactory.CreateLogger<BodyCam.Platforms.Windows.Audio.VoiceCaptureDmoAecProcessor>();
+				var dmo = new BodyCam.Platforms.Windows.Audio.VoiceCaptureDmoAecProcessor(dmoLogger);
+				dmo.Initialize();
+				return dmo;
+			}
+			else
+			{
+				var apmLogger = loggerFactory.CreateLogger<AecProcessor>();
+				var drift = sp.GetRequiredService<Services.Audio.ClockDriftMonitor>();
+				var apm = new AecProcessor(apmLogger, settings, drift);
+				apm.Initialize(mobileMode: false);
+				return apm;
+			}
+		});
+#else
+		services.AddSingleton<IAecProcessor>(sp =>
+		{
+			var logger = sp.GetRequiredService<ILogger<AecProcessor>>();
+			var settings = sp.GetRequiredService<AppSettings>();
+			var drift = sp.GetRequiredService<Services.Audio.ClockDriftMonitor>();
+			var apm = new AecProcessor(logger, settings, drift);
+#if ANDROID || IOS
+			apm.Initialize(mobileMode: true);
+#else
+			apm.Initialize(mobileMode: false);
+#endif
+			return apm;
+		});
+#endif
+
+		// Route monitoring for AEC bypass
+#if WINDOWS
+		services.AddSingleton<BodyCam.Services.Audio.IRouteMonitor, BodyCam.Platforms.Windows.WindowsRouteMonitor>();
+#elif ANDROID
+		services.AddSingleton<BodyCam.Services.Audio.IRouteMonitor, BodyCam.Platforms.Android.AndroidRouteMonitor>();
+#elif IOS
+		services.AddSingleton<BodyCam.Services.Audio.IRouteMonitor, BodyCam.Platforms.iOS.IosRouteMonitor>();
+#endif
+		services.AddSingleton<BodyCam.Services.Audio.AecBypassManager>();
 
 		return services;
 	}
@@ -62,6 +152,14 @@ public static class ServiceExtensions
 
 		services.AddSingleton<PhoneCameraProvider>();
 		services.AddSingleton<ICameraProvider>(sp => sp.GetRequiredService<PhoneCameraProvider>());
+
+#if ANDROID
+		// Use HeyCyan-aware selector on Android; default selector elsewhere
+		services.AddSingleton<ICameraProviderSelector, HeyCyanCameraSelector>();
+#else
+		services.AddSingleton<ICameraProviderSelector, DefaultCameraSelector>();
+#endif
+
 		services.AddSingleton<CameraManager>();
 
 		return services;
@@ -158,6 +256,8 @@ public static class ServiceExtensions
 #if WINDOWS
 		services.AddSingleton<IButtonInputProvider, BodyCam.Platforms.Windows.Input.KeyboardShortcutProvider>();
 #endif
+		services.AddSingleton<ActionMap>();
+		services.AddSingleton<IButtonMappingStore, ButtonMappingStore>();
 		services.AddSingleton<ButtonInputManager>();
 
 		services.AddSingleton<PorcupineWakeWordService>();
@@ -199,15 +299,61 @@ public static class ServiceExtensions
 		return services;
 	}
 
-	public static IServiceCollection AddViewModels(this IServiceCollection services)
+	public static IServiceCollection AddGlassesServices(this IServiceCollection services)
 	{
-		services.AddTransient<SetupViewModel>();
+		// Platform-specific SDK bridges and sessions
+#if ANDROID
+		services.AddSingleton<Services.Glasses.HeyCyan.IHeyCyanSdkBridge, BodyCam.Platforms.Android.HeyCyan.HeyCyanSdkBridge>();
+		services.AddSingleton<Services.Glasses.HeyCyan.IHeyCyanGlassesSession, Services.Glasses.HeyCyan.AndroidHeyCyanGlassesSession>();
+		services.AddTransient<BodyCam.Platforms.Android.HeyCyan.WiFiP2pHttpClient>();
+		services.AddSingleton<Services.Glasses.HeyCyan.IHeyCyanHttpClientFactory, BodyCam.Platforms.Android.HeyCyan.AndroidHeyCyanHttpClientFactory>();
+		services.AddSingleton<Services.Glasses.HeyCyan.Media.IMediaStore, BodyCam.Platforms.Android.HeyCyan.AndroidMediaStore>();
+		services.AddSingleton<Services.Glasses.HeyCyan.Media.IMediaDurationProbe, BodyCam.Platforms.Android.HeyCyan.AndroidMediaDurationProbe>();
+#elif IOS
+		services.AddSingleton<BodyCam.Platforms.iOS.HeyCyan.HotspotHttpClient>();
+		services.AddSingleton<Services.Glasses.HeyCyan.IHeyCyanHttpClientFactory, BodyCam.Platforms.iOS.HeyCyan.IosHeyCyanHttpClientFactory>();
+		services.AddSingleton<Services.Glasses.HeyCyan.IHeyCyanGlassesSession, BodyCam.Platforms.iOS.HeyCyan.IosHeyCyanGlassesSession>();
+		services.AddSingleton<Services.Glasses.HeyCyan.Media.IMediaStore, BodyCam.Platforms.iOS.HeyCyan.IosMediaStore>();
+		services.AddSingleton<Services.Glasses.HeyCyan.Media.IMediaDurationProbe, BodyCam.Platforms.iOS.HeyCyan.IosMediaDurationProbe>();
+#elif WINDOWS
+		services.AddSingleton<Services.Glasses.HeyCyan.IHeyCyanGlassesSession, BodyCam.Platforms.Windows.HeyCyan.WindowsHeyCyanGlassesSession>();
+		services.AddSingleton<Services.Glasses.HeyCyan.IHeyCyanHttpClientFactory, BodyCam.Platforms.Windows.HeyCyan.WindowsHeyCyanHttpClientFactory>();
+		services.AddSingleton<Services.Glasses.HeyCyan.Media.IMediaStore, Services.Glasses.HeyCyan.Media.NoopMediaStore>();
+		services.AddSingleton<Services.Glasses.HeyCyan.Media.IMediaDurationProbe, Services.Glasses.HeyCyan.Media.NoopMediaDurationProbe>();
+#else
+		services.AddSingleton<Services.Glasses.HeyCyan.IHeyCyanGlassesSession, Services.Glasses.HeyCyan.NullHeyCyanGlassesSession>();
+		services.AddSingleton<Services.Glasses.HeyCyan.IHeyCyanHttpClientFactory, Services.Glasses.HeyCyan.NullHeyCyanHttpClientFactory>();
+		services.AddSingleton<Services.Glasses.HeyCyan.Media.IMediaStore, Services.Glasses.HeyCyan.Media.NoopMediaStore>();
+		services.AddSingleton<Services.Glasses.HeyCyan.Media.IMediaDurationProbe, Services.Glasses.HeyCyan.Media.NoopMediaDurationProbe>();
+#endif
+
+		// Cross-platform HeyCyan providers (consume IHeyCyanGlassesSession)
+		services.AddSingleton<Services.Glasses.HeyCyan.HeyCyanCameraProvider>();
+		services.AddSingleton<ICameraProvider>(sp => sp.GetRequiredService<Services.Glasses.HeyCyan.HeyCyanCameraProvider>());
+		services.AddSingleton<Services.Glasses.HeyCyan.HeyCyanButtonProvider>();
+		services.AddSingleton<IButtonInputProvider>(sp => sp.GetRequiredService<Services.Glasses.HeyCyan.HeyCyanButtonProvider>());
+		services.AddSingleton<Services.Glasses.HeyCyan.Media.ISidecarWriter, Services.Glasses.HeyCyan.Media.JsonSidecarWriter>();
+		services.AddSingleton<Services.Glasses.HeyCyan.IHeyCyanMediaTransfer, Services.Glasses.HeyCyan.HeyCyanMediaTransfer>();
+		services.AddSingleton<Services.Glasses.HeyCyan.Media.IHeyCyanRecordedMediaService, Services.Glasses.HeyCyan.Media.HeyCyanRecordedMediaService>();
+	// Glasses device manager (aggregates session + providers)
+	services.AddSingleton<Services.Glasses.HeyCyan.HeyCyanGlassesDeviceManager>();
+	services.AddSingleton<Services.Glasses.GlassesDeviceManager>(sp =>
+		sp.GetRequiredService<Services.Glasses.HeyCyan.HeyCyanGlassesDeviceManager>());
+		return services;
+	}
+
+	public static IServiceCollection AddViewModels(this IServiceCollection services)
+	{		services.AddSingleton<AppShell>();		services.AddTransient<SetupViewModel>();
 		services.AddTransient<MainViewModel>();
 		services.AddTransient<SettingsViewModel>();
 		services.AddTransient<ViewModels.Settings.ConnectionViewModel>();
 		services.AddTransient<ViewModels.Settings.VoiceViewModel>();
 		services.AddTransient<ViewModels.Settings.DeviceViewModel>();
 		services.AddTransient<ViewModels.Settings.AdvancedViewModel>();
+		services.AddTransient<ViewModels.Settings.GlassesCameraSectionViewModel>();
+		services.AddTransient<ViewModels.Settings.HeyCyanButtonMappingsViewModel>();
+		services.AddTransient<MediaGalleryViewModel>();
+		services.AddTransient<GlassesViewModel>();
 		services.AddTransient<Pages.Setup.SetupPage>();
 		services.AddTransient<Pages.Main.MainPage>();
 		services.AddTransient<Pages.Settings.SettingsPage>();
@@ -215,6 +361,15 @@ public static class ServiceExtensions
 		services.AddTransient<Pages.Settings.VoiceSettingsPage>();
 		services.AddTransient<Pages.Settings.DeviceSettingsPage>();
 		services.AddTransient<Pages.Settings.AdvancedSettingsPage>();
+		services.AddTransient<Pages.MediaGalleryPage>();
+		services.AddTransient<Pages.ImageViewerPage>();
+		services.AddTransient<Pages.AudioPlayerPage>();
+		services.AddTransient<Pages.GlassesPage>();
+
+		Routing.RegisterRoute("media-gallery", typeof(Pages.MediaGalleryPage));
+		Routing.RegisterRoute("image-viewer", typeof(Pages.ImageViewerPage));
+		Routing.RegisterRoute("audio-player", typeof(Pages.AudioPlayerPage));
+		Routing.RegisterRoute("glasses", typeof(Pages.GlassesPage));
 
 		return services;
 	}

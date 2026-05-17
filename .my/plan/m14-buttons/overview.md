@@ -7,6 +7,14 @@ recognition (single tap, double tap, long press).
 
 **Depends on:** M4 (BT glasses pairing), M11 (camera abstraction — for photo capture actions).
 
+**Related:** [M33 — HeyCyan Glasses SDK Integration](../m33-heycyan-sdk/overview.md)
+supplies `HeyCyanButtonProvider` (Phase 4). HeyCyan / QCSDK glasses do **not**
+expose a generic GATT button characteristic — button events arrive as parsed BLE
+notify frames through the vendor SDK callback. The provider raises
+*pre-recognized gestures* (tap / double / long-press are debounced in firmware),
+following the same path as `BtHomeButtonProvider`. Path A (custom GATT) in the
+button sub-design is therefore **not** the implementation path for HeyCyan.
+
 ---
 
 ## Why This Matters

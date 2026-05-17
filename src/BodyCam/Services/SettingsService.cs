@@ -169,6 +169,13 @@ public class SettingsService : ISettingsService
         set => Preferences.Set(nameof(SendUsageData), value);
     }
 
+    // HeyCyan Glasses
+    public bool FeedVoiceNotesToDictation
+    {
+        get => Preferences.Get(nameof(FeedVoiceNotesToDictation), false);
+        set => Preferences.Set(nameof(FeedVoiceNotesToDictation), value);
+    }
+
     public bool SetupCompleted
     {
         get => Preferences.Get(nameof(SetupCompleted), false);

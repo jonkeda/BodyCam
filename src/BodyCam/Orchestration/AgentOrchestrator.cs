@@ -28,7 +28,7 @@ public class AgentOrchestrator
     private readonly ToolDispatcher _dispatcher;
     private readonly IWakeWordService _wakeWord;
     private readonly CameraManager _cameraManager;
-    private readonly AecProcessor _aec;
+    private readonly IAecProcessor _aec;
     private readonly QrContentResolver _contentResolver;
     private readonly ILogger<AgentOrchestrator> _logger;
 
@@ -67,7 +67,7 @@ public class AgentOrchestrator
         IWakeWordService wakeWord,
         IMicrophoneCoordinator micCoordinator,
         CameraManager cameraManager,
-        AecProcessor aec,
+        IAecProcessor aec,
         QrContentResolver contentResolver,
         ILogger<AgentOrchestrator> logger)
     {
@@ -439,7 +439,7 @@ public class AgentOrchestrator
         {
             if (_voiceOut.Tracker.CurrentItemId is not null)
             {
-                _voiceOut.HandleInterruption();
+                await _voiceOut.HandleInterruptionAsync(ct);
                 var itemId = _voiceOut.Tracker.CurrentItemId;
                 var playedMs = _voiceOut.Tracker.PlayedMs;
                 _voiceOut.ResetTracker();

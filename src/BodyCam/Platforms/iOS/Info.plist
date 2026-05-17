@@ -28,5 +28,20 @@
 	</array>
 	<key>XSAppIconAssets</key>
 	<string>Assets.xcassets/appicon.appiconset</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>BodyCam connects to HeyCyan smart glasses over Bluetooth Low Energy to control capture and read battery, firmware, and media counts.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>BodyCam joins the glasses' Wi-Fi hotspot to download captured photos, videos, and audio recordings.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>BodyCam captures photos with the phone camera when no glasses are connected.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>BodyCam records audio for live conversations and dictation.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>BodyCam reads the active Wi-Fi SSID to confirm the glasses hotspot is currently joined before downloading media.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>bluetooth-central</string>
+		<string>audio</string>
+	</array>
 </dict>
 </plist>

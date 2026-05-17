@@ -22,12 +22,12 @@ public sealed class WindowsBluetoothAudioProvider : IAudioInputProvider, IDispos
     public event EventHandler<byte[]>? AudioChunkAvailable;
     public event EventHandler? Disconnected;
 
-    public WindowsBluetoothAudioProvider(MMDevice device, AppSettings settings)
+    public WindowsBluetoothAudioProvider(MMDevice device, AppSettings settings, string mac)
     {
         _device = device;
         _settings = settings;
         DisplayName = $"BT: {device.FriendlyName}";
-        ProviderId = $"bt:{device.ID}";
+        ProviderId = $"bt:{mac}";
     }
 
     public Task StartAsync(CancellationToken ct = default)

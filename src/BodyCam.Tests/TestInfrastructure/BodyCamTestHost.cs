@@ -55,7 +55,7 @@ public sealed class BodyCamTestHost : IDisposable, IAsyncDisposable
         var services = new ServiceCollection();
 
         // AppSettings
-        services.AddSingleton(new AppSettings());
+        services.AddSingleton(new AppSettings { EnableJitterBuffer = false });
 
         // Settings stub — configure to select test providers
         var settings = Substitute.For<ISettingsService>();
@@ -79,7 +79,9 @@ public sealed class BodyCamTestHost : IDisposable, IAsyncDisposable
         services.AddSingleton<IAudioInputService>(sp => sp.GetRequiredService<AudioInputManager>());
         services.AddSingleton<AudioOutputManager>();
         services.AddSingleton<IAudioOutputService>(sp => sp.GetRequiredService<AudioOutputManager>());
+        services.AddSingleton<ICameraProviderSelector, DefaultCameraSelector>();
         services.AddSingleton<CameraManager>();
+        services.AddSingleton<ActionMap>();
         services.AddSingleton<ButtonInputManager>();
 
         // Realtime client stub

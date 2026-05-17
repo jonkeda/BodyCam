@@ -7,6 +7,12 @@ active output at a time and automatic fallback.
 
 **Depends on:** M12 (BT audio input) for shared BT device enumeration/pairing infrastructure.
 
+**Related:** [M33 — HeyCyan Glasses SDK Integration](../m33-heycyan-sdk/overview.md)
+supplies `HeyCyanAudioOutputProvider` (Phase 3) — a thin auto-routing wrapper over
+the generic `BluetoothAudioOutputProvider` that selects the BT-classic A2DP output
+exposed by HeyCyan glasses when QCSDK reports them connected, and falls back to
+phone speaker on disconnect.
+
 ---
 
 ## Why This Matters

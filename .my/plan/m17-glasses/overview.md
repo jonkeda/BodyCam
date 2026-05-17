@@ -1,10 +1,18 @@
 # M17 — Glasses Integration
 
-**Status:** Not started — waiting for hardware  
-**Goal:** Connect smart glasses (TKYUAN, Chinese WiFi, Meta Ray-Ban) as unified
+**Status:** Investigation complete — vendor SDK identified  
+**Goal:** Connect smart glasses (HeyCyan/TKYUAN/QCSDK, Meta Ray-Ban) as unified
 peripheral devices, using the provider abstractions built in M11–M14.
 
 **Depends on:** M11 (camera), M12 (audio input), M13 (audio output), M14 (buttons).
+
+**Vendor SDK integration:** [M33 — HeyCyan Glasses SDK Integration](../m33-heycyan-sdk/overview.md)
+delivers the concrete provider implementations and `HeyCyanGlassesDeviceManager`.
+The Phase 1 "hardware investigation" portion of M17 is largely satisfied by the
+reverse-engineering work already in [`Alternative-HeyCyan-App-and-SDK/`](../../../Alternative-HeyCyan-App-and-SDK/)
+— see `WIFI_TRANSFER_ARCHITECTURE.md` and `android/AGENTS.md`. M17 retains the
+abstract `GlassesDeviceManager` design and the cross-vendor connection UI; the
+HeyCyan-specific BLE/WiFi/transfer plumbing lives entirely in M33.
 
 ---
 
@@ -91,24 +99,25 @@ public record GlassesBatteryInfo(int Percentage, bool IsCharging);
 
 ---
 
-## Hardware: TKYUAN Smart Glasses
+## Hardware: HeyCyan / TKYUAN / QCSDK Smart Glasses
 
 **Known specs:**
-- Bluetooth 5.3
-- Camera: 1080p front-facing
-- Audio: Open-ear speakers + dual microphone
-- Physical button: multi-function (tap, double-tap, long-press)
-- Storage: internal or micro-SD
+- Bluetooth 5.3 (BLE control + BT-classic A2DP/HFP audio)
+- Camera: 1080p, **photo/video captured to internal storage** (not live-streamed)
+- Audio: Open-ear speakers + dual microphone (BT-classic A2DP/HFP)
+- Physical button: multi-function (tap, double-tap, long-press) — debounced in firmware
+- Storage: internal flash, exposed via WiFi-Direct hotspot in transfer mode
+- Vendor SDK: `glasses_sdk_20250723_v01.aar` (Android) + `QCSDK.framework` (iOS)
 
-**Unknown (must investigate on arrival):**
+**Resolved (see [M33](../m33-heycyan-sdk/overview.md) and `Alternative-HeyCyan-App-and-SDK/WIFI_TRANSFER_ARCHITECTURE.md`):**
 
-| Question | Investigation Method |
-|----------|---------------------|
-| Camera protocol? | nRF Connect (GATT services), companion app traffic capture |
-| WiFi-Direct stream? | Check if glasses broadcast hotspot, probe for RTSP/MJPEG |
-| Button event format? | nRF Connect GATT notifications, observe HID reports |
-| Audio codec? | BT logs, check SBC/AAC/aptX negotiation |
-| Battery GATT service? | nRF Connect, UUID 0x180F (standard battery service) |
+| Question | Answer |
+|----------|--------|
+| Camera protocol? | Not a live stream. BLE photo command → glasses opens WiFi-Direct hotspot → HTTP `GET /files/media.config` then `GET /files/<name>.jpg` |
+| WiFi-Direct stream? | Hotspot only during transfer mode; reachable IP is from BLE notify frame `0x08` (groupOwnerAddress is the *phone*, not glasses) |
+| Button event format? | BLE notify frames (`cmdType=2`) parsed by vendor SDK into tap/double/long-press callbacks |
+| Audio codec? | BT-classic A2DP (SBC) + HFP — separate from QCSDK BLE control channel |
+| Battery GATT service? | Read via QCSDK `getDeviceBattery` callback (vendor service, not standard 0x180F) |
 
 ---
 
@@ -116,6 +125,11 @@ public record GlassesBatteryInfo(int Percentage, bool IsCharging);
 
 ### Phase 1: Hardware Investigation & BT Audio
 Receive glasses, investigate all protocols, implement BT audio providers.
+For HeyCyan/QCSDK hardware the investigation is already complete — see
+[`Alternative-HeyCyan-App-and-SDK/`](../../../Alternative-HeyCyan-App-and-SDK/)
+and [M33](../m33-heycyan-sdk/overview.md). The remaining work is the generic
+`GlassesDeviceManager` skeleton plus the generic `BluetoothAudio*Provider`
+implementations from M12/M13 Phase 2 (already done).
 
 **Deliverables:** Investigation report, `BluetoothAudioInputProvider`,
 `BluetoothAudioOutputProvider`, basic `GlassesDeviceManager`.

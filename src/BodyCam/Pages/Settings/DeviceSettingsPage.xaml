@@ -10,35 +10,132 @@
     <ScrollView>
         <VerticalStackLayout Padding="16" Spacing="12" MaximumWidthRequest="500">
 
-            <!-- Camera -->
-            <Label Text="Camera" FontSize="Subtitle" FontAttributes="Bold"
+            <!-- Glasses Connection -->
+            <Button Text="Connect Glasses"
+                    Command="{Binding ConnectGlassesCommand}"
+                    AutomationId="ConnectGlassesButton"
+                    IsVisible="{Binding IsGlassesConnected, Converter={StaticResource InvertBoolConverter}}"
+                    StyleClass="OutlineButton" />
+
+            <!-- Inline glasses status (visible when connected) -->
+            <Frame Padding="12" CornerRadius="10"
+                   IsVisible="{Binding IsGlassesConnected}">
+                <VerticalStackLayout Spacing="8">
+
+                    <HorizontalStackLayout Spacing="8">
+                        <Label Text="🔋" FontSize="20" />
+                        <ProgressBar
+                            Progress="{Binding GlassesBatteryPct,
+                                       Converter={StaticResource PercentConverter}}"
+                            WidthRequest="180" VerticalOptions="Center" />
+                        <Label Text="{Binding GlassesBatteryPct, StringFormat='{0}%'}"
+                               VerticalOptions="Center" />
+                        <Label Text="⚡" IsVisible="{Binding GlassesIsCharging}"
+                               VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+
+                    <Grid ColumnDefinitions="120,*"
+                          RowDefinitions="Auto,Auto,Auto" RowSpacing="4">
+                        <Label Grid.Row="0" Grid.Column="0" Text="MAC" TextColor="Gray" />
+                        <Label Grid.Row="0" Grid.Column="1" Text="{Binding GlassesMac}" />
+                        <Label Grid.Row="1" Grid.Column="0" Text="Firmware" TextColor="Gray" />
+                        <Label Grid.Row="1" Grid.Column="1" Text="{Binding GlassesFirmware}" />
+                        <Label Grid.Row="2" Grid.Column="0" Text="Hardware" TextColor="Gray" />
+                        <Label Grid.Row="2" Grid.Column="1" Text="{Binding GlassesHardware}" />
+                    </Grid>
+
+                    <HorizontalStackLayout Spacing="14">
+                        <Label Text="{Binding GlassesPhotos,     StringFormat='📷 {0}'}" />
+                        <Label Text="{Binding GlassesVideos,     StringFormat='🎬 {0}'}" />
+                        <Label Text="{Binding GlassesAudioFiles, StringFormat='🎙️ {0}'}" />
+                    </HorizontalStackLayout>
+
+                    <Button Text="Disconnect"
+                            Command="{Binding DisconnectGlassesCommand}"
+                            BackgroundColor="Red" TextColor="White"
+                            Margin="0,4,0,0" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- Glasses Button -->
+            <VerticalStackLayout IsVisible="{Binding HeyCyanButtonMappings, Converter={StaticResource IsNotNullConverter}}"
+                                 Spacing="8" Margin="0,12,0,0">
+                <Label Text="Glasses Button" FontSize="Subtitle" FontAttributes="Bold"
+                       SemanticProperties.HeadingLevel="Level1" />
+                <Label Text="Configure tap, double-tap and long-press for the HeyCyan glasses."
+                       FontSize="Small"
+                       TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+                <CollectionView ItemsSource="{Binding HeyCyanButtonMappings.Rows}">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="vm:HeyCyanGestureRowViewModel">
+                            <Grid ColumnDefinitions="*,2*" Padding="0,6">
+                                <Label Grid.Column="0" Text="{Binding Label}" VerticalOptions="Center" />
+                                <Picker Grid.Column="1"
+                                        ItemsSource="{Binding Source={RelativeSource AncestorType={x:Type vm:DeviceViewModel}}, Path=HeyCyanButtonMappings.AvailableActions}"
+                                        SelectedItem="{Binding Action, Mode=TwoWay}"
+                                        AutomationId="{Binding Label, StringFormat='GlassesButton{0}Picker'}" />
+                            </Grid>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </VerticalStackLayout>
+
+            <!-- Camera Source -->
+            <Label Text="Camera Source" FontSize="Subtitle" FontAttributes="Bold" Margin="0,12,0,0"
                    SemanticProperties.HeadingLevel="Level1" />
-            <Label Text="Camera Source" FontSize="Small" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
             <Picker AutomationId="CameraSourcePicker"
                     ItemsSource="{Binding CameraProviders}"
                     ItemDisplayBinding="{Binding DisplayName}"
                     SelectedItem="{Binding SelectedCameraProvider}"
                     SemanticProperties.Description="Camera source" />
 
-            <!-- Audio Input -->
-            <Label Text="Audio Input" FontSize="Subtitle" FontAttributes="Bold" Margin="0,12,0,0"
+            <Button Text="Test Capture"
+                    Command="{Binding GlassesCameraSection.TestCaptureCommand}"
+                    IsEnabled="{Binding GlassesCameraSection.IsTestCaptureEnabled}"
+                    AutomationId="TestCaptureButton" />
+
+            <Label Text="{Binding GlassesCameraSection.LastCaptureLatencyMs, StringFormat='Latency: {0} ms'}"
+                   IsVisible="{Binding GlassesCameraSection.LastCaptureLatencyMs, Converter={StaticResource IsNotNullConverter}}"
+                   FontSize="Small"
+                   TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+
+            <Image Source="{Binding GlassesCameraSection.LastCaptureImage}"
+                   IsVisible="{Binding GlassesCameraSection.LastCaptureImage, Converter={StaticResource IsNotNullConverter}}"
+                   Aspect="AspectFit"
+                   HeightRequest="200"
+                   AutomationId="LastCaptureImage" />
+
+            <!-- Microphone -->
+            <Label Text="Microphone" FontSize="Subtitle" FontAttributes="Bold" Margin="0,12,0,0"
                    SemanticProperties.HeadingLevel="Level1" />
-            <Label Text="Microphone Source" FontSize="Small" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
             <Picker AutomationId="AudioInputPicker"
                     ItemsSource="{Binding AudioInputProviders}"
                     ItemDisplayBinding="{Binding DisplayName}"
                     SelectedItem="{Binding SelectedAudioInputProvider}"
-                    SemanticProperties.Description="Microphone source" />
+                    SemanticProperties.Description="Microphone" />
 
-            <!-- Audio Output -->
-            <Label Text="Audio Output" FontSize="Subtitle" FontAttributes="Bold" Margin="0,12,0,0"
+            <Button Text="Test Recording"
+                    Command="{Binding TestRecordingCommand}"
+                    IsEnabled="{Binding IsTestingRecording, Converter={StaticResource InvertBoolConverter}}"
+                    AutomationId="TestRecordingButton" />
+
+            <Label Text="{Binding TestRecordingStatus}"
+                   IsVisible="{Binding TestRecordingStatus, Converter={StaticResource IsNotNullConverter}}"
+                   FontSize="Small"
+                   TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+
+            <!-- Speaker -->
+            <Label Text="Speaker" FontSize="Subtitle" FontAttributes="Bold" Margin="0,12,0,0"
                    SemanticProperties.HeadingLevel="Level1" />
-            <Label Text="Speaker" FontSize="Small" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
             <Picker AutomationId="AudioOutputPicker"
                     ItemsSource="{Binding AudioOutputProviders}"
                     ItemDisplayBinding="{Binding DisplayName}"
                     SelectedItem="{Binding SelectedAudioOutputProvider}"
                     SemanticProperties.Description="Speaker" />
+
+            <Button Text="Test Sound"
+                    Command="{Binding TestSoundCommand}"
+                    AutomationId="TestSoundButton" />
 
         </VerticalStackLayout>
     </ScrollView>

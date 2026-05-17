@@ -21,6 +21,17 @@ public sealed class ActionMap
     public void SetAction(string providerId, ButtonGesture gesture, ButtonAction action)
         => _map[(providerId, gesture)] = action;
 
+    /// <summary>
+    /// Set a mapping only if no mapping already exists for the given provider + button + gesture.
+    /// Used by default-seeding logic to avoid overwriting user customizations.
+    /// </summary>
+    public void SetIfUnset(string providerId, string buttonId, ButtonGesture gesture, ButtonAction action)
+    {
+        var compositeKey = $"{providerId}:{buttonId}";
+        if (!_map.ContainsKey((compositeKey, gesture)))
+            _map[(compositeKey, gesture)] = action;
+    }
+
     public void LoadMappings(IEnumerable<ButtonMapping> mappings)
     {
         _map.Clear();

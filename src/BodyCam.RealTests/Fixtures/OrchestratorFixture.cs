@@ -140,7 +140,11 @@ public class OrchestratorFixture : IAsyncLifetime
         var settingsService = new InMemorySettingsService(Settings);
         var wakeWord = new NullWakeWordService();
         var micCoordinator = new NoOpMicrophoneCoordinator();
-        var cameraManager = new CameraManager([FrameProvider], settingsService);
+        var cameraManager = new CameraManager(
+            [FrameProvider],
+            settingsService,
+            new DefaultCameraSelector(),
+            NullLogger<CameraManager>.Instance);
 
         Orchestrator = new AgentOrchestrator(
             voiceIn, conversation, voiceOut, vision,

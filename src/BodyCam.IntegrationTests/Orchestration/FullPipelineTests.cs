@@ -8,6 +8,7 @@ using BodyCam.Orchestration;
 using BodyCam.Services;
 using BodyCam.Services.Audio.WebRtcApm;
 using BodyCam.Services.Camera;
+using BodyCam.Services.QrCode;
 using BodyCam.Tools;
 using FluentAssertions;
 using Microsoft.Extensions.AI;
@@ -76,10 +77,12 @@ public class FullPipelineTests : IClassFixture<OpenAiWireMockFixture>
         var dispatcher = new ToolDispatcher(new ITool[] { describeSceneTool, deepAnalysisTool });
         var wakeWord = Substitute.For<IWakeWordService>();
         var micCoordinator = Substitute.For<IMicrophoneCoordinator>();
-        var cameraManager = new CameraManager([], settingsService);
+        var selector = new DefaultCameraSelector();
+        var cameraManager = new CameraManager([], settingsService, selector, Substitute.For<ILogger<CameraManager>>(), null);
         var aec = new AecProcessor(Substitute.For<ILogger<AecProcessor>>());
         var logger = Substitute.For<ILogger<AgentOrchestrator>>();
-        var orchestrator = new AgentOrchestrator(voiceIn, conversation, voiceOut, vision, realtimeClient, settingsService, new AppSettings(), dispatcher, wakeWord, micCoordinator, cameraManager, aec, logger);
+        var qrResolver = new QrContentResolver([]);
+        var orchestrator = new AgentOrchestrator(voiceIn, conversation, voiceOut, vision, realtimeClient, settingsService, new AppSettings(), dispatcher, wakeWord, micCoordinator, cameraManager, aec, qrResolver, logger);
 
         var transcripts = new List<string>();
         orchestrator.TranscriptUpdated += (_, t) => transcripts.Add(t);

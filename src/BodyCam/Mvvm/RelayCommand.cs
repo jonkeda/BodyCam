@@ -27,5 +27,11 @@ public class RelayCommand : ICommand
 
     public void Execute(object? parameter) => _execute(parameter);
 
-    public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+    public void RaiseCanExecuteChanged()
+    {
+        if (MainThread.IsMainThread)
+            CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+        else
+            MainThread.BeginInvokeOnMainThread(() => CanExecuteChanged?.Invoke(this, EventArgs.Empty));
+    }
 }

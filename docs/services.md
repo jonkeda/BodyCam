@@ -65,6 +65,46 @@ Plays PCM audio to the platform speaker.
 
 Camera lifecycle management. The actual frame capture is handled by MAUI's `CameraView` control — `MainViewModel.CaptureFrameFromCameraViewAsync()` captures JPEG frames on demand.
 
+### ICameraProvider / CameraManager
+
+**Interface:** `ICameraProvider`
+**Manager:** `CameraManager`
+**Implementations:** `PhoneCameraProvider`, `HeyCyanCameraProvider` (Android)
+
+Abstraction for camera sources that can capture JPEG frames. Multiple providers may be registered; `CameraManager` manages the active provider selection.
+
+**Providers:**
+- `PhoneCameraProvider` — wraps MAUI's `CameraView` for on-device camera capture
+- `HeyCyanCameraProvider` (Android) — captures from HeyCyan smart glasses via BLE+WiFi-Direct file transfer
+
+**Selection strategy:**
+- `ICameraProviderSelector` determines which provider is active
+- `HeyCyanCameraSelector` (Android) — prefers glasses when connected, falls back to phone
+- `DefaultCameraSelector` (other platforms) — picks first available provider
+
+**Methods:**
+- `CaptureFrameAsync(ct)` — capture a single JPEG frame
+- `StreamFramesAsync(ct)` — continuous frame stream (IAsyncEnumerable)
+- `StartAsync(ct)` / `StopAsync()` — provider lifecycle
+
+**Latency contract:**
+
+| Provider | Latency | Notes |
+|----------|---------|-------|
+| Phone camera | <50 ms | Synchronous capture from local hardware |
+| HeyCyan glasses (cold) | 2-5 s | Includes BLE command + WiFi-Direct group formation + HTTP download |
+| HeyCyan glasses (warm) | 700 ms - 1.5 s | Transfer mode kept warm (8s idle timeout) to avoid group formation overhead |
+
+**Warm mode optimization:**
+- `HeyCyanCameraProvider` keeps the WiFi-Direct transfer session alive for 8 seconds after the last capture
+- Subsequent `CaptureFrameAsync` calls within the warm window skip group formation and reconnection
+- Cold capture is required after disconnect or idle timeout
+
+**Platform notes:**
+- HeyCyan glasses are **not a live camera** — each frame is a discrete BLE-triggered photo + file transfer
+- `StreamFramesAsync` on `HeyCyanCameraProvider` internally polls `CaptureFrameAsync` with 1s delays
+- Vision agents should expect variable latency when glasses are active and adjust polling intervals accordingly
+
 ## API Key Management
 
 ### IApiKeyService / ApiKeyService

@@ -32,6 +32,9 @@ public partial class MainPage : ContentPage
 
 			// Scan for Bluetooth audio devices after audio manager is ready
 #if WINDOWS
+			// Build paired BT device cache first (needed for Intel SST fallback detection)
+			await BodyCam.Platforms.Windows.Audio.WindowsBluetoothEnumerator.RefreshPairedDeviceCacheAsync();
+
 			var btEnum = services.GetService<BodyCam.Platforms.Windows.Audio.WindowsBluetoothEnumerator>();
 			btEnum?.ScanAndRegister();
 			btEnum?.StartListening();
@@ -90,8 +93,8 @@ public partial class MainPage : ContentPage
 		}
 
 		await Task.WhenAll(
-			element.FadeTo(1, 250, Easing.CubicOut),
-			element.TranslateTo(0, 0, 250, Easing.CubicOut));
+			element.FadeToAsync(1, 250, Easing.CubicOut),
+			element.TranslateToAsync(0, 0, 250, Easing.CubicOut));
 	}
 
 	private async void ThinkingDots_Loaded(object sender, EventArgs e)
@@ -112,8 +115,8 @@ public partial class MainPage : ContentPage
 		{
 			for (int i = 0; i < dots.Count; i++)
 			{
-				await dots[i].FadeTo(1.0, 200);
-				await dots[i].FadeTo(0.3, 200);
+				await dots[i].FadeToAsync(1.0, 200);
+				await dots[i].FadeToAsync(0.3, 200);
 			}
 			await Task.Delay(100);
 		}

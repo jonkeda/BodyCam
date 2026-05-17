@@ -1,0 +1,48 @@
+<metadata>
+  <!-- HeyCyan SDK Binding Metadata Transforms -->
+  <!-- This file contains fixes for the glasses_sdk_20250723_v01.aar binding. -->
+  
+  <!-- Hide all obfuscated inner classes by default (classes with $ in the name).
+       We will selectively re-expose only the public API we need. -->
+  <remove-node path="//class[contains(@name, '$')]" />
+
+  <!-- Hide the entire SPP (Serial Port Profile / classic Bluetooth music) package.
+       BodyCam M33 only uses the BLE+Wi-Fi-Direct path. The SPP package contains:
+         * SerialListener with overloaded onSerialRead([B) / onSerialRead(ArrayDeque)
+           which causes CS0102 in C# AND a corresponding Java Implementor that
+           javac cannot compile because removing one overload from the C# surface
+           leaves the generated Implementor non-abstract for the Java interface.
+         * SerialSocket / BleMusicHandle / SppHandle — unused by BodyCam.
+       Removing the whole package eliminates the binding error cleanly. -->
+  <remove-node path="/api/package[@name='com.oudmon.ble.base.bluetooth.spp']" />
+  <remove-node path="/api/package[@name='com.oudmon.ble.base.bluetooth.spp.bean']" />
+  <!-- Remove methods in Jieli package that reference SerialListener (from SPP package).
+       These methods cause SerialListenerImplementor to be generated even though SPP is removed. -->
+  <remove-node path="/api/package[@name='com.oudmon.ble.base.bluetooth.spp.jieli']/class[@name='BleMusicHandle']/method[@name='setOutSerialListener']" />
+  <remove-node path="/api/package[@name='com.oudmon.ble.base.bluetooth.spp.jieli']/class[@name='SppHandle']/method[@name='setOutSerialListener']" />
+  <remove-node path="/api/package[@name='com.oudmon.ble.base.bluetooth.spp.jieli']/class[@name='SppHandleBackup']/method[@name='setOutSerialListener']" />
+  <!-- Fix duplicate DateFormater.YyyyMMddHHmm field (BG8402) -->
+  <!-- The binding generator automatically skips this; document it here for completeness. -->
+  <!-- Already handled by the generator - it skips the duplicate. -->
+
+  <!-- Fix duplicate property name warnings in MySongInfo class (BG8401) -->
+  <!-- The class has duplicate field/property names from Java boolean getters.
+       Remove the getter/setter methods to avoid the duplication - we'll use fields only. -->
+  <remove-node path="/api/package[@name='com.oudmon.ble.base.bluetooth.spp.bean']/class[@name='MySongInfo']/method[@name='isChecked' or @name='setChecked' or @name='isDeleted' or @name='setDeleted' or @name='getRelatePlayList' or @name='setRelatePlayList' or @name='getRelatePlayListIndex' or @name='setRelatePlayListIndex' or @name='getSongIndexInFileList' or @name='setSongIndexInFileList' or @name='getSongName' or @name='setSongName' or @name='getSongNameLength' or @name='setSongNameLength' or @name='getSongNameOffset' or @name='setSongNameOffset' or @name='getSongNameWithoutSuffix' or @name='setSongNameWithoutSuffix']" />
+
+  <!-- Fix duplicate CmdType property in BaseResponse (BG8401) -->
+  <remove-node path="/api/package[@name='com.oudmon.ble.base.communication.bigData.resp']/class[@name='BaseResponse']/method[@name='getCmdType' or @name='setCmdType']" />
+
+  <!-- Fix duplicate CmdType and Status properties in BaseRspCmd (BG8401) -->
+  <remove-node path="/api/package[@name='com.oudmon.ble.base.communication.rsp']/class[@name='BaseRspCmd']/method[@name='getCmdType' or @name='setCmdType' or @name='getStatus' or @name='setStatus']" />
+
+  <!-- Fix duplicate YyyyMMddHHmm field in DateUtil.DateFormater (BG8402) -->
+  <remove-node path="/api/package[@name='com.oudmon.qc_utils.date']/class[@name='DateUtil.DateFormater']/field[@name='yyyyMMddHHmm' or @name='YyyyMMddHHmm'][position()>1]" />
+
+  <!-- Fix Clone() hiding warning in BleStepTotal -->
+  <attr path="/api/package[@name='com.oudmon.ble.base.communication.entity']/class[@name='BleStepTotal']/method[@name='clone']" name="managedName">CloneStepTotal</attr>
+
+  <!-- Fix RealTimeHeartRate.Type hiding BaseReqCmd.Type -->
+  <attr path="/api/package[@name='com.oudmon.ble.base.communication.req']/class[@name='RealTimeHeartRate']/method[@name='getType']" name="managedName">GetHeartRateType</attr>
+
+</metadata>

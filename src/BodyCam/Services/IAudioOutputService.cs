@@ -9,5 +9,6 @@ public interface IAudioOutputService
     Task StopAsync();
     Task PlayChunkAsync(byte[] pcmData, CancellationToken ct = default);
     void ClearBuffer();
+    Task FadeOutAndClearAsync(int fadeMs = 30, CancellationToken ct = default);
     bool IsPlaying { get; }
 }

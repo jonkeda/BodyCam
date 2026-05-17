@@ -9,12 +9,30 @@
     Title="BodyCam">
 
     <Shell.TitleView>
-        <Grid ColumnDefinitions="Auto,Auto,*,Auto" VerticalOptions="Center" Padding="8,0">
+        <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto" VerticalOptions="Center" Padding="8,0">
             <Label Text="BodyCam" FontSize="20" FontAttributes="Bold" VerticalOptions="Center" />
             <Label x:Name="BuildLabel" AutomationId="BuildLabel" Grid.Column="1" FontSize="12"
                    VerticalOptions="Center" Margin="6,0,0,0"
                    TextColor="{AppThemeBinding Light=#999999, Dark=#777777}" />
-            <Button x:Name="NavIcon" AutomationId="NavIcon" Grid.Column="3" Text="⚙" FontSize="20"
+            
+            <!-- Glasses battery widget (M33 Phase 7 Wave 3) -->
+            <HorizontalStackLayout Grid.Column="3"
+                                   Spacing="4" VerticalOptions="Center"
+                                   Margin="12,0"
+                                   IsVisible="{Binding GlassesConnected}">
+                <Label Text="🕶️" FontSize="16" />
+                <Label Text="{Binding GlassesBatteryPct, StringFormat='{0}%'}"
+                       FontSize="12"
+                       TextColor="{Binding GlassesBatteryColor}" />
+                <Label Text="⚡" FontSize="12"
+                       IsVisible="{Binding GlassesCharging}" />
+                <HorizontalStackLayout.GestureRecognizers>
+                    <TapGestureRecognizer
+                        Command="{Binding NavigateToGlassesCommand}" />
+                </HorizontalStackLayout.GestureRecognizers>
+            </HorizontalStackLayout>
+
+            <Button x:Name="NavIcon" AutomationId="NavIcon" Grid.Column="4" Text="⚙" FontSize="20"
                     Clicked="OnNavIconTapped"
                     VerticalOptions="Center"
                     BackgroundColor="Transparent"

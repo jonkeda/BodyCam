@@ -1,4 +1,5 @@
 ﻿using BodyCam.Services;
+using BodyCam.Services.Input;
 using BodyCam.Services.Logging;
 using Azure.Monitor.OpenTelemetry.Exporter;
 using CommunityToolkit.Maui;
@@ -76,6 +77,7 @@ public static class MauiProgram
 		builder.Services
 			.AddAudioServices()
 			.AddCameraServices()
+			.AddGlassesServices()
 			.AddAgents()
 			.AddQrCodeServices()
 			.AddBarcodeServices()
@@ -83,6 +85,16 @@ public static class MauiProgram
 			.AddTools()
 			.AddOrchestration()
 			.AddViewModels();
+
+		// Optional M16 dictation hook for HeyCyan voice notes
+		// When M16 is not present, register null IDictationRegistry so hook is no-op
+		builder.Services.AddSingleton<Services.Dictation.IDictationRegistry>(sp => null!);
+		if (settingsService.FeedVoiceNotesToDictation)
+		{
+			builder.Services.AddSingleton<Services.Glasses.HeyCyan.Media.HeyCyanDictationHook>();
+			builder.Services.AddHostedService(sp =>
+				sp.GetRequiredService<Services.Glasses.HeyCyan.Media.HeyCyanDictationHook>());
+		}
 
 // Chat Completions client (deep_analysis + vision tools)
 		builder.Services.AddSingleton<IChatClient, AppChatClient>();
@@ -162,6 +174,18 @@ public static class MauiProgram
 		builder.Logging.AddDebug();
 #endif
 
-		return builder.Build();
+		var app = builder.Build();
+
+		// Load button mappings from storage
+		var store = app.Services.GetRequiredService<IButtonMappingStore>();
+		_ = store.LoadAsync();
+
+		// Initialize AEC bypass manager (subscribes to route changes)
+		_ = app.Services.GetRequiredService<Services.Audio.AecBypassManager>();
+
+		// Initialize HeyCyan audio router so it subscribes to session state changes
+		_ = app.Services.GetRequiredService<Services.Glasses.HeyCyan.HeyCyanAudioRouter>();
+
+		return app;
 	}
 }

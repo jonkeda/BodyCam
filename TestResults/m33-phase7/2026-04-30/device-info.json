@@ -1,0 +1,27 @@
+{
+  "platform": "android | ios",
+  "date": "2026-04-30",
+  "device": {
+    "name": "[device name from scan, e.g. 'HeyCyan-AB12']",
+    "macAddress": "[MAC address from SDK, e.g. '00:11:22:33:44:55']",
+    "hardwareVersion": "[hardware version from GetVersionAsync]",
+    "firmwareVersion": "[firmware version from GetVersionAsync]",
+    "wifiHardwareVersion": "[WiFi hardware version]",
+    "wifiFirmwareVersion": "[WiFi firmware version]"
+  },
+  "battery": {
+    "percentage": 0,
+    "isCharging": false
+  },
+  "mediaCount": {
+    "photos": 0,
+    "videos": 0,
+    "audioFiles": 0
+  },
+  "testEnvironment": {
+    "appVersion": "[BodyCam version]",
+    "sdkVersion": "[QCSDK version from binding library]",
+    "osVersion": "[Android/iOS version]",
+    "phoneModel": "[phone model]"
+  }
+}

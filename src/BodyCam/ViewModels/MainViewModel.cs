@@ -4,7 +4,10 @@ using BodyCam.Models;
 using BodyCam.Mvvm;
 using BodyCam.Orchestration;
 using BodyCam.Services;
+using BodyCam.Services.Audio.WebRtcApm;
 using BodyCam.Services.Camera;
+using BodyCam.Services.Glasses;
+using BodyCam.Services.Glasses.HeyCyan;
 using BodyCam.Services.QrCode;
 using CommunityToolkit.Maui.Views;
 using Microsoft.Extensions.Logging;
@@ -27,8 +30,11 @@ public class MainViewModel : ViewModelBase
     private readonly IQrCodeScanner _qrScanner;
     private readonly QrCodeService _qrCodeService;
     private readonly QrContentResolver _contentResolver;
+    private readonly HeyCyanGlassesDeviceManager _glasses;
     private readonly ILogger<MainViewModel> _logger;
+    private readonly IAecProcessor? _aec;
     private string _debugLog = string.Empty;
+    private string _aecDebugText = string.Empty;
     private string _toggleButtonText = "Start";
     private string _statusText = "Ready";
     private bool _isRunning;
@@ -54,7 +60,7 @@ public class MainViewModel : ViewModelBase
     private Dictionary<string, object>? _lastScanParsed;
     private string? _lastScanRawContent;
 
-    public MainViewModel(AgentOrchestrator orchestrator, IApiKeyService apiKeyService, ISettingsService settingsService, CameraManager cameraManager, IQrCodeScanner qrScanner, QrCodeService qrCodeService, QrContentResolver contentResolver, ILogger<MainViewModel> logger)
+    public MainViewModel(AgentOrchestrator orchestrator, IApiKeyService apiKeyService, ISettingsService settingsService, CameraManager cameraManager, IQrCodeScanner qrScanner, QrCodeService qrCodeService, QrContentResolver contentResolver, HeyCyanGlassesDeviceManager glasses, ILogger<MainViewModel> logger, IAecProcessor? aec = null)
     {
         _orchestrator = orchestrator;
         _apiKeyService = apiKeyService;
@@ -63,10 +69,24 @@ public class MainViewModel : ViewModelBase
         _qrScanner = qrScanner;
         _qrCodeService = qrCodeService;
         _contentResolver = contentResolver;
+        _glasses = glasses;
         _logger = logger;
+        _aec = aec;
         Title = "BodyCam";
 
         _debugVisible = _settingsService.DebugMode;
+
+        // Wire AEC statistics (Phase 6.1)
+        if (_aec is AecProcessor aecProc)
+        {
+            aecProc.StatisticsUpdated += OnAecStatisticsUpdated;
+        }
+
+        // Subscribe to glasses events for shell widget
+        _glasses.StateChanged += (_, _) => RefreshGlasses();
+        _glasses.StatusChanged += (_, _) => RefreshGlasses();
+
+        NavigateToGlassesCommand = new AsyncRelayCommand(async () => await Shell.Current.GoToAsync("//glasses"));
 
         ToggleCommand = new AsyncRelayCommand(ToggleAsync);
         ClearCommand = new RelayCommand(() =>
@@ -192,6 +212,12 @@ public class MainViewModel : ViewModelBase
     {
         get => _debugLog;
         set => SetProperty(ref _debugLog, value);
+    }
+
+    public string AecDebugText
+    {
+        get => _aecDebugText;
+        set => SetProperty(ref _aecDebugText, value);
     }
 
     public string ToggleButtonText
@@ -333,6 +359,25 @@ public class MainViewModel : ViewModelBase
         set => SetProperty(ref _scanResultSummary, value);
     }
     public ObservableCollection<ContentAction> ScanActions { get; } = [];
+
+    // --- Glasses status for shell widget (M33 Phase 7 Wave 3) ---
+    public bool GlassesConnected => _glasses.State == GlassesConnectionState.Connected;
+    public int GlassesBatteryPct => _glasses.Battery?.Percentage ?? 0;
+    public bool GlassesCharging => _glasses.Battery?.IsCharging ?? false;
+    public Color GlassesBatteryColor =>
+        (!GlassesCharging && GlassesBatteryPct <= 15)
+            ? Colors.Red
+            : Colors.White;
+
+    public AsyncRelayCommand NavigateToGlassesCommand { get; }
+
+    private void RefreshGlasses()
+    {
+        OnPropertyChanged(nameof(GlassesConnected));
+        OnPropertyChanged(nameof(GlassesBatteryPct));
+        OnPropertyChanged(nameof(GlassesCharging));
+        OnPropertyChanged(nameof(GlassesBatteryColor));
+    }
 
     public Color StateColor => CurrentLayer switch
     {
@@ -769,5 +814,16 @@ public class MainViewModel : ViewModelBase
     {
         await Task.Delay(TimeSpan.FromSeconds(30));
         ShowScanResult = false;
+    }
+
+    /// <summary>
+    /// Phase 6.1: Update AEC debug overlay when new statistics arrive from WebRTC APM.
+    /// </summary>
+    private void OnAecStatisticsUpdated(object? sender, ApmStatistics stats)
+    {
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            AecDebugText = $"ERLE {stats.EchoReturnLossEnhancementDb:F1} dB · res {stats.ResidualEchoLikelihood:F2} · delay {stats.DelayMs} ms · div {stats.DivergentFilterFraction:F2}";
+        });
     }
 }

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:BodyCam.ViewModels"
+             x:Class="BodyCam.Pages.MediaGalleryPage"
+             x:DataType="vm:MediaGalleryViewModel"
+             Title="{Binding Title}">
+
+    <Grid RowDefinitions="Auto,Auto,*">
+
+        <HorizontalStackLayout Grid.Row="0" Spacing="8" Padding="12">
+            <Button Text="All" Command="{Binding FilterCommand}" CommandParameter="All" 
+                    AutomationId="FilterAllButton" />
+            <Button Text="Photos" Command="{Binding FilterCommand}" CommandParameter="Photo"
+                    AutomationId="FilterPhotosButton" />
+            <Button Text="Videos" Command="{Binding FilterCommand}" CommandParameter="Video"
+                    AutomationId="FilterVideosButton" />
+            <Button Text="Audio" Command="{Binding FilterCommand}" CommandParameter="Audio"
+                    AutomationId="FilterAudioButton" />
+            <Button Text="Refresh" Command="{Binding RefreshCommand}"
+                    AutomationId="RefreshButton" />
+        </HorizontalStackLayout>
+
+        <ProgressBar Grid.Row="1" Progress="{Binding ImportProgress}"
+                     IsVisible="{Binding IsImporting}"
+                     AutomationId="ImportProgressBar" />
+
+        <CollectionView Grid.Row="2"
+                        ItemsSource="{Binding FilteredItems}"
+                        SelectionMode="Single"
+                        SelectionChangedCommand="{Binding OpenItemCommand}"
+                        SelectionChangedCommandParameter="{Binding Source={RelativeSource Self}, Path=SelectedItem}"
+                        AutomationId="MediaCollectionView">
+            <CollectionView.ItemsLayout>
+                <GridItemsLayout Orientation="Vertical" Span="3"
+                                 HorizontalItemSpacing="4" VerticalItemSpacing="4"/>
+            </CollectionView.ItemsLayout>
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="vm:MediaTileViewModel">
+                    <Grid HeightRequest="120">
+                        <Image Source="{Binding ThumbnailSource}" Aspect="AspectFill"/>
+                        <Label Text="▶" IsVisible="{Binding IsVideo}" FontSize="28"
+                               HorizontalOptions="End" VerticalOptions="End" Margin="4"/>
+                        <Label Text="🎙" IsVisible="{Binding IsAudio}" FontSize="32"
+                               HorizontalOptions="Center" VerticalOptions="Center"/>
+                        <Label Text="{Binding Duration}" FontSize="10"
+                               BackgroundColor="#80000000" TextColor="White"
+                               HorizontalOptions="Start" VerticalOptions="End"
+                               Padding="4,1"
+                               IsVisible="{Binding Duration, Converter={StaticResource IsNotNullConverter}}"/>
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+
+            <CollectionView.EmptyView>
+                <Label Text="No glasses media imported yet. Tap Refresh."
+                       HorizontalOptions="Center" VerticalOptions="Center"
+                       FontSize="16"
+                       AutomationId="EmptyViewLabel" />
+            </CollectionView.EmptyView>
+        </CollectionView>
+    </Grid>
+</ContentPage>

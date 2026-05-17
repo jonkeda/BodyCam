@@ -11,6 +11,9 @@
                 <ResourceDictionary Source="Resources/Styles/Styles.xaml" />
             </ResourceDictionary.MergedDictionaries>
             <conv:InvertBoolConverter x:Key="InvertBoolConverter" />
+            <conv:IsNotNullConverter x:Key="IsNotNullConverter" />
+            <conv:BoolToColorConverter x:Key="BoolToColorConverter" />
+            <conv:PercentConverter x:Key="PercentConverter" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

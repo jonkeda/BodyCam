@@ -41,14 +41,15 @@ public class VoiceInputAgentTests
 
         await agent.StartAsync();
 
-        // Simulate audio chunk
-        audioInput.AudioChunkAvailable += Raise.Event<EventHandler<byte[]>>(audioInput, new byte[] { 1, 2, 3 });
+        // Simulate audio chunk — 8 bytes = 4 PCM16 samples @ 48 kHz
+        // Resample48to24 halves the sample count: 4 → 2 samples = 4 bytes
+        audioInput.AudioChunkAvailable += Raise.Event<EventHandler<byte[]>>(audioInput, new byte[] { 1, 0, 2, 0, 3, 0, 4, 0 });
 
         // Give the async void handler a moment to execute
         await Task.Delay(50);
 
         received.Should().NotBeNull();
-        received!.Length.Should().Be(3);
+        received!.Length.Should().Be(4);
     }
 
     [Fact]

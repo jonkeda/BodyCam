@@ -20,6 +20,7 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<NoWarn>$(NoWarn);MEAI001;OPENAI002</NoWarn>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 
 		<!-- Display name -->
 		<ApplicationTitle>BodyCam</ApplicationTitle>
@@ -36,7 +37,7 @@
 
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">15.0</SupportedOSPlatformVersion>
-		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">26.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
 		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tizen'">6.5</SupportedOSPlatformVersion>
@@ -80,7 +81,7 @@
 		<PackageReference Include="ZXing.Net" Version="0.16.*" />
 		<PackageReference Include="OpenTelemetry" Version="1.*" />
 		<PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.*" />
-		<PackageReference Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.*" />
+		<PackageReference Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.8.0" />
 		<PackageReference Include="Sentry.Maui" Version="6.*" />
 	</ItemGroup>
 
@@ -108,13 +109,29 @@
 			<_NextBuild>$([MSBuild]::Add($(_CurrentBuild), 1))</_NextBuild>
 		</PropertyGroup>
 		<WriteLinesToFile File="$(MSBuildProjectDirectory)\build-number.txt" Lines="$(_NextBuild)" Overwrite="true" />
-		<WriteLinesToFile File="$(IntermediateOutputPath)BuildNumber.g.cs"
-			Lines="[assembly: System.Reflection.AssemblyMetadata(&quot;BuildNumber&quot;, &quot;$(_NextBuild)&quot;)]"
-			Overwrite="true" />
+		<WriteLinesToFile File="$(IntermediateOutputPath)BuildNumber.g.cs" Lines="[assembly: System.Reflection.AssemblyMetadata(&quot;BuildNumber&quot;, &quot;$(_NextBuild)&quot;)]" Overwrite="true" />
 		<ItemGroup>
 			<Compile Include="$(IntermediateOutputPath)BuildNumber.g.cs" />
 		</ItemGroup>
 		<Message Importance="high" Text="Build #$(_NextBuild)" />
 	</Target>
+
+	<!-- HeyCyan Android Bindings (Android only) -->
+	<ItemGroup Condition="$(TargetFramework.Contains('-android'))">
+		<ProjectReference Include="..\BodyCam.HeyCyan.Android.Bindings\BodyCam.HeyCyan.Android.Bindings.csproj" />
+	</ItemGroup>
+
+	<!-- HeyCyan iOS Bindings (iOS only) -->
+	<ItemGroup Condition="$(TargetFramework.Contains('-ios'))">
+		<ProjectReference Include="..\BodyCam.HeyCyan.iOS.Bindings\BodyCam.HeyCyan.iOS.Bindings.csproj" />
+	</ItemGroup>
+
+	<!-- iOS Code Signing -->
+	<PropertyGroup Condition="$(TargetFramework.Contains('-ios')) And '$(Configuration)' == 'Debug'">
+		<CodesignEntitlements>Platforms/iOS/Entitlements.plist</CodesignEntitlements>
+	</PropertyGroup>
+	<PropertyGroup Condition="$(TargetFramework.Contains('-ios')) And '$(Configuration)' == 'Release'">
+		<CodesignEntitlements>Platforms/iOS/Entitlements.plist</CodesignEntitlements>
+	</PropertyGroup>
 
 </Project>

@@ -27,4 +27,10 @@ public class AudioOutputService : IAudioOutputService
     }
 
     public void ClearBuffer() { }
+
+    public Task FadeOutAndClearAsync(int fadeMs = 30, CancellationToken ct = default)
+    {
+        ClearBuffer();
+        return Task.CompletedTask;
+    }
 }

@@ -48,12 +48,13 @@ public class VoiceOutputAgentTests
     {
         var audioOutput = Substitute.For<IAudioOutputService>();
         var agent = new VoiceOutputAgent(audioOutput);
-        var chunk = new byte[] { 1, 2, 3, 4 };
+        var chunk = new byte[] { 1, 2, 3, 4 }; // 4 bytes at 24kHz
 
         await agent.PlayAudioDeltaAsync(chunk);
 
-        await audioOutput.Received(1).PlayChunkAsync(chunk, Arg.Any<CancellationToken>());
-        agent.Tracker.BytesPlayed.Should().Be(4);
+        // Audio is resampled 24kHz → 48kHz (2x), so expect roughly 2x the bytes
+        await audioOutput.Received(1).PlayChunkAsync(Arg.Any<byte[]>(), Arg.Any<CancellationToken>());
+        agent.Tracker.BytesPlayed.Should().BeGreaterThan(4); // Resampled chunk is larger
     }
 
     [Fact]
@@ -62,21 +63,23 @@ public class VoiceOutputAgentTests
         var audioOutput = Substitute.For<IAudioOutputService>();
         var agent = new VoiceOutputAgent(audioOutput);
 
-        await agent.PlayAudioDeltaAsync(new byte[100]);
-        await agent.PlayAudioDeltaAsync(new byte[200]);
+        await agent.PlayAudioDeltaAsync(new byte[100]); // 100 bytes at 24kHz → ~200 bytes at 48kHz
+        await agent.PlayAudioDeltaAsync(new byte[200]); // 200 bytes at 24kHz → ~400 bytes at 48kHz
 
-        agent.Tracker.BytesPlayed.Should().Be(300);
+        // Total: ~600 bytes (resampled)
+        agent.Tracker.BytesPlayed.Should().BeGreaterThan(300);
+        agent.Tracker.BytesPlayed.Should().BeInRange(500, 700); // Account for resampling
     }
 
     [Fact]
-    public void HandleInterruption_ClearsBuffer()
+    public async Task HandleInterruptionAsync_ClearsBufferWithFade()
     {
         var audioOutput = Substitute.For<IAudioOutputService>();
         var agent = new VoiceOutputAgent(audioOutput);
 
-        agent.HandleInterruption();
+        await agent.HandleInterruptionAsync();
 
-        audioOutput.Received(1).ClearBuffer();
+        await audioOutput.Received(1).FadeOutAndClearAsync(30, Arg.Any<CancellationToken>());
     }
 
     [Fact]

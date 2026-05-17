@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:BodyCam.ViewModels"
+             xmlns:hc="clr-namespace:BodyCam.Services.Glasses.HeyCyan"
+             x:Class="BodyCam.Pages.GlassesPage"
+             x:DataType="vm:GlassesViewModel"
+             Title="Glasses">
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="14">
+
+            <!-- Status header -->
+            <Frame Padding="12" CornerRadius="10">
+                <HorizontalStackLayout Spacing="10">
+                    <Label Text="●" FontSize="22"
+                           TextColor="{Binding IsConnected,
+                                       Converter={StaticResource BoolToColorConverter}}" />
+                    <Label Text="{Binding StatusText}" FontSize="18"
+                           VerticalOptions="Center" />
+                </HorizontalStackLayout>
+            </Frame>
+
+            <!-- Scan + device list (disconnected only) -->
+            <Button Text="Scan for Glasses"
+                    Command="{Binding ScanCommand}"
+                    IsVisible="{Binding IsScanning,
+                                Converter={StaticResource InvertBoolConverter}}" />
+
+            <HorizontalStackLayout Spacing="10"
+                                   IsVisible="{Binding IsScanning}">
+                <ActivityIndicator IsRunning="{Binding IsScanning}"
+                                   WidthRequest="24" HeightRequest="24"
+                                   VerticalOptions="Center" />
+                <Button Text="Stop Scanning"
+                        Command="{Binding StopScanCommand}" />
+            </HorizontalStackLayout>
+
+            <CollectionView ItemsSource="{Binding Devices}"
+                            SelectionMode="Single"
+                            SelectedItem="{Binding SelectedDevice}"
+                            IsVisible="{Binding IsConnected,
+                                        Converter={StaticResource InvertBoolConverter}}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="hc:HeyCyanDeviceInfo">
+                        <Frame Padding="8" Margin="0,4">
+                            <VerticalStackLayout>
+                                <Label Text="{Binding Name}" FontAttributes="Bold" />
+                                <Label Text="{Binding Address}"
+                                       FontSize="12" TextColor="Gray" />
+                                <Label Text="{Binding Rssi, StringFormat='RSSI {0} dBm'}"
+                                       FontSize="11" TextColor="Gray" />
+                            </VerticalStackLayout>
+                        </Frame>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+            <Button Text="Connect"
+                    Command="{Binding ConnectCommand}"
+                    IsVisible="{Binding IsConnected,
+                                Converter={StaticResource InvertBoolConverter}}" />
+
+            <!-- Status panel (connected only) -->
+            <Frame Padding="12" CornerRadius="10"
+                   IsVisible="{Binding IsConnected}">
+                <VerticalStackLayout Spacing="8">
+
+                    <HorizontalStackLayout Spacing="8">
+                        <Label Text="🔋" FontSize="20" />
+                        <ProgressBar
+                            Progress="{Binding BatteryPct,
+                                       Converter={StaticResource PercentConverter}}"
+                            WidthRequest="180" VerticalOptions="Center" />
+                        <Label Text="{Binding BatteryPct, StringFormat='{0}%'}"
+                               VerticalOptions="Center" />
+                        <Label Text="⚡" IsVisible="{Binding IsCharging}"
+                               VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+
+                    <Grid ColumnDefinitions="120,*"
+                          RowDefinitions="Auto,Auto,Auto" RowSpacing="4">
+                        <Label Grid.Row="0" Grid.Column="0"
+                               Text="MAC" TextColor="Gray" />
+                        <Label Grid.Row="0" Grid.Column="1" Text="{Binding Mac}" />
+                        <Label Grid.Row="1" Grid.Column="0"
+                               Text="Firmware" TextColor="Gray" />
+                        <Label Grid.Row="1" Grid.Column="1" Text="{Binding Firmware}" />
+                        <Label Grid.Row="2" Grid.Column="0"
+                               Text="Hardware" TextColor="Gray" />
+                        <Label Grid.Row="2" Grid.Column="1" Text="{Binding Hardware}" />
+                    </Grid>
+
+                    <HorizontalStackLayout Spacing="14">
+                        <Label Text="{Binding Photos,     StringFormat='📷 {0}'}" />
+                        <Label Text="{Binding Videos,     StringFormat='🎬 {0}'}" />
+                        <Label Text="{Binding AudioFiles, StringFormat='🎙️ {0}'}" />
+                    </HorizontalStackLayout>
+
+                </VerticalStackLayout>
+            </Frame>
+
+            <Button Text="Disconnect"
+                    Command="{Binding DisconnectCommand}"
+                    IsVisible="{Binding IsConnected}"
+                    BackgroundColor="Red" TextColor="White" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

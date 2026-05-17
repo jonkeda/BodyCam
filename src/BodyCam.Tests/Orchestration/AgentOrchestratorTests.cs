@@ -50,7 +50,8 @@ public class AgentOrchestratorTests
         var dispatcher = new ToolDispatcher(new ITool[] { describeSceneTool, deepAnalysisTool });
         var wakeWord = Substitute.For<IWakeWordService>();
         var micCoordinator = Substitute.For<IMicrophoneCoordinator>();
-        var cameraManager = new CameraManager([], settingsService);
+        var selector = new DefaultCameraSelector();
+        var cameraManager = new CameraManager([], settingsService, selector, NullLogger<CameraManager>.Instance, null);
         var aec = new AecProcessor(NullLogger<AecProcessor>.Instance);
         var sink = logSink ?? new InAppLogSink();
         var loggerProvider = new InAppLoggerProvider(sink, LogLevel.Debug);

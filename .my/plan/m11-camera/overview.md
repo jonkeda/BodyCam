@@ -7,6 +7,13 @@ phone camera, USB bodycams, and WiFi cameras — with one active camera at a tim
 **Absorbs:** M4 camera portions (BT/WiFi glasses camera). M4 retains BT audio routing
 and button mapping only.
 
+**Related:** [M33 — HeyCyan Glasses SDK Integration](../m33-heycyan-sdk/overview.md)
+supplies the concrete implementation for Phase 4 (Chinese WiFi glasses). Important:
+the HeyCyan/QCSDK hardware does **not** stream live RTSP/MJPEG video — it captures
+photos to internal storage and transfers them via WiFi-Direct + HTTP. The Phase 4
+protocol assumptions in [wifi-camera.md](wifi-camera.md) (RTSP/MJPEG live stream)
+apply only to generic IP cameras / non-HeyCyan WiFi glasses.
+
 ---
 
 ## Why This Matters
@@ -104,6 +111,11 @@ WiFi cameras and acts as the foundation for WiFi glasses.
 ### Phase 4: Chinese WiFi Glasses
 Implement `WifiGlassesCameraProvider`. Protocol varies by model — may use
 RTSP, WiFi-Direct, or proprietary protocol. Builds on Phase 3 RTSP work.
+
+For **HeyCyan / QCSDK / TKYUAN** glasses specifically, this is delivered by
+[M33 Phase 2](../m33-heycyan-sdk/overview.md) as `HeyCyanCameraProvider`,
+which is a *file-based snapshot* provider (BLE photo command → WiFi-Direct
+transfer mode → HTTP `GET /files/<name>.jpg`), not a live RTSP stream.
 
 **Deliverables:** `WifiGlassesCameraProvider`, WiFi-Direct discovery,
 per-model protocol adapters.
