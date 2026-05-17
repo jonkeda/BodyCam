@@ -10,13 +10,26 @@ namespace BodyCam.Platforms.Windows.Audio;
 /// </summary>
 public sealed class WindowsBluetoothAudioProvider : IAudioInputProvider, IDisposable
 {
-    private readonly MMDevice _device;
+    private readonly string _deviceId;
     private readonly AppSettings _settings;
     private WasapiCapture? _capture;
+    private MMDevice? _activeDevice;
 
     public string DisplayName { get; }
     public string ProviderId { get; }
-    public bool IsAvailable => _device.State == DeviceState.Active;
+    public bool IsAvailable
+    {
+        get
+        {
+            try
+            {
+                using var enumerator = new MMDeviceEnumerator();
+                var device = enumerator.GetDevice(_deviceId);
+                return device.State == DeviceState.Active;
+            }
+            catch { return false; }
+        }
+    }
     public bool IsCapturing { get; private set; }
 
     public event EventHandler<byte[]>? AudioChunkAvailable;
@@ -24,7 +37,7 @@ public sealed class WindowsBluetoothAudioProvider : IAudioInputProvider, IDispos
 
     public WindowsBluetoothAudioProvider(MMDevice device, AppSettings settings, string mac)
     {
-        _device = device;
+        _deviceId = device.ID;
         _settings = settings;
         DisplayName = $"BT: {device.FriendlyName}";
         ProviderId = $"bt:{mac}";
@@ -34,10 +47,45 @@ public sealed class WindowsBluetoothAudioProvider : IAudioInputProvider, IDispos
     {
         if (IsCapturing) return Task.CompletedTask;
 
-        _capture = new WasapiCapture(_device)
+        // Re-acquire a fresh COM proxy — the original MMDevice from scan time may be stale
+        // (BT endpoint recycled, or COM apartment mismatch). See RCA 001.
+        var enumerator = new MMDeviceEnumerator();
+        MMDevice device;
+        try
         {
-            WaveFormat = _device.AudioClient.MixFormat
-        };
+            device = enumerator.GetDevice(_deviceId);
+        }
+        catch (Exception ex)
+        {
+            enumerator.Dispose();
+            throw new InvalidOperationException(
+                $"BT capture endpoint '{DisplayName}' is no longer available.", ex);
+        }
+
+        if (device.State != DeviceState.Active)
+        {
+            var state = device.State;
+            enumerator.Dispose();
+            throw new InvalidOperationException(
+                $"BT capture endpoint '{DisplayName}' is not active (state: {state}).");
+        }
+
+        _activeDevice = device;
+
+        try
+        {
+            _capture = new WasapiCapture(device)
+            {
+                WaveFormat = device.AudioClient.MixFormat
+            };
+        }
+        catch (InvalidCastException ex)
+        {
+            _activeDevice = null;
+            enumerator.Dispose();
+            throw new InvalidOperationException(
+                $"BT capture endpoint '{DisplayName}' COM proxy is invalid — device may have disconnected.", ex);
+        }
 
         _capture.DataAvailable += OnDataAvailable;
         _capture.RecordingStopped += OnRecordingStopped;
@@ -139,5 +187,6 @@ public sealed class WindowsBluetoothAudioProvider : IAudioInputProvider, IDispos
         _capture?.StopRecording();
         _capture?.Dispose();
         _capture = null;
+        _activeDevice = null;
     }
 }

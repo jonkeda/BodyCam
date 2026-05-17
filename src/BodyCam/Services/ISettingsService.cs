@@ -50,6 +50,9 @@ public interface ISettingsService
 
     // HeyCyan Glasses
     bool FeedVoiceNotesToDictation { get; set; }
+    string? LastHeyCyanDeviceAddress { get; set; }
+    string? LastHeyCyanDeviceName { get; set; }
+    bool HeyCyanAutoReconnect { get; set; }
 
     // Setup
     bool SetupCompleted { get; set; }

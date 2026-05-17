@@ -111,6 +111,48 @@ iOS-specific optimization and App Store compliance.
 - iOS-specific audio session interruption handling (phone calls, Siri, other apps)
 - TestFlight distribution setup
 
+### Phase 8: App Icon & Branding
+Custom app icon that communicates the product identity at a glance. Replaces the
+default MAUI template icon on all platforms.
+
+**Concept direction:**
+
+The icon should convey *wearable AI assistant* — smart glasses + voice. A few
+candidate directions:
+
+| # | Concept | Description |
+|---|---------|-------------|
+| 1 | **Glasses silhouette + waveform** | Minimal side-profile of smart glasses with a small audio waveform underneath or inside one lens. Clean, recognizable at small sizes. |
+| 2 | **Lens with AI spark** | Single circular lens (front-on) with a subtle sparkle/star inside, suggesting intelligence. Bold, app-store friendly. |
+| 3 | **Eye + signal** | Stylized eye shape combined with broadcast/signal arcs, implying vision + connectivity. |
+| 4 | **Monogram "BC"** | Lettermark in a rounded-square with a gradient that evokes glass/light refraction. Simple, professional. |
+
+**Recommended:** Option 1 — it directly communicates both *glasses* and *voice*,
+the two core concepts of the app.
+
+**Color palette:**
+- Primary: deep navy (#1A2744) or charcoal — professional, pairs well with light accents
+- Accent: cyan/teal (#00BCD4) — ties to the HeyCyan brand and feels tech-forward
+- Background: solid color or subtle gradient (no transparent backgrounds for store icons)
+
+**Deliverables:**
+- SVG source file for the icon (vector, scalable)
+- Platform-specific exports:
+  - **Android:** adaptive icon (foreground + background layers), 108×108dp foreground, mipmap set
+  - **iOS:** 1024×1024 App Store icon + required sizes (no alpha channel)
+  - **Windows:** 44×44, 150×150, store logo 50×50 (`.ico` or `.png`)
+  - **MAUI:** replace `appicon.svg` + `appicon_fg.svg` in `Resources/AppIcon/`
+- Splash screen updated to match icon branding
+- Verify icon renders correctly at 16×16, 32×32, 64×64, 128×128, 512×512
+
+**Implementation steps:**
+1. Generate icon candidates using an image generation tool or designer
+2. Review at multiple sizes (notification badge → app store listing)
+3. Export platform assets
+4. Replace default MAUI icon files in `src/BodyCam/Resources/AppIcon/`
+5. Update `Info.plist` / `AndroidManifest.xml` if needed
+6. Test on physical devices (Android, iOS, Windows)
+
 ---
 
 ## Exit Criteria

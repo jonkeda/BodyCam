@@ -5,7 +5,9 @@ using Microsoft.Extensions.Logging;
 using Windows.Devices.Bluetooth;
 using Windows.Devices.Bluetooth.Advertisement;
 using Windows.Devices.Bluetooth.GenericAttributeProfile;
+using Windows.Devices.Bluetooth.Rfcomm;
 using Windows.Storage.Streams;
+using BodyCam.Platforms.Windows.Audio;
 using BodyCam.Services.Glasses.HeyCyan;
 
 namespace BodyCam.Platforms.Windows.HeyCyan;
@@ -32,6 +34,8 @@ internal sealed class WindowsHeyCyanGlassesSession : IHeyCyanGlassesSession
     private static readonly Guid CharHardwareRevision = Guid.Parse("00002a27-0000-1000-8000-00805f9b34fb");
 
     private readonly ILogger<WindowsHeyCyanGlassesSession> _log;
+    private readonly WindowsBluetoothEnumerator _btEnumerator;
+    private readonly WindowsBluetoothOutputEnumerator _btOutputEnumerator;
     private readonly SemaphoreSlim _commandLock = new(1, 1);
 
     private BluetoothLEDevice? _bleDevice;
@@ -44,9 +48,14 @@ internal sealed class WindowsHeyCyanGlassesSession : IHeyCyanGlassesSession
     private HeyCyanState _state = HeyCyanState.Disconnected;
     private HeyCyanMediaCount? _lastMediaCount;
 
-    public WindowsHeyCyanGlassesSession(ILogger<WindowsHeyCyanGlassesSession> log)
+    public WindowsHeyCyanGlassesSession(
+        ILogger<WindowsHeyCyanGlassesSession> log,
+        WindowsBluetoothEnumerator btEnumerator,
+        WindowsBluetoothOutputEnumerator btOutputEnumerator)
     {
         _log = log;
+        _btEnumerator = btEnumerator;
+        _btOutputEnumerator = btOutputEnumerator;
     }
 
     public HeyCyanState State
@@ -145,6 +154,63 @@ internal sealed class WindowsHeyCyanGlassesSession : IHeyCyanGlassesSession
             State = HeyCyanState.Disconnected;
         }
 
+        // Fallback: also check paired BLE devices that may not be advertising
+        // (e.g. glasses already connected via Classic BT — see RCA 002).
+        try
+        {
+            // Check BLE paired devices
+            var bleSelector = BluetoothLEDevice.GetDeviceSelectorFromPairingState(true);
+            var blePairedDevices = await global::Windows.Devices.Enumeration.DeviceInformation
+                .FindAllAsync(bleSelector).AsTask(ct).ConfigureAwait(false);
+
+            _log.LogDebug("Paired-device fallback: {Count} BLE paired device(s) found", blePairedDevices.Count);
+            foreach (var di in blePairedDevices)
+            {
+                _log.LogDebug("  BLE paired: {Name} ({Id}), match={Match}", di.Name, di.Id, IsHeyCyanName(di.Name));
+                if (!IsHeyCyanName(di.Name)) continue;
+
+                using var bleDevice = await BluetoothLEDevice.FromIdAsync(di.Id).AsTask(ct).ConfigureAwait(false);
+                if (bleDevice is null) continue;
+
+                if (!devices.ContainsKey(bleDevice.BluetoothAddress))
+                {
+                    var address = FormatBluetoothAddress(bleDevice.BluetoothAddress);
+                    var info = new HeyCyanDeviceInfo(di.Name, address, Rssi: 0);
+                    devices[bleDevice.BluetoothAddress] = info;
+                    _log.LogInformation("BLE scan: found paired BLE device {Name} ({Address}) — not advertising",
+                        di.Name, address);
+                }
+            }
+
+            // Also check Classic BT paired devices — glasses may be Classic-paired only
+            var classicSelector = BluetoothDevice.GetDeviceSelectorFromPairingState(true);
+            var classicPairedDevices = await global::Windows.Devices.Enumeration.DeviceInformation
+                .FindAllAsync(classicSelector).AsTask(ct).ConfigureAwait(false);
+
+            _log.LogDebug("Paired-device fallback: {Count} Classic BT paired device(s) found", classicPairedDevices.Count);
+            foreach (var di in classicPairedDevices)
+            {
+                _log.LogDebug("  Classic paired: {Name} ({Id}), match={Match}", di.Name, di.Id, IsHeyCyanName(di.Name));
+                if (!IsHeyCyanName(di.Name)) continue;
+
+                using var classicDevice = await BluetoothDevice.FromIdAsync(di.Id).AsTask(ct).ConfigureAwait(false);
+                if (classicDevice is null) continue;
+
+                if (!devices.ContainsKey(classicDevice.BluetoothAddress))
+                {
+                    var address = FormatBluetoothAddress(classicDevice.BluetoothAddress);
+                    var info = new HeyCyanDeviceInfo(di.Name, address, Rssi: 0);
+                    devices[classicDevice.BluetoothAddress] = info;
+                    _log.LogInformation("BLE scan: found paired Classic BT device {Name} ({Address}) — not advertising",
+                        di.Name, address);
+                }
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _log.LogWarning(ex, "Paired-device fallback scan failed");
+        }
+
         var results = devices.Values.ToList();
         _log.LogInformation("BLE scan complete: {Count} device(s) matched, {Total} ads received ({Named} with names, {UniqueNames} unique named devices)",
             results.Count, totalAds, namedAds, deviceNames.Count);
@@ -218,13 +284,16 @@ internal sealed class WindowsHeyCyanGlassesSession : IHeyCyanGlassesSession
                 }
             }
 
-            // Classic BT pairing AFTER BLE GATT setup is complete — running in parallel
-            // disrupts GATT service discovery (see RCA: serial-port-service-not-found).
-            var classicPaired = await TryPairClassicAsync(address, ct).ConfigureAwait(false);
-            if (classicPaired)
-                _log.LogInformation("Classic BT paired with {Name} — audio endpoint should appear", device.Name);
+            // Classic BT audio: pair if needed AND ensure audio endpoints exist.
+            // Runs AFTER BLE GATT setup — running in parallel disrupts GATT service
+            // discovery (see RCA: serial-port-service-not-found).
+            var audioResult = await EnsureClassicBtAudioAsync(address, ct).ConfigureAwait(false);
+            if (audioResult == BtAudioResult.Success)
+                _log.LogInformation("Classic BT audio ready for {Name} — both endpoints found", device.Name);
+            else if (audioResult == BtAudioResult.PartialSuccess)
+                _log.LogWarning("Classic BT audio partial for {Name} — only some endpoints found", device.Name);
             else
-                _log.LogWarning("Classic BT pairing failed for {Name} — live audio may be unavailable", device.Name);
+                _log.LogWarning("Classic BT audio unavailable for {Name} — GATT-only connection", device.Name);
 
             State = HeyCyanState.Connected;
             _log.LogInformation("Connected to {Name} ({Address})", device.Name, device.Address);
@@ -235,6 +304,167 @@ internal sealed class WindowsHeyCyanGlassesSession : IHeyCyanGlassesSession
             State = HeyCyanState.Disconnected;
             throw;
         }
+    }
+
+    /// <summary>
+    /// Internal result of Classic BT audio endpoint discovery.
+    /// Used only within this session — not exposed on <see cref="IHeyCyanGlassesSession"/>.
+    /// </summary>
+    private enum BtAudioResult
+    {
+        /// <summary>Both capture and render endpoints found.</summary>
+        Success,
+        /// <summary>Only some endpoints found (e.g. render but not capture).</summary>
+        PartialSuccess,
+        /// <summary>No BT audio endpoints found. GATT-only connection.</summary>
+        Failure
+    }
+
+    /// <summary>
+    /// Ensures Classic BT audio endpoints (HFP capture + A2DP render) are available.
+    /// Handles three scenarios:
+    /// <list type="bullet">
+    ///   <item>Already paired + endpoints exist → immediate return</item>
+    ///   <item>Paired but no endpoints → SDP query to trigger profile connection, then poll</item>
+    ///   <item>Not paired → pair first, then trigger profile connection</item>
+    /// </list>
+    /// This method never throws — failures are logged and returned as <see cref="BtAudioResult.Failure"/>.
+    /// </summary>
+    private async Task<BtAudioResult> EnsureClassicBtAudioAsync(ulong bleAddress, CancellationToken ct)
+    {
+        var mac = FormatBluetoothAddress(bleAddress);
+
+        try
+        {
+            // Phase A: Quick check — are endpoints already here?
+            _log.LogDebug("EnsureBtAudio Phase A: checking existing endpoints for {Mac}", mac);
+            await WindowsBluetoothEnumerator.RefreshPairedDeviceCacheAsync().ConfigureAwait(false);
+            _btEnumerator.ScanAndRegister();
+            _btOutputEnumerator.ScanAndRegister();
+
+            if (HasBtEndpoints(mac))
+            {
+                _log.LogInformation("EnsureBtAudio: endpoints already exist for {Mac}", mac);
+                return GetBtAudioResult(mac);
+            }
+
+            // Phase B: Check if paired but no endpoints
+            _log.LogDebug("EnsureBtAudio Phase B: checking pairing state for {Mac}", mac);
+            var classicDevice = await BluetoothDevice.FromBluetoothAddressAsync(bleAddress)
+                .AsTask(ct).ConfigureAwait(false);
+
+            if (classicDevice is not null && classicDevice.DeviceInformation.Pairing.IsPaired)
+            {
+                _log.LogInformation("EnsureBtAudio: device paired but no endpoints — forcing profile connection for {Mac}", mac);
+                if (await TryForceProfileConnectionAsync(classicDevice, mac, ct).ConfigureAwait(false))
+                    return GetBtAudioResult(mac);
+
+                _log.LogWarning("EnsureBtAudio: profile forcing failed for {Mac}, trying unpair+repair", mac);
+                // Strategy 2: Unpair and re-pair as nuclear option
+                var unpairResult = await classicDevice.DeviceInformation.Pairing.UnpairAsync()
+                    .AsTask(ct).ConfigureAwait(false);
+                if (unpairResult.Status == global::Windows.Devices.Enumeration.DeviceUnpairingResultStatus.Unpaired)
+                {
+                    _log.LogDebug("EnsureBtAudio: unpaired successfully, re-pairing");
+                    await Task.Delay(2000, ct).ConfigureAwait(false);
+                    // Fall through to Phase C
+                }
+                else
+                {
+                    _log.LogWarning("EnsureBtAudio: unpair returned {Status}", unpairResult.Status);
+                }
+            }
+
+            // Phase C: Not paired (or was just unpaired) — full pairing sequence
+            _log.LogDebug("EnsureBtAudio Phase C: pairing for {Mac}", mac);
+            var paired = await TryPairClassicAsync(bleAddress, ct).ConfigureAwait(false);
+            if (!paired)
+            {
+                _log.LogWarning("EnsureBtAudio: Classic BT pairing failed for {Mac}", mac);
+                return BtAudioResult.Failure;
+            }
+
+            // After pairing, try to force profile connection and poll
+            classicDevice = await BluetoothDevice.FromBluetoothAddressAsync(bleAddress)
+                .AsTask(ct).ConfigureAwait(false);
+            if (classicDevice is not null)
+            {
+                await TryForceProfileConnectionAsync(classicDevice, mac, ct).ConfigureAwait(false);
+            }
+
+            return HasBtEndpoints(mac) ? GetBtAudioResult(mac) : BtAudioResult.Failure;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "EnsureBtAudio failed for {Mac}", mac);
+            return BtAudioResult.Failure;
+        }
+    }
+
+    /// <summary>
+    /// Attempt to force Windows to connect HFP/A2DP audio profiles for an already-paired device.
+    /// Queries RFCOMM services via SDP, which can trigger Windows to discover and connect profiles.
+    /// Then polls for endpoint appearance.
+    /// </summary>
+    private async Task<bool> TryForceProfileConnectionAsync(BluetoothDevice device, string mac, CancellationToken ct)
+    {
+        try
+        {
+            // Query RFCOMM services — SDP query may trigger Windows BT stack to connect HFP.
+            var hfpId = RfcommServiceId.FromUuid(Guid.Parse("0000111e-0000-1000-8000-00805f9b34fb"));
+            var services = await device.GetRfcommServicesForIdAsync(hfpId)
+                .AsTask(ct).ConfigureAwait(false);
+
+            if (services.Services.Count > 0)
+                _log.LogInformation("HFP service found via SDP for {Mac} — waiting for Windows to create endpoint", mac);
+            else
+                _log.LogDebug("No HFP service found via SDP for {Mac} — polling anyway", mac);
+
+            // Poll for endpoint appearance (2s intervals, 30s max)
+            for (int i = 0; i < 15; i++)
+            {
+                await Task.Delay(2000, ct).ConfigureAwait(false);
+                await WindowsBluetoothEnumerator.RefreshPairedDeviceCacheAsync().ConfigureAwait(false);
+                _btEnumerator.ScanAndRegister();
+                _btOutputEnumerator.ScanAndRegister();
+
+                if (HasBtEndpoints(mac))
+                {
+                    _log.LogInformation("BT audio endpoint appeared after {Seconds}s for {Mac}", (i + 1) * 2, mac);
+                    return true;
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "TryForceProfileConnection failed for {Mac}", mac);
+        }
+
+        return false;
+    }
+
+    private bool HasBtEndpoints(string mac)
+    {
+        var hasCapture = _btEnumerator.HasEndpointWithMac(mac);
+        var hasRender = _btOutputEnumerator.HasEndpointWithMac(mac);
+        return hasCapture || hasRender;
+    }
+
+    private BtAudioResult GetBtAudioResult(string mac)
+    {
+        var hasCapture = _btEnumerator.HasEndpointWithMac(mac);
+        var hasRender = _btOutputEnumerator.HasEndpointWithMac(mac);
+        if (hasCapture && hasRender) return BtAudioResult.Success;
+        if (hasCapture || hasRender) return BtAudioResult.PartialSuccess;
+        return BtAudioResult.Failure;
     }
 
     /// <summary>
@@ -632,6 +862,13 @@ internal sealed class WindowsHeyCyanGlassesSession : IHeyCyanGlassesSession
     }
 
     // ── Utilities ───────────────────────────────────────────────────────────
+
+    private static bool IsHeyCyanName(string? name) =>
+        !string.IsNullOrEmpty(name)
+        && (name.StartsWith("QC", StringComparison.OrdinalIgnoreCase)
+         || name.StartsWith("O_", StringComparison.OrdinalIgnoreCase)
+         || name.StartsWith("M01", StringComparison.OrdinalIgnoreCase)
+         || name.Contains("Cyan", StringComparison.OrdinalIgnoreCase));
 
     private static string FormatBluetoothAddress(ulong address)
     {

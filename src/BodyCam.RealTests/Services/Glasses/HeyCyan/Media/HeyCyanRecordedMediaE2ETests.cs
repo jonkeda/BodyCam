@@ -2,6 +2,7 @@ using BodyCam.Services.Glasses.HeyCyan;
 using BodyCam.Services.Glasses.HeyCyan.Media;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
+using Xunit;
 
 namespace BodyCam.RealTests.Services.Glasses.HeyCyan.Media;
 

@@ -22,7 +22,7 @@ public class DeviceViewModelTests
         var audioOut = new AudioOutputManager([], _settings, new AppSettings(), NullLogger<AudioOutputManager>.Instance);
         var glassesCameraSection = new GlassesCameraSectionViewModel(null, null, NullLogger<GlassesCameraSectionViewModel>.Instance);
         var glasses = CreateGlassesManager();
-        return new DeviceViewModel(camMgr, audioIn, audioOut, glassesCameraSection, glasses);
+        return new DeviceViewModel(camMgr, audioIn, audioOut, glassesCameraSection, glasses, _settings, new AppSettings());
     }
 
     private static HeyCyanGlassesDeviceManager CreateGlassesManager()
@@ -36,7 +36,7 @@ public class DeviceViewModelTests
         var speaker = new HeyCyanAudioOutputProvider(session, fakeBtOutput, NullLogger<HeyCyanAudioOutputProvider>.Instance);
         var button = new HeyCyanButtonProvider(session, NullLogger<HeyCyanButtonProvider>.Instance);
         return new HeyCyanGlassesDeviceManager(session, camera, mic, speaker, button, fakeTransfer,
-            NullLogger<HeyCyanGlassesDeviceManager>.Instance);
+            new FakeSettingsService(), NullLogger<HeyCyanGlassesDeviceManager>.Instance);
     }
 
     [Fact]

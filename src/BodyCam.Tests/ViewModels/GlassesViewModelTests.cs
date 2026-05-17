@@ -21,7 +21,7 @@ public sealed class GlassesViewModelTests
         _glasses = CreateManager(_session);
     }
 
-    private GlassesViewModel CreateVm() => new(_glasses);
+    private GlassesViewModel CreateVm() => new(_glasses, new FakeSettingsService());
 
     private static HeyCyanGlassesDeviceManager CreateManager(IHeyCyanGlassesSession session)
     {
@@ -50,7 +50,7 @@ public sealed class GlassesViewModelTests
 
         var log = NullLogger<HeyCyanGlassesDeviceManager>.Instance;
 
-        return new HeyCyanGlassesDeviceManager(session, camera, mic, speaker, button, fakeTransfer, log);
+        return new HeyCyanGlassesDeviceManager(session, camera, mic, speaker, button, fakeTransfer, new FakeSettingsService(), log);
     }
 
     [Fact]

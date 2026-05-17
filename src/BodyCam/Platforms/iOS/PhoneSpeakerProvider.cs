@@ -40,13 +40,15 @@ public sealed class PhoneSpeakerProvider : IAudioOutputProvider, IDisposable
     public event EventHandler? Disconnected;
     public event EventHandler? OutputRouteChanged;
 
+    private NSObject? _routeChangeObserver;
+
     public PhoneSpeakerProvider(AVAudioEngine engine, ILogger<PhoneSpeakerProvider> logger)
     {
         _engine = engine;
         _logger = logger;
 
         // Subscribe to route change notifications
-        NSNotificationCenter.DefaultCenter.AddObserver(
+        _routeChangeObserver = NSNotificationCenter.DefaultCenter.AddObserver(
             AVAudioSession.RouteChangeNotification,
             OnRouteChange);
     }
@@ -66,7 +68,7 @@ public sealed class PhoneSpeakerProvider : IAudioOutputProvider, IDisposable
         _engine.Connect(_playerNode, _engine.MainMixerNode, format);
 
         // Engine should already be running if mic is active; if not, start it
-        if (!_engine.IsRunning)
+        if (!_engine.Running)
         {
             _engine.Prepare();
             NSError? error;
@@ -127,7 +129,8 @@ public sealed class PhoneSpeakerProvider : IAudioOutputProvider, IDisposable
 
         unsafe
         {
-            float* samples = (float*)buffer.FloatChannelData[0].ToPointer();
+            float** channelData = (float**)buffer.FloatChannelData;
+            float* samples = channelData[0];
             for (int i = 0; i < frameCount; i++)
             {
                 short pcm = (short)(pcmData[i * 2] | (pcmData[i * 2 + 1] << 8));
@@ -189,7 +192,8 @@ public sealed class PhoneSpeakerProvider : IAudioOutputProvider, IDisposable
             buffer.FrameLength = (uint)frameCount;
             unsafe
             {
-                float* samples = (float*)buffer.FloatChannelData[0].ToPointer();
+                float** channelData = (float**)buffer.FloatChannelData;
+                float* samples = channelData[0];
                 for (int i = 0; i < frameCount; i++)
                 {
                     short pcm = BitConverter.ToInt16(fadeChunk, i * 2);
@@ -219,7 +223,8 @@ public sealed class PhoneSpeakerProvider : IAudioOutputProvider, IDisposable
 
     public void Dispose()
     {
-        NSNotificationCenter.DefaultCenter.RemoveObserver(this);
+        _routeChangeObserver?.Dispose();
+        _routeChangeObserver = null;
         if (IsPlaying)
         {
             _ = StopAsync();

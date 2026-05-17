@@ -181,6 +181,9 @@ public class AudioInputManagerChannelTests
         public string? SentryDsn { get; set; }
         public bool SendUsageData { get; set; }
         public bool FeedVoiceNotesToDictation { get; set; }
+        public string? LastHeyCyanDeviceAddress { get; set; }
+        public string? LastHeyCyanDeviceName { get; set; }
+        public bool HeyCyanAutoReconnect { get; set; } = true;
         public bool SetupCompleted { get; set; }
     }
 }

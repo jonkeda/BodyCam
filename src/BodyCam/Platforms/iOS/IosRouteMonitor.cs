@@ -43,15 +43,15 @@ public class IosRouteMonitor : IRouteMonitor
         }
 
         IsHeadphonesConnected = outputs.Any(o =>
-            o.PortType == AVAudioSessionPort.Headphones ||
-            o.PortType == AVAudioSessionPort.BluetoothA2DP ||
-            o.PortType == AVAudioSessionPort.BluetoothHFP ||
-            o.PortType == AVAudioSessionPort.BluetoothLE);
+            o.PortType == AVAudioSession.PortHeadphones ||
+            o.PortType == AVAudioSession.PortBluetoothA2DP ||
+            o.PortType == AVAudioSession.PortBluetoothHfp ||
+            o.PortType == AVAudioSession.PortBluetoothLE);
 
         IsBluetoothAudioConnected = outputs.Any(o =>
-            o.PortType == AVAudioSessionPort.BluetoothA2DP ||
-            o.PortType == AVAudioSessionPort.BluetoothHFP ||
-            o.PortType == AVAudioSessionPort.BluetoothLE);
+            o.PortType == AVAudioSession.PortBluetoothA2DP ||
+            o.PortType == AVAudioSession.PortBluetoothHfp ||
+            o.PortType == AVAudioSession.PortBluetoothLE);
 
         _logger.LogInformation("Route changed: Headphones={Headphones}, Bluetooth={Bluetooth}",
             IsHeadphonesConnected, IsBluetoothAudioConnected);

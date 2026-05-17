@@ -10,13 +10,26 @@ namespace BodyCam.Platforms.Windows.Audio;
 /// </summary>
 public class WindowsBluetoothAudioOutputProvider : IAudioOutputProvider, IDisposable
 {
-    private readonly MMDevice _mmDevice;
+    private readonly string _deviceId;
     private WasapiOut? _wasapiOut;
     private BufferedWaveProvider? _buffer;
+    private MMDevice? _activeDevice;
 
     public string DisplayName { get; }
     public string ProviderId { get; }
-    public bool IsAvailable => _mmDevice.State == DeviceState.Active;
+    public bool IsAvailable
+    {
+        get
+        {
+            try
+            {
+                using var enumerator = new MMDeviceEnumerator();
+                var device = enumerator.GetDevice(_deviceId);
+                return device.State == DeviceState.Active;
+            }
+            catch { return false; }
+        }
+    }
     public bool IsPlaying { get; private set; }
     public int EstimatedOutputLatencyMs => 200; // Typical BT latency
 
@@ -25,7 +38,7 @@ public class WindowsBluetoothAudioOutputProvider : IAudioOutputProvider, IDispos
 
     public WindowsBluetoothAudioOutputProvider(MMDevice device, string mac)
     {
-        _mmDevice = device;
+        _deviceId = device.ID;
         DisplayName = $"BT: {device.FriendlyName}";
         ProviderId = $"bt:{mac}";
     }
@@ -34,6 +47,31 @@ public class WindowsBluetoothAudioOutputProvider : IAudioOutputProvider, IDispos
     {
         if (IsPlaying) return Task.CompletedTask;
 
+        // Re-acquire a fresh COM proxy — the original MMDevice from scan time may be stale.
+        // See RCA 001.
+        var enumerator = new MMDeviceEnumerator();
+        MMDevice device;
+        try
+        {
+            device = enumerator.GetDevice(_deviceId);
+        }
+        catch (Exception ex)
+        {
+            enumerator.Dispose();
+            throw new InvalidOperationException(
+                $"BT render endpoint '{DisplayName}' is no longer available.", ex);
+        }
+
+        if (device.State != DeviceState.Active)
+        {
+            var state = device.State;
+            enumerator.Dispose();
+            throw new InvalidOperationException(
+                $"BT render endpoint '{DisplayName}' is not active (state: {state}).");
+        }
+
+        _activeDevice = device;
+
         var waveFormat = new WaveFormat(sampleRate, 16, 1);
         _buffer = new BufferedWaveProvider(waveFormat)
         {
@@ -41,7 +79,19 @@ public class WindowsBluetoothAudioOutputProvider : IAudioOutputProvider, IDispos
             DiscardOnBufferOverflow = false
         };
 
-        _wasapiOut = new WasapiOut(_mmDevice, AudioClientShareMode.Shared, true, 200);
+        try
+        {
+            _wasapiOut = new WasapiOut(device, AudioClientShareMode.Shared, true, 200);
+        }
+        catch (InvalidCastException ex)
+        {
+            _activeDevice = null;
+            _buffer = null;
+            enumerator.Dispose();
+            throw new InvalidOperationException(
+                $"BT render endpoint '{DisplayName}' COM proxy is invalid — device may have disconnected.", ex);
+        }
+
         _wasapiOut.PlaybackStopped += OnPlaybackStopped;
         _wasapiOut.Init(_buffer);
         _wasapiOut.Play();
@@ -101,6 +151,7 @@ public class WindowsBluetoothAudioOutputProvider : IAudioOutputProvider, IDispos
         _wasapiOut?.Dispose();
         _wasapiOut = null;
         _buffer = null;
+        _activeDevice = null;
     }
 
     public ValueTask DisposeAsync()

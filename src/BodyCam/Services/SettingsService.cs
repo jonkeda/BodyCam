@@ -176,6 +176,24 @@ public class SettingsService : ISettingsService
         set => Preferences.Set(nameof(FeedVoiceNotesToDictation), value);
     }
 
+    public string? LastHeyCyanDeviceAddress
+    {
+        get { var v = Preferences.Get(nameof(LastHeyCyanDeviceAddress), string.Empty); return v.Length == 0 ? null : v; }
+        set => Preferences.Set(nameof(LastHeyCyanDeviceAddress), value ?? string.Empty);
+    }
+
+    public string? LastHeyCyanDeviceName
+    {
+        get { var v = Preferences.Get(nameof(LastHeyCyanDeviceName), string.Empty); return v.Length == 0 ? null : v; }
+        set => Preferences.Set(nameof(LastHeyCyanDeviceName), value ?? string.Empty);
+    }
+
+    public bool HeyCyanAutoReconnect
+    {
+        get => Preferences.Get(nameof(HeyCyanAutoReconnect), true);
+        set => Preferences.Set(nameof(HeyCyanAutoReconnect), value);
+    }
+
     public bool SetupCompleted
     {
         get => Preferences.Get(nameof(SetupCompleted), false);

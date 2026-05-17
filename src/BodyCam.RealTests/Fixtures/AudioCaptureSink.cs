@@ -48,6 +48,12 @@ public sealed class AudioCaptureSink : IAudioOutputService
             _chunks.Clear();
     }
 
+    public Task FadeOutAndClearAsync(int fadeMs = 30, CancellationToken ct = default)
+    {
+        ClearBuffer();
+        return Task.CompletedTask;
+    }
+
     public void Clear()
     {
         lock (_lock)

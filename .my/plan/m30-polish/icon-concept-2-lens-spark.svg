@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1A2744"/>
+      <stop offset="100%" stop-color="#0F1B30"/>
+    </linearGradient>
+    <radialGradient id="lensGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#00BCD4" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#00BCD4" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Rounded square background -->
+  <rect width="512" height="512" rx="112" ry="112" fill="url(#bg2)"/>
+
+  <!-- Outer lens ring -->
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#00BCD4" stroke-width="16"/>
+
+  <!-- Inner glow -->
+  <circle cx="256" cy="256" r="140" fill="url(#lensGlow)"/>
+
+  <!-- Inner lens ring (subtle) -->
+  <circle cx="256" cy="256" r="110" fill="none" stroke="#00BCD4" stroke-width="4" opacity="0.35"/>
+
+  <!-- AI sparkle / 4-pointed star -->
+  <g transform="translate(256,256)">
+    <!-- Main 4-pointed star -->
+    <path d="M0,-60 C4,-12 12,-4 60,0 C12,4 4,12 0,60 C-4,12 -12,4 -60,0 C-12,-4 -4,-12 0,-60Z"
+          fill="#00BCD4"/>
+    <!-- Small accent spark top-right -->
+    <path d="M58,-58 C59,-46 62,-43 74,-42 C62,-41 59,-38 58,-26 C57,-38 54,-41 42,-42 C54,-43 57,-46 58,-58Z"
+          fill="#FFFFFF" opacity="0.8"/>
+    <!-- Small accent spark bottom-left -->
+    <path d="M-50,50 C-49,40 -46,37 -36,36 C-46,35 -49,32 -50,22 C-51,32 -54,35 -64,36 C-54,37 -51,40 -50,50Z"
+          fill="#FFFFFF" opacity="0.5"/>
+  </g>
+
+  <!-- Lens reflection line -->
+  <path d="M160,180 Q200,160 220,180"
+        fill="none" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" opacity="0.25"/>
+</svg>

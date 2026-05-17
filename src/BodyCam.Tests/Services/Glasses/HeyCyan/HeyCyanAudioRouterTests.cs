@@ -144,7 +144,13 @@ public sealed class HeyCyanAudioRouterTests : IAsyncDisposable
         _ = input.SetActiveProviderAsync("platform");
         _ = output.SetActiveProviderAsync("platform");
 
-        var router = new HeyCyanAudioRouter(session, input, output, NullLogger<HeyCyanAudioRouter>.Instance);
+        // Create HeyCyan-specific providers (wrapping fake BT providers with the glasses MAC)
+        var fakeBtInput = new FakeBluetoothAudioInputProvider(new[] { "AA:BB:CC:DD:EE:FF" });
+        var fakeBtOutput = new FakeBluetoothAudioOutputProvider(new[] { "AA:BB:CC:DD:EE:FF" });
+        var heycyanInputProvider = new HeyCyanAudioInputProvider(session, fakeBtInput, NullLogger<HeyCyanAudioInputProvider>.Instance);
+        var heycyanOutputProvider = new HeyCyanAudioOutputProvider(session, fakeBtOutput, NullLogger<HeyCyanAudioOutputProvider>.Instance);
+
+        var router = new HeyCyanAudioRouter(session, input, output, heycyanInputProvider, heycyanOutputProvider, NullLogger<HeyCyanAudioRouter>.Instance);
 
         _disposables.Add(router);
         _disposables.Add(input);

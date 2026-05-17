@@ -92,7 +92,7 @@ public class OrchestratorFixture : IAsyncLifetime
         var aec = new AecProcessor(NullLogger<AecProcessor>.Instance) { IsEnabled = false };
         var vision = new VisionAgent(chatClient, Settings);
         var conversation = new ConversationAgent(chatClient, Settings);
-        var voiceIn = new VoiceInputAgent(AudioInput, NullLogger<VoiceInputAgent>.Instance, aec);
+        var voiceIn = new VoiceInputAgent(AudioInput, NullLogger<VoiceInputAgent>.Instance);
         var voiceOut = new VoiceOutputAgent(AudioOutput, aec);
 
         // QR code services
@@ -367,6 +367,10 @@ public class OrchestratorFixture : IAsyncLifetime
         public bool SendCrashReports { get; set; }
         public string? SentryDsn { get; set; }
         public bool SendUsageData { get; set; }
+        public bool FeedVoiceNotesToDictation { get; set; }
+        public string? LastHeyCyanDeviceAddress { get; set; }
+        public string? LastHeyCyanDeviceName { get; set; }
+        public bool HeyCyanAutoReconnect { get; set; } = true;
         public bool SetupCompleted { get; set; }
     }
 }

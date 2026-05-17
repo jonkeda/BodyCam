@@ -1,5 +1,6 @@
 namespace BodyCam.Services.Glasses.HeyCyan;
 
+using BodyCam.Services;
 using BodyCam.Services.Glasses;
 using Microsoft.Extensions.Logging;
 
@@ -17,6 +18,7 @@ public sealed class HeyCyanGlassesDeviceManager : GlassesDeviceManager
     private readonly HeyCyanAudioOutputProvider _speaker;
     private readonly HeyCyanButtonProvider _button;
     private readonly IHeyCyanMediaTransfer? _media;
+    private readonly ISettingsService _settings;
     private readonly ILogger<HeyCyanGlassesDeviceManager> _log;
 
     private HeyCyanDeviceInfo? _lastDevice;
@@ -31,6 +33,7 @@ public sealed class HeyCyanGlassesDeviceManager : GlassesDeviceManager
         HeyCyanAudioOutputProvider speaker,
         HeyCyanButtonProvider button,
         IHeyCyanMediaTransfer media,
+        ISettingsService settings,
         ILogger<HeyCyanGlassesDeviceManager> log)
         : base(camera, mic, speaker, button)
     {
@@ -40,6 +43,7 @@ public sealed class HeyCyanGlassesDeviceManager : GlassesDeviceManager
         _speaker = speaker;
         _button = button;
         _media = media;
+        _settings = settings;
         _log = log;
 
         _session.StateChanged += OnSessionStateChanged;
@@ -80,6 +84,10 @@ public sealed class HeyCyanGlassesDeviceManager : GlassesDeviceManager
         _lastDevice = device;
         await _session.ConnectAsync(device, ct);
 
+        // Persist for auto-reconnect on next startup
+        _settings.LastHeyCyanDeviceAddress = device.Address;
+        _settings.LastHeyCyanDeviceName = device.Name;
+
         Version = await _session.GetVersionAsync(ct);
         Battery = await _session.GetBatteryAsync(ct);
         await _session.SyncTimeAsync(ct);
@@ -98,6 +106,40 @@ public sealed class HeyCyanGlassesDeviceManager : GlassesDeviceManager
         await _button.StartAsync(ct);
 
         StatusChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// Quick BLE scan for the last-connected device. Call once at app startup.
+    /// </summary>
+    public async Task TryAutoReconnectAsync()
+    {
+        if (!_settings.HeyCyanAutoReconnect) return;
+        var savedAddress = _settings.LastHeyCyanDeviceAddress;
+        if (savedAddress is null) return;
+        if (State != GlassesConnectionState.Disconnected) return;
+
+        _log.LogInformation("Auto-reconnect: scanning for saved device {Mac}", savedAddress);
+        try
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            var found = await ScanAsync(TimeSpan.FromSeconds(5), cts.Token);
+            var match = found.FirstOrDefault(d =>
+                string.Equals(d.Address, savedAddress, StringComparison.OrdinalIgnoreCase));
+
+            if (match is not null)
+            {
+                _log.LogInformation("Auto-reconnect: found {Name} ({Mac}), connecting", match.Name, match.Address);
+                await ConnectAsync(match, CancellationToken.None);
+            }
+            else
+            {
+                _log.LogInformation("Auto-reconnect: saved device not found in range");
+            }
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "Auto-reconnect failed");
+        }
     }
 
     public async Task DisconnectAsync(CancellationToken ct)

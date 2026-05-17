@@ -37,8 +37,8 @@ internal sealed class IosMediaStore : Services.Glasses.HeyCyan.Media.IMediaStore
 
         PHPhotoLibrary.SharedPhotoLibrary.PerformChanges(() =>
         {
-            var request = PHAssetCreationRequest.CreationRequestForAssetFromImage(NSUrl.FromFilename(tempPath));
-            // Request.PlaceholderForCreatedAsset?.LocalIdentifier is available after commit
+            var request = PHAssetCreationRequest.CreationRequestForAsset();
+            request.AddResource(PHAssetResourceType.Photo, NSUrl.FromFilename(tempPath), null);
         }, (success, error) =>
         {
             try
@@ -77,8 +77,8 @@ internal sealed class IosMediaStore : Services.Glasses.HeyCyan.Media.IMediaStore
 
         PHPhotoLibrary.SharedPhotoLibrary.PerformChanges(() =>
         {
-            var request = PHAssetCreationRequest.CreationRequestForAssetFromVideo(NSUrl.FromFilename(tempPath));
-            // Request.PlaceholderForCreatedAsset?.LocalIdentifier is available after commit
+            var request = PHAssetCreationRequest.CreationRequestForAsset();
+            request.AddResource(PHAssetResourceType.Video, NSUrl.FromFilename(tempPath), null);
         }, (success, error) =>
         {
             try

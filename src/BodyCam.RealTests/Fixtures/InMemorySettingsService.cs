@@ -1,12 +1,12 @@
 using BodyCam.Services;
 
-namespace BodyCam.Tests.Services.Glasses.HeyCyan.Fakes;
+namespace BodyCam.RealTests.Fixtures;
 
 /// <summary>
-/// Fake settings service for unit testing.
-/// Stores settings in memory without persistence.
+/// In-memory implementation of <see cref="ISettingsService"/> for real hardware tests.
+/// Avoids MAUI Preferences dependency while allowing the full production object graph.
 /// </summary>
-public sealed class FakeSettingsService : ISettingsService
+public sealed class InMemorySettingsService : ISettingsService
 {
     // Models
     public string RealtimeModel { get; set; } = "gpt-realtime-1.5";
@@ -25,7 +25,7 @@ public sealed class FakeSettingsService : ISettingsService
     public string? AzureRealtimeDeploymentName { get; set; }
     public string? AzureChatDeploymentName { get; set; }
     public string? AzureVisionDeploymentName { get; set; }
-    public string AzureApiVersion { get; set; } = "2024-05-01-preview";
+    public string AzureApiVersion { get; set; } = "2025-04-01-preview";
 
     // Debug
     public bool DebugMode { get; set; }

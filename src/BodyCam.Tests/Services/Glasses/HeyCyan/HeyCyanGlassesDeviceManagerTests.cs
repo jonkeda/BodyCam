@@ -12,13 +12,18 @@ namespace BodyCam.Tests.Services.Glasses.HeyCyan;
 /// </summary>
 public sealed class HeyCyanGlassesDeviceManagerTests
 {
+    private static HeyCyanGlassesDeviceManager CreateSut(FakeHeyCyanSessionWithVersion session)
+    {
+        var (camera, mic, speaker, button, media, log) = CreateDependencies(session);
+        return new HeyCyanGlassesDeviceManager(session, camera, mic, speaker, button, media, new FakeSettingsService(), log);
+    }
+
     [Fact]
     public async Task Connect_PopulatesStatus()
     {
         // Arrange
         var session = new FakeHeyCyanSessionWithVersion();
-        var (camera, mic, speaker, button, media, log) = CreateDependencies(session);
-        var sut = new HeyCyanGlassesDeviceManager(session, camera, mic, speaker, button, media, log);
+        var sut = CreateSut(session);
 
         var device = new HeyCyanDeviceInfo("TestGlasses", "AA:BB:CC:DD:EE:FF", -50);
 
@@ -46,8 +51,7 @@ public sealed class HeyCyanGlassesDeviceManagerTests
     {
         // Arrange
         var session = new FakeHeyCyanSessionWithVersion();
-        var (camera, mic, speaker, button, media, log) = CreateDependencies(session);
-        var sut = new HeyCyanGlassesDeviceManager(session, camera, mic, speaker, button, media, log);
+        var sut = CreateSut(session);
 
         GlassesConnectionState? capturedState = null;
         sut.StateChanged += (_, state) => capturedState = state;
@@ -65,8 +69,7 @@ public sealed class HeyCyanGlassesDeviceManagerTests
     {
         // Arrange
         var session = new FakeHeyCyanSessionWithVersion();
-        var (camera, mic, speaker, button, media, log) = CreateDependencies(session);
-        var sut = new HeyCyanGlassesDeviceManager(session, camera, mic, speaker, button, media, log);
+        var sut = CreateSut(session);
 
         var statusChangedFired = false;
         sut.StatusChanged += (_, _) => statusChangedFired = true;
@@ -88,8 +91,7 @@ public sealed class HeyCyanGlassesDeviceManagerTests
     {
         // Arrange
         var session = new FakeHeyCyanSessionWithVersion();
-        var (camera, mic, speaker, button, media, log) = CreateDependencies(session);
-        var sut = new HeyCyanGlassesDeviceManager(session, camera, mic, speaker, button, media, log);
+        var sut = CreateSut(session);
 
         var statusChangedFired = false;
         sut.StatusChanged += (_, _) => statusChangedFired = true;
@@ -112,8 +114,7 @@ public sealed class HeyCyanGlassesDeviceManagerTests
     {
         // Arrange
         var session = new FakeHeyCyanSessionWithVersion();
-        var (camera, mic, speaker, button, media, log) = CreateDependencies(session);
-        var sut = new HeyCyanGlassesDeviceManager(session, camera, mic, speaker, button, media, log);
+        var sut = CreateSut(session);
 
         // Act
         var devices = await sut.ScanAsync(TimeSpan.FromSeconds(5), CancellationToken.None);

@@ -23,6 +23,22 @@ public sealed class WindowsBluetoothOutputEnumerator : IDisposable
     }
 
     /// <summary>
+    /// Raised when a new BT audio endpoint is registered, passing the MAC address.
+    /// </summary>
+    public event Action<string>? EndpointRegistered;
+
+    /// <summary>
+    /// Returns true if there is a registered BT render endpoint matching the given MAC.
+    /// </summary>
+    public bool HasEndpointWithMac(string? mac)
+    {
+        if (mac is null) return false;
+        var providerId = $"bt:{mac}";
+        return _deviceIdToProviderId.Values.Contains(providerId)
+            || _manager.Providers.Any(p => p.ProviderId == providerId);
+    }
+
+    /// <summary>
     /// Scan active render endpoints for BT devices and register them.
     /// </summary>
     public void ScanAndRegister()
@@ -52,6 +68,7 @@ public sealed class WindowsBluetoothOutputEnumerator : IDisposable
             _deviceIdToProviderId[device.ID] = providerId;
             var provider = new WindowsBluetoothAudioOutputProvider(device, mac);
             _manager.RegisterProvider(provider);
+            EndpointRegistered?.Invoke(mac);
         }
     }
 

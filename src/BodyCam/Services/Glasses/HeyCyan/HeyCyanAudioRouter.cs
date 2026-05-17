@@ -10,6 +10,10 @@ namespace BodyCam.Services.Glasses.HeyCyan;
 /// <see cref="AudioInputManager"/> / <see cref="AudioOutputManager"/> active providers.
 /// </summary>
 /// <remarks>
+/// <para>Routing is reactive: when the session enters Connected, providers are
+/// registered and availability is checked once. If BT endpoints appear later
+/// (e.g. Classic BT profile connects after BLE), the platform BT enumerators
+/// raise an event that triggers auto-selection via <see cref="OnBtEndpointRegistered"/>.</para>
 /// <para>Fallback policy:</para>
 /// <list type="bullet">
 ///   <item>On first <c>Connected</c>: snapshot whatever was active (typically "platform").</item>
@@ -53,6 +57,18 @@ public sealed class HeyCyanAudioRouter : IAsyncDisposable
         _session.StateChanged += OnStateChanged;
     }
 
+    /// <summary>
+    /// Called by platform BT enumerators when a new endpoint is registered.
+    /// If we are connected to glasses and the MAC matches, auto-select.
+    /// </summary>
+    public void OnBtEndpointRegistered(string mac)
+    {
+        if (_session.State != HeyCyanState.Connected) return;
+        if (!string.Equals(_session.Device?.Address, mac, StringComparison.OrdinalIgnoreCase)) return;
+
+        _ = TryAutoSelectAsync();
+    }
+
     private async void OnStateChanged(object? sender, HeyCyanState state)
     {
         try
@@ -79,25 +95,18 @@ public sealed class HeyCyanAudioRouter : IAsyncDisposable
                 _input.RegisterProvider(_inputProvider);
                 _output.RegisterProvider(_outputProvider);
 
-                // Only auto-select if BT audio endpoints are actually available;
-                // glasses may be BLE-connected without classic BT audio on this platform.
-                // After Classic BT pairing, the audio endpoint may take a few seconds to appear.
-                if (!_inputProvider.IsAvailable || !_outputProvider.IsAvailable)
-                {
-                    _log.LogInformation("Waiting for BT audio endpoint to appear (mac={Mac})…", _session.Device?.Address);
-                    for (int i = 0; i < 10 && (!_inputProvider.IsAvailable || !_outputProvider.IsAvailable); i++)
-                        await Task.Delay(2000).ConfigureAwait(false);
-                }
-
+                // Check once — if endpoints are already available, select immediately.
+                // If not, the BT enumerator's EndpointRegistered event will trigger
+                // auto-selection reactively via OnBtEndpointRegistered.
                 if (_inputProvider.IsAvailable)
                     await _input .SetActiveProviderAsync("heycyan-glasses").ConfigureAwait(false);
                 else
-                    _log.LogWarning("HeyCyan glasses mic registered but no BT capture endpoint found (mac={Mac}).", _session.Device?.Address);
+                    _log.LogInformation("HeyCyan glasses mic not yet available (mac={Mac}) — will auto-select when endpoint appears.", _session.Device?.Address);
 
                 if (_outputProvider.IsAvailable)
                     await _output.SetActiveProviderAsync("heycyan-glasses").ConfigureAwait(false);
                 else
-                    _log.LogWarning("HeyCyan glasses speaker registered but no BT render endpoint found (mac={Mac}).", _session.Device?.Address);
+                    _log.LogInformation("HeyCyan glasses speaker not yet available (mac={Mac}) — will auto-select when endpoint appears.", _session.Device?.Address);
 
                 _log.LogInformation(
                     "Routed live audio to HeyCyan glasses (mac={Mac}, restoreIn={In}, restoreOut={Out}).",
@@ -123,6 +132,32 @@ public sealed class HeyCyanAudioRouter : IAsyncDisposable
             // Scanning / Connecting / TransferMode — do not touch routing.
             default:
                 break;
+        }
+    }
+
+    private async Task TryAutoSelectAsync()
+    {
+        try
+        {
+            await _gate.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                if (_input.ActiveProviderId != "heycyan-glasses" && _inputProvider.IsAvailable)
+                {
+                    _log.LogInformation("BT endpoint appeared — auto-selecting HeyCyan glasses mic");
+                    await _input.SetActiveProviderAsync("heycyan-glasses").ConfigureAwait(false);
+                }
+                if (_output.ActiveProviderId != "heycyan-glasses" && _outputProvider.IsAvailable)
+                {
+                    _log.LogInformation("BT endpoint appeared — auto-selecting HeyCyan glasses speaker");
+                    await _output.SetActiveProviderAsync("heycyan-glasses").ConfigureAwait(false);
+                }
+            }
+            finally { _gate.Release(); }
+        }
+        catch (Exception ex)
+        {
+            _log.LogError(ex, "Failed to auto-select HeyCyan glasses audio after endpoint appeared");
         }
     }
 

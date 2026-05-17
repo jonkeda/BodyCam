@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using BodyCam.Mvvm;
+using BodyCam.Services;
 using BodyCam.Services.Glasses;
 using BodyCam.Services.Glasses.HeyCyan;
 
@@ -8,11 +9,15 @@ namespace BodyCam.ViewModels;
 public sealed class GlassesViewModel : ViewModelBase
 {
     private readonly HeyCyanGlassesDeviceManager _glasses;
+    private readonly ISettingsService _settings;
     private CancellationTokenSource? _scanCts;
 
-    public GlassesViewModel(HeyCyanGlassesDeviceManager glasses)
+    public GlassesViewModel(
+        HeyCyanGlassesDeviceManager glasses,
+        ISettingsService settings)
     {
         _glasses = glasses;
+        _settings = settings;
         _glasses.StateChanged += (_, _) => RefreshAll();
         _glasses.StatusChanged += (_, _) => RefreshAll();
 
@@ -22,6 +27,8 @@ public sealed class GlassesViewModel : ViewModelBase
             ConnectAsync, () => SelectedDevice is not null);
         DisconnectCommand = new AsyncRelayCommand(
             DisconnectAsync, () => IsConnected);
+        ForgetDeviceCommand = new RelayCommand(
+            ForgetDevice, () => _settings.LastHeyCyanDeviceAddress is not null);
     }
 
     private bool _isScanning;
@@ -64,10 +71,13 @@ public sealed class GlassesViewModel : ViewModelBase
         _ => "Unknown",
     };
 
+    public string? SavedDeviceName => _settings.LastHeyCyanDeviceName;
+
     public AsyncRelayCommand ScanCommand { get; }
     public RelayCommand StopScanCommand { get; }
     public AsyncRelayCommand ConnectCommand { get; }
     public AsyncRelayCommand DisconnectCommand { get; }
+    public RelayCommand ForgetDeviceCommand { get; }
 
     private async Task ScanAsync()
     {
@@ -107,6 +117,19 @@ public sealed class GlassesViewModel : ViewModelBase
 
     private Task DisconnectAsync()
         => _glasses.DisconnectAsync(CancellationToken.None);
+
+    /// <summary>
+    /// Delegates to the manager's auto-reconnect. Fire-and-forget from page init.
+    /// </summary>
+    public Task TryAutoReconnectAsync() => _glasses.TryAutoReconnectAsync();
+
+    private void ForgetDevice()
+    {
+        _settings.LastHeyCyanDeviceAddress = null;
+        _settings.LastHeyCyanDeviceName = null;
+        OnPropertyChanged(nameof(SavedDeviceName));
+        ForgetDeviceCommand.RaiseCanExecuteChanged();
+    }
 
     private void RefreshAll()
     {

@@ -5,6 +5,7 @@
     <NoBindingEmbedding>false</NoBindingEmbedding>
     <Nullable>enable</Nullable>
     <RootNamespace>BodyCam.HeyCyan.iOS.Bindings</RootNamespace>
+    <SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
   </PropertyGroup>
 
   <ItemGroup>

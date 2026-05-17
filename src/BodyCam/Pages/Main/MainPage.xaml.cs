@@ -32,9 +32,6 @@ public partial class MainPage : ContentPage
 
 			// Scan for Bluetooth audio devices after audio manager is ready
 #if WINDOWS
-			// Build paired BT device cache first (needed for Intel SST fallback detection)
-			await BodyCam.Platforms.Windows.Audio.WindowsBluetoothEnumerator.RefreshPairedDeviceCacheAsync();
-
 			var btEnum = services.GetService<BodyCam.Platforms.Windows.Audio.WindowsBluetoothEnumerator>();
 			btEnum?.ScanAndRegister();
 			btEnum?.StartListening();
@@ -42,6 +39,14 @@ public partial class MainPage : ContentPage
 			var btOutEnum = services.GetService<BodyCam.Platforms.Windows.Audio.WindowsBluetoothOutputEnumerator>();
 			btOutEnum?.ScanAndRegister();
 			btOutEnum?.StartListening();
+
+			// Wire BT enumerator events to HeyCyan audio router for reactive auto-selection
+			var audioRouter = services.GetService<BodyCam.Services.Glasses.HeyCyan.HeyCyanAudioRouter>();
+			if (audioRouter is not null)
+			{
+				if (btEnum is not null) btEnum.EndpointRegistered += audioRouter.OnBtEndpointRegistered;
+				if (btOutEnum is not null) btOutEnum.EndpointRegistered += audioRouter.OnBtEndpointRegistered;
+			}
 #elif ANDROID
 			var btStatus = await Permissions.CheckStatusAsync<Permissions.Bluetooth>();
 			if (btStatus == PermissionStatus.Granted)
@@ -55,6 +60,11 @@ public partial class MainPage : ContentPage
 				btOutEnum?.StartListening();
 			}
 #endif
+
+			// Auto-reconnect to last-known HeyCyan glasses if enabled
+			var glassesManager = services.GetService<BodyCam.Services.Glasses.HeyCyan.HeyCyanGlassesDeviceManager>();
+			if (glassesManager is not null)
+				_ = glassesManager.TryAutoReconnectAsync();
 		};
 
 		if (BindingContext is MainViewModel vm)

@@ -1,6 +1,6 @@
 # M35 — Update to Latest Stable .NET 10
 
-**Status:** Complete
+**Status:** In progress
 **Depends on:** M33 (HeyCyan SDK, landed)
 
 ## Context
@@ -45,6 +45,7 @@ All projects already target `net10.0-*` TFMs — no TFM changes are needed.
 - [Phase 2 — Fix CS0618 obsolete MAUI API warnings](phase-2-fix-cs0618/overview.md)
 - [Phase 3 — NuGet package update](phase-3-nuget-update/overview.md)
 - [Phase 4 — Verify build & workload notes](phase-4-verify-build/overview.md)
+- [Phase 5 — Fix iOS TFM build errors](phase-5-fix-ios-build/overview.md)
 
 ---
 

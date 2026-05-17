@@ -1,4 +1,5 @@
 using BodyCam.Mvvm;
+using BodyCam.Services;
 using BodyCam.Services.Audio;
 using BodyCam.Services.Camera;
 using BodyCam.Services.Glasses;
@@ -13,6 +14,8 @@ public class DeviceViewModel : ViewModelBase, IDisposable
     private readonly AudioInputManager _audioInputManager;
     private readonly AudioOutputManager _audioOutputManager;
     private readonly HeyCyanGlassesDeviceManager _glasses;
+    private readonly ISettingsService _settingsService;
+    private readonly AppSettings _settings;
 
     public DeviceViewModel(
         CameraManager cameraManager,
@@ -20,12 +23,16 @@ public class DeviceViewModel : ViewModelBase, IDisposable
         AudioOutputManager audioOutputManager,
         GlassesCameraSectionViewModel glassesCameraSection,
         HeyCyanGlassesDeviceManager glasses,
+        ISettingsService settingsService,
+        AppSettings settings,
         HeyCyanButtonMappingsViewModel? heyCyanButtonMappings = null)
     {
         _cameraManager = cameraManager;
         _audioInputManager = audioInputManager;
         _audioOutputManager = audioOutputManager;
         _glasses = glasses;
+        _settingsService = settingsService;
+        _settings = settings;
         GlassesCameraSection = glassesCameraSection;
         HeyCyanButtonMappings = heyCyanButtonMappings;
         Title = "Devices";
@@ -74,6 +81,23 @@ public class DeviceViewModel : ViewModelBase, IDisposable
     public int GlassesPhotos => _glasses.MediaCount?.Photos ?? 0;
     public int GlassesVideos => _glasses.MediaCount?.Videos ?? 0;
     public int GlassesAudioFiles => _glasses.MediaCount?.AudioFiles ?? 0;
+
+    // ── Glasses persistence ─────────────────────────────────────────────────
+
+    public bool HeyCyanAutoReconnect
+    {
+        get => _settingsService.HeyCyanAutoReconnect;
+        set
+        {
+            if (_settingsService.HeyCyanAutoReconnect != value)
+            {
+                _settingsService.HeyCyanAutoReconnect = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public string? SavedGlassesDeviceName => _settingsService.LastHeyCyanDeviceName;
 
     // ── Audio test state ────────────────────────────────────────────────────
 
@@ -279,12 +303,17 @@ public class DeviceViewModel : ViewModelBase, IDisposable
                 return;
             }
 
-            // Playback
+            // Playback — use the same sample rate the input provider resampled to
             TestRecordingStatus = "Playing back…";
-            await output.StartAsync(16000);
+            var playbackRate = _audioInputManager.Active is not null
+                ? _settings.SampleRate
+                : 16000;
+            await output.StartAsync(playbackRate);
             foreach (var chunk in buffer)
                 await output.PlayChunkAsync(chunk);
-            await Task.Delay(500);
+
+            // Wait for the buffer to drain (recording was ~3s)
+            await Task.Delay(3500);
             await output.StopAsync();
             TestRecordingStatus = $"Done — {buffer.Count} chunks recorded";
         }

@@ -1,3 +1,4 @@
+using AudioToolbox;
 using AVFoundation;
 using BodyCam.Services;
 using BodyCam.Services.Audio;
@@ -47,10 +48,10 @@ public sealed class PlatformMicProvider : IAudioInputProvider, IDisposable
         // Enable VoiceProcessingIO for hardware AEC
         if (_settings.IosUsePlatformAecOnly)
         {
-            var error = inputNode.SetVoiceProcessingEnabled(true);
-            if (error != null)
+            bool success = inputNode.SetVoiceProcessingEnabled(true, out NSError? vpError);
+            if (!success || vpError != null)
             {
-                _logger.LogWarning("Failed to enable VoiceProcessingIO: {Error}", error.LocalizedDescription);
+                _logger.LogWarning("Failed to enable VoiceProcessingIO: {Error}", vpError?.LocalizedDescription);
             }
             else
             {
