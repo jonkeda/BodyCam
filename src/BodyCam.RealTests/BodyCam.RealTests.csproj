@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net10.0-windows10.0.19041.0;net10.0-ios</TargetFrameworks>
+    <TargetFrameworks>net10.0-windows10.0.19041.0;net10.0-ios26.2</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
@@ -23,7 +23,7 @@
     <ProjectReference Include="..\BodyCam\BodyCam.csproj" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-ios'">
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-ios26.2'">
     <ProjectReference Include="..\BodyCam.HeyCyan.iOS.Bindings\BodyCam.HeyCyan.iOS.Bindings.csproj" />
   </ItemGroup>
 

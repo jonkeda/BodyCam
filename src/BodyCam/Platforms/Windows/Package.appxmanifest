@@ -42,6 +42,8 @@
   <Capabilities>
     <rescap:Capability Name="runFullTrust" />
     <DeviceCapability Name="bluetooth" />
+    <DeviceCapability Name="wifiControl" />
+    <DeviceCapability Name="wifiDirect" />
   </Capabilities>
 
 </Package>

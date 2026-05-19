@@ -34,6 +34,10 @@ public sealed class WindowsHeyCyanRealFixture : IAsyncDisposable
     public HeyCyanAudioInputProvider MicProvider { get; }
     public HeyCyanAudioOutputProvider SpeakerProvider { get; }
 
+    // WiFi + media transfer (null when created without transfer support)
+    internal WindowsGlassesWiFiManager? WifiManager { get; }
+    public IHeyCyanMediaTransfer? Transfer { get; }
+
     // Settings
     public InMemorySettingsService Settings { get; }
 
@@ -50,7 +54,9 @@ public sealed class WindowsHeyCyanRealFixture : IAsyncDisposable
         HeyCyanAudioInputProvider micProvider,
         HeyCyanAudioOutputProvider speakerProvider,
         InMemorySettingsService settings,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory,
+        WindowsGlassesWiFiManager? wifiManager = null,
+        IHeyCyanMediaTransfer? transfer = null)
     {
         Session = session;
         DeviceManager = deviceManager;
@@ -63,6 +69,8 @@ public sealed class WindowsHeyCyanRealFixture : IAsyncDisposable
         SpeakerProvider = speakerProvider;
         Settings = settings;
         _loggerFactory = loggerFactory;
+        WifiManager = wifiManager;
+        Transfer = transfer;
     }
 
     public static async Task<WindowsHeyCyanRealFixture> CreateAsync()
@@ -155,6 +163,109 @@ public sealed class WindowsHeyCyanRealFixture : IAsyncDisposable
     }
 
     /// <summary>
+    /// Create a fixture with real WiFi + HTTP media transfer support.
+    /// Use this for WiFi transfer tests that need <see cref="Transfer"/>.
+    /// </summary>
+    public static async Task<WindowsHeyCyanRealFixture> CreateWithTransferAsync()
+    {
+        var loggerFactory = LoggerFactory.Create(b => b
+            .AddDebug()
+            .SetMinimumLevel(LogLevel.Trace));
+
+        var settings = new InMemorySettingsService();
+        var appSettings = new AppSettings();
+
+        var platformMic = new PlatformMicProvider(appSettings);
+        var platformSpeaker = new WindowsSpeakerProvider();
+
+        var audioInput = new AudioInputManager(
+            new IAudioInputProvider[] { platformMic },
+            settings,
+            loggerFactory.CreateLogger<AudioInputManager>());
+
+        var audioOutput = new AudioOutputManager(
+            new IAudioOutputProvider[] { platformSpeaker },
+            settings,
+            appSettings,
+            loggerFactory.CreateLogger<AudioOutputManager>());
+
+        var btEnum = new WindowsBluetoothEnumerator(audioInput, appSettings);
+        var btOutEnum = new WindowsBluetoothOutputEnumerator(audioOutput);
+
+        await WindowsBluetoothEnumerator.RefreshPairedDeviceCacheAsync();
+        btEnum.ScanAndRegister();
+        btOutEnum.ScanAndRegister();
+
+        // WiFi manager (real WinRT WiFiAdapter)
+        var wifiManager = new WindowsGlassesWiFiManager(
+            loggerFactory.CreateLogger<WindowsGlassesWiFiManager>());
+
+        // WiFi Direct manager (real WinRT WiFiDirectDevice)
+        var bleMac = Environment.GetEnvironmentVariable("BODYCAM_REAL_HEYCYAN_MAC");
+        var wifiDirectManager = new WindowsWiFiDirectManager(
+            loggerFactory.CreateLogger<WindowsWiFiDirectManager>(),
+            bleMac);
+
+        // Session with WiFi + WiFi Direct support
+        var session = new WindowsHeyCyanGlassesSession(
+            loggerFactory.CreateLogger<WindowsHeyCyanGlassesSession>(),
+            btEnum,
+            btOutEnum,
+            wifiManager,
+            wifiDirectManager);
+
+        // Real HTTP client factory (standard HttpClient, no network binding on Windows)
+        var httpFactory = new WindowsHeyCyanHttpClientFactory(
+            loggerFactory.CreateLogger<WindowsHeyCyanHttpClientFactory>());
+
+        // Real media transfer
+        var transfer = new HeyCyanMediaTransfer(
+            session,
+            httpFactory,
+            loggerFactory.CreateLogger<HeyCyanMediaTransfer>());
+
+        var btInput = new BluetoothAudioInputProvider(
+            audioInput,
+            loggerFactory.CreateLogger<BluetoothAudioInputProvider>());
+        var btOutput = new BluetoothAudioOutputProvider(
+            audioOutput,
+            loggerFactory.CreateLogger<BluetoothAudioOutputProvider>());
+
+        var mic = new HeyCyanAudioInputProvider(
+            session, btInput,
+            loggerFactory.CreateLogger<HeyCyanAudioInputProvider>());
+        var speaker = new HeyCyanAudioOutputProvider(
+            session, btOutput,
+            loggerFactory.CreateLogger<HeyCyanAudioOutputProvider>());
+
+        var camera = new HeyCyanCameraProvider(
+            session, transfer,
+            loggerFactory.CreateLogger<HeyCyanCameraProvider>());
+
+        var button = new HeyCyanButtonProvider(
+            session, loggerFactory.CreateLogger<HeyCyanButtonProvider>());
+
+        var router = new HeyCyanAudioRouter(
+            session, audioInput, audioOutput, mic, speaker,
+            loggerFactory.CreateLogger<HeyCyanAudioRouter>());
+
+        btEnum.EndpointRegistered += router.OnBtEndpointRegistered;
+        btOutEnum.EndpointRegistered += router.OnBtEndpointRegistered;
+
+        var deviceMgr = new HeyCyanGlassesDeviceManager(
+            session, camera, mic, speaker, button, transfer, settings,
+            loggerFactory.CreateLogger<HeyCyanGlassesDeviceManager>());
+
+        return new WindowsHeyCyanRealFixture(
+            session, deviceMgr, router,
+            audioInput, audioOutput,
+            btEnum, btOutEnum,
+            mic, speaker, settings,
+            loggerFactory,
+            wifiManager, transfer);
+    }
+
+    /// <summary>
     /// Scan for glasses and connect via the full DeviceManager flow.
     /// Retries scanning up to <paramref name="maxAttempts"/> times because
     /// glasses may not always be BLE-advertising.
@@ -217,6 +328,12 @@ public sealed class WindowsHeyCyanRealFixture : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        if (Transfer is not null)
+        {
+            try { await Transfer.DisposeAsync(); }
+            catch { /* best-effort cleanup */ }
+        }
+
         if (Session.State != HeyCyanState.Disconnected)
         {
             try { await Session.DisconnectAsync(CancellationToken.None); }

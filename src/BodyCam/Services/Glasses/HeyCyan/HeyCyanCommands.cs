@@ -3,93 +3,151 @@ using System.Buffers.Binary;
 namespace BodyCam.Services.Glasses.HeyCyan;
 
 /// <summary>
-/// Command payloads for LargeDataHandler.GlassesControl, copied verbatim from
-/// CyanBridge MainActivity.kt. Do NOT invent payload bytes.
+/// Builds Serial Port protocol frames for the HeyCyan glasses.
+/// Frame format: [0xBC][action][len_lo][len_hi][crc16_lo][crc16_hi][payload...]
+/// All multi-byte fields are little-endian. CRC-16/ARC over payload only.
 /// </summary>
 internal static class HeyCyanCommands
 {
-    /// <summary>
-    /// Start photo mode: 0x02, 0x01, 0x01.
-    /// CyanBridge: binding.btnCamera click handler.
-    /// </summary>
-    public static byte[] StartPhotoMode() => new byte[] { 0x02, 0x01, 0x01 };
+    // Serial Port protocol action IDs
+    private const byte ActionSyncTime = 0x40;
+    private const byte ActionGlassesControl = 0x41;
+    private const byte ActionBattery = 0x42;
+    private const byte ActionDeviceInfo = 0x43;
+    private const byte ActionHeartbeat = 0x45;
+    private const byte ActionDeviceConfig = 0x47;
 
     /// <summary>
-    /// AI photo trigger: 0x02, 0x01, 0x06, 0x02, 0x02.
-    /// CyanBridge: AutoLoopVisualNoteGenerator / image hijack.
+    /// Take photo. CyanBridge: binding.btnCamera → glassesControl(byteArrayOf(0x02, 0x01, 0x01)).
+    /// Atomically enters camera mode and captures. Cannot be used while in transfer mode.
     /// </summary>
-    public static byte[] TakeAiPhoto() => new byte[] { 0x02, 0x01, 0x06, 0x02, 0x02 };
+    public static byte[] StartPhotoMode() => BuildFrame(ActionGlassesControl, [0x02, 0x01, 0x01]);
 
     /// <summary>
-    /// Stop photo/video mode: 0x02, 0x01, 0x0b.
-    /// CyanBridge: controlVideoRecording(false) / controlAudioRecording(false).
+    /// AI photo trigger. CyanBridge: AutoLoopVisualNoteGenerator → glassesControl(byteArrayOf(0x02, 0x01, 0x06, 0x02, 0x02)).
+    /// Captures photo AND streams thumbnail back over BLE. Follow with StartPhotoMode() after 250ms.
     /// </summary>
-    public static byte[] StopMode() => new byte[] { 0x02, 0x01, 0x0b };
+    public static byte[] TakeAiPhoto() => BuildFrame(ActionGlassesControl, [0x02, 0x01, 0x06, 0x02, 0x02]);
 
     /// <summary>
-    /// Get media count (photo/video/audio): 0x02, 0x04.
-    /// CyanBridge: binding.btnMediaCount click handler.
-    /// Response: GlassModelControlResponse with imageCount, videoCount, recordCount.
+    /// Stop photo/video mode. CyanBridge: controlVideoRecording(false).
     /// </summary>
-    public static byte[] GetMediaCounts() => new byte[] { 0x02, 0x04 };
+    public static byte[] StopMode() => BuildFrame(ActionGlassesControl, [0x02, 0x01, 0x0b]);
 
     /// <summary>
-    /// Enter transfer mode (enable Wi-Fi Direct for HTTP media download): 0x02, 0x01, 0x04.
-    /// CyanBridge: startDataDownload() → enterTransferModeAsync().
+    /// Get media count (photo/video/audio). CyanBridge: binding.btnMediaCount click handler.
     /// </summary>
-    public static byte[] EnterTransferMode() => new byte[] { 0x02, 0x01, 0x04 };
+    public static byte[] GetMediaCounts() => BuildFrame(ActionGlassesControl, [0x02, 0x04]);
 
     /// <summary>
-    /// Exit transfer mode: 0x02, 0x01, 0x09.
-    /// CyanBridge: cancelDataDownloadAttempt() / exitTransferModeAsync().
+    /// Enter transfer mode (enable Wi-Fi for HTTP media download).
+    /// CyanBridge: startDataDownload() → glassesControl(byteArrayOf(0x02, 0x01, 0x04)).
+    /// The 0x02 prefix triggers the AP/hotspot broadcast on the glasses.
     /// </summary>
-    public static byte[] ExitTransferMode() => new byte[] { 0x02, 0x01, 0x09 };
+    public static byte[] EnterTransferMode() => BuildFrame(ActionGlassesControl, [0x02, 0x01, 0x04]);
 
     /// <summary>
-    /// Reset P2P (Wi-Fi Direct) state machine: 0x02, 0x01, 0x0F.
-    /// CyanBridge: WifiP2pManagerSingleton.resetP2p().
+    /// Query glasses WiFi AP IP address (iOS SDK: getDeviceWifiIPSuccess).
+    /// CmdTypeIP = 0x03. The glasses respond with the AP's IP once the hotspot is ready.
+    /// This command MUST be polled after EnterTransferMode to trigger/confirm AP startup.
     /// </summary>
-    public static byte[] ResetP2p() => new byte[] { 0x02, 0x01, 0x0F };
+    public static byte[] GetWifiIP() => BuildFrame(ActionGlassesControl, [0x02, 0x03]);
 
     /// <summary>
-    /// Start video recording: 0x02, 0x01, value (where value = 0x02 or similar).
-    /// CyanBridge: controlVideoRecording(true) uses dynamic value.
-    /// NOTE: Exact byte sequence for video start not yet confirmed; use 0x02, 0x01, 0x02 as provisional.
+    /// Exit transfer mode. CyanBridge: cancelDataDownloadAttempt().
     /// </summary>
-    public static byte[] StartVideoRecording() => new byte[] { 0x02, 0x01, 0x02 };
+    public static byte[] ExitTransferMode() => BuildFrame(ActionGlassesControl, [0x02, 0x01, 0x09]);
 
     /// <summary>
-    /// Start audio recording: 0x02, 0x01, value (where value = 0x08 or similar).
-    /// CyanBridge: controlAudioRecording(true) uses dynamic value.
-    /// NOTE: Exact byte sequence for audio start not yet confirmed; use 0x02, 0x01, 0x08 as provisional.
+    /// Reset P2P (Wi-Fi Direct) state machine. CyanBridge: WifiP2pManagerSingleton.resetP2p().
     /// </summary>
-    public static byte[] StartAudioRecording() => new byte[] { 0x02, 0x01, 0x08 };
+    public static byte[] ResetP2p() => BuildFrame(ActionGlassesControl, [0x02, 0x01, 0x0F]);
 
     /// <summary>
-    /// Sync time to glasses. Payload: 0x03 + unix timestamp (4 bytes, little-endian).
-    /// CyanBridge: LargeDataHandler.syncTime callback, but actual glassesControl payload
-    /// for time sync is handled by the SDK internally — this is a NO-OP placeholder.
-    /// Use LargeDataHandler.SyncTime(callback) directly on Android instead.
+    /// Start video recording.
+    /// </summary>
+    public static byte[] StartVideoRecording() => BuildFrame(ActionGlassesControl, [0x02, 0x01, 0x02]);
+
+    /// <summary>
+    /// Start audio recording.
+    /// </summary>
+    public static byte[] StartAudioRecording() => BuildFrame(ActionGlassesControl, [0x02, 0x01, 0x08]);
+
+    /// <summary>
+    /// Sync time to glasses. Payload: unix timestamp (4 bytes, little-endian).
     /// </summary>
     public static byte[] SyncTime(DateTimeOffset now)
     {
-        Span<byte> b = stackalloc byte[5];
-        b[0] = 0x03;
-        BinaryPrimitives.WriteUInt32LittleEndian(b[1..], (uint)now.ToUnixTimeSeconds());
-        return b.ToArray();
+        var payload = new byte[4];
+        BinaryPrimitives.WriteUInt32LittleEndian(payload, (uint)now.ToUnixTimeSeconds());
+        return BuildFrame(ActionSyncTime, payload);
     }
 
     /// <summary>
-    /// Get battery (poll). CyanBridge: LargeDataHandler.syncBattery() — async result via notify.
-    /// The SDK does not expose an explicit glassesControl payload for battery poll;
-    /// use LargeDataHandler.SyncBattery() directly on Android.
+    /// Get battery level. Response on notify: [percentage, charging_flag].
     /// </summary>
-    public static byte[] GetBattery() => new byte[] { 0x02, 0x04 }; // Placeholder; SDK method is async notify-based.
+    public static byte[] GetBattery() => BuildFrame(ActionBattery, []);
 
     /// <summary>
-    /// Get device version/info.
-    /// CyanBridge: LargeDataHandler.SyncDeviceInfo callback → DeviceInfoResponse.
-    /// Actual glassesControl payload is SDK-internal; this is a provisional command.
+    /// Get device version/info. Response on notify: version strings.
     /// </summary>
-    public static byte[] GetVersion() => new byte[] { 0x02, 0x06 }; // Placeholder; real API is LargeDataHandler.SyncDeviceInfo.
+    public static byte[] GetVersion() => BuildFrame(ActionDeviceInfo, []);
+
+    /// <summary>
+    /// Heartbeat / keepalive. Glasses respond with status byte.
+    /// </summary>
+    public static byte[] Heartbeat() => BuildFrame(ActionHeartbeat, []);
+
+    /// <summary>
+    /// Get device config (iOS SDK: getDeviceConfigWithFinished, opcode 0x47).
+    /// Called after GetWifiIP to verify the glasses are in WiFi hotspot mode
+    /// and signal them to start broadcasting. CRITICAL for AP activation.
+    /// </summary>
+    public static byte[] GetDeviceConfig() => BuildFrame(ActionDeviceConfig, []);
+
+    /// <summary>
+    /// Builds a Serial Port protocol frame.
+    /// Format: [0xBC][action][len_lo][len_hi][crc16_lo][crc16_hi][payload...]
+    /// </summary>
+    public static byte[] BuildFrame(byte action, ReadOnlySpan<byte> payload)
+    {
+        var frame = new byte[6 + payload.Length];
+        frame[0] = 0xBC;
+        frame[1] = action;
+        frame[2] = (byte)(payload.Length & 0xFF);
+        frame[3] = (byte)((payload.Length >> 8) & 0xFF);
+        if (payload.Length > 0)
+        {
+            var crc = Crc16(payload);
+            frame[4] = (byte)(crc & 0xFF);
+            frame[5] = (byte)((crc >> 8) & 0xFF);
+            payload.CopyTo(frame.AsSpan(6));
+        }
+        else
+        {
+            frame[4] = 0xFF;
+            frame[5] = 0xFF;
+        }
+        return frame;
+    }
+
+    /// <summary>
+    /// CRC-16/ARC: initial=0xFFFF, polynomial=0xA001 (reflected).
+    /// </summary>
+    private static ushort Crc16(ReadOnlySpan<byte> data)
+    {
+        ushort crc = 0xFFFF;
+        foreach (var b in data)
+        {
+            crc ^= b;
+            for (int i = 0; i < 8; i++)
+            {
+                if ((crc & 1) != 0)
+                    crc = (ushort)((crc >> 1) ^ 0xA001);
+                else
+                    crc >>= 1;
+            }
+        }
+        return crc;
+    }
 }

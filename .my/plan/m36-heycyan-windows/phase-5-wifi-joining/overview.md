@@ -1,7 +1,8 @@
 # Phase 5 — Windows WiFi Hotspot Joining
 
-**Status:** Proposed
+**Status:** Research complete — blocked on WiFi Direct capability
 **Depends on:** Phase 2 (BLE session — **complete**), Phase 3 (HTTP client factory — **complete**)
+**Research document:** [wifi-hotspot-joining-research.md](../../../docs/functionality/wifi-hotspot-joining-research.md)
 **Sibling phases:** [Phase 1](../phase-1-ble-discovery/overview.md), [Phase 2](../phase-2-windows-ble/overview.md), [Phase 3](../phase-3-windows-wifi/overview.md), [Phase 4](../phase-4-integration/overview.md)
 
 ---
@@ -25,32 +26,33 @@ hotspot for iOS. Windows must use one or the other.
 
 ---
 
-## Investigation needed
-
-Before implementation, determine which WiFi mode the glasses offer Windows:
+## Investigation Results (2026-05-17)
 
 ### Question 1: Does the glasses' WiFi appear as a regular AP?
 
-When the glasses enter transfer mode, does a standard WiFi network (SSID)
-appear in the Windows WiFi network list? If yes, this is the simpler path
-(Option A below).
-
-**Test:** Enter transfer mode via BLE from the BodyCam app (Phase 2 is
-implemented), then check available WiFi networks in Windows Settings or
-`netsh wlan show networks`.
+**NO.** After sending `{0x02, 0x01, 0x04}`, regular WiFi scans show only
+household networks. The glasses use **WiFi Direct (P2P)**, not a standard
+AP. WiFi Direct peers are invisible to `WiFiAdapter.ScanAsync()`.
 
 ### Question 2: What is the SSID?
 
-The SSID is sent by the glasses via BLE. Check:
-- Does `WindowsHeyCyanGlassesSession` receive a notify frame carrying
-  the SSID during transfer mode entry? (May be a frame type not yet
-  parsed by `HeyCyanFrameParser`.)
-- Or is the SSID derived from the device name / MAC?
+**Not applicable for WiFi Direct.** The iOS SDK returns SSID/password via
+the `openWifiWithMode:` BLE callback (proprietary QCSDK framework). We
+don't receive an SSID frame — only a late type-0x01 notification of unknown
+meaning.
 
 ### Question 3: What is the password?
 
-- iOS uses `"123456789"` as fallback. Same on Windows?
-- Or does the BLE frame carry the password alongside the SSID?
+**Not applicable for WiFi Direct.** iOS uses `"123456789"` as fallback
+password for standard hotspot mode. WiFi Direct uses WPS PBC (push-button
+config) with no credentials.
+
+### Question 4: Does WiFi Direct work on Windows?
+
+**Not yet.** `DeviceWatcher` with `WiFiDirectDevice.GetDeviceSelector
+(AssociationEndpoint)` finds zero peers. Most likely cause: the unpackaged
+app (dotnet test / WindowsPackageType=None) lacks the `wifiDirect` device
+capability at runtime. Needs testing from a packaged MSIX deployment.
 
 ---
 
@@ -158,9 +160,33 @@ And `ExitTransferModeAsync` to:
 
 ## Acceptance
 
-- [ ] Glasses WiFi network type determined (standard AP vs WiFi Direct)
-- [ ] SSID and password discovery method documented
-- [ ] Windows programmatically joins glasses WiFi after BLE transfer command
-- [ ] HTTP requests to glasses IP succeed (`GET /files/media.config`)
+- [x] Glasses WiFi network type determined (**WiFi Direct**, not standard AP)
+- [x] SSID and password discovery method documented (N/A for WiFi Direct; iOS-only via QCSDK)
+- [ ] Windows programmatically joins glasses WiFi after BLE transfer command — **BLOCKED**
+- [ ] HTTP requests to glasses IP succeed (`GET /files/media.config`) — **BLOCKED**
 - [ ] WiFi cleanup restores previous network on exit
-- [ ] `Package.appxmanifest` updated with required capabilities
+- [x] `Package.appxmanifest` updated with required capabilities (`wifiDirect`, `bluetooth`, `wifiControl`)
+
+## Critical Finding: BLE Frame Misidentification
+
+The 14-byte frame received after ~60–90 seconds:
+
+```
+BC-73-08-00-FA-C7-01-0B-00-00-00-00-00-01
+```
+
+Was initially identified as a "0x08 IP notify" but is actually **type 0x01**
+(`frame[6] = 0x01`). The `0x08` at `frame[2]` is the payload length, not the
+notify type. Our `TryParseTransferIp` (which checks `frame[6] == 0x08`)
+correctly rejects this frame. See the research document for full analysis.
+
+## Next Steps
+
+See [research document](../../../docs/functionality/wifi-hotspot-joining-research.md)
+Section 8 for prioritized next steps. Key actions:
+
+1. **P0:** Check WiFi Direct driver support (`netsh wlan show drivers`)
+2. **P0:** Parse the type-0x01 notification (may contain mode status)
+3. **P1:** Start WiFi Direct discovery BEFORE sending BLE command (match Android)
+4. **P1:** Send ResetP2P (`{0x02, 0x01, 0x0F}`) before EnterTransferMode
+5. **P2:** Deploy as packaged MSIX and test WiFi Direct with proper capabilities

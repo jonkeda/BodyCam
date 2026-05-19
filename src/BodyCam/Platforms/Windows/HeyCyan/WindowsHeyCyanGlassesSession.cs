@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
 using System.Net;
+using System.Net.Http;
 using System.Runtime.InteropServices.WindowsRuntime;
+using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
 using Windows.Devices.Bluetooth;
 using Windows.Devices.Bluetooth.Advertisement;
@@ -36,14 +38,32 @@ internal sealed class WindowsHeyCyanGlassesSession : IHeyCyanGlassesSession
     private readonly ILogger<WindowsHeyCyanGlassesSession> _log;
     private readonly WindowsBluetoothEnumerator _btEnumerator;
     private readonly WindowsBluetoothOutputEnumerator _btOutputEnumerator;
+    private readonly WindowsGlassesWiFiManager? _wifiManager;
+    private readonly WindowsWiFiDirectManager? _wifiDirectManager;
     private readonly SemaphoreSlim _commandLock = new(1, 1);
 
     private BluetoothLEDevice? _bleDevice;
+    private GattDeviceService? _gattService; // MUST be kept alive — GC kills notifications
+    private GattSession? _gattSession; // MUST be kept alive — maintains BLE connection for notifications
     private GattCharacteristic? _txCharacteristic;
     private GattCharacteristic? _rxCharacteristic;
 
     // Pending one-shot response waiters keyed by notify type byte
     private readonly ConcurrentDictionary<byte, TaskCompletionSource<byte[]>> _pendingResponses = new();
+
+    // Channel for collecting ALL 0x41 notifications during transfer mode.
+    // Avoids the single-shot waiter bug where the mode-change ACK consumes
+    // the waiter before the IP notification (payload[0]==0x08) arrives.
+    private Channel<byte[]>? _transferNotifyChannel;
+
+    // BLE-provided transfer credentials (populated from 0x41 notification during transfer mode)
+    private string? _bleTransferSsid;
+    private string? _bleTransferPassword;
+
+    /// <summary>
+    /// Fired for every BLE notification frame (diagnostic use only).
+    /// </summary>
+    internal event EventHandler<byte[]>? RawNotifyReceived;
 
     private HeyCyanState _state = HeyCyanState.Disconnected;
     private HeyCyanMediaCount? _lastMediaCount;
@@ -51,11 +71,15 @@ internal sealed class WindowsHeyCyanGlassesSession : IHeyCyanGlassesSession
     public WindowsHeyCyanGlassesSession(
         ILogger<WindowsHeyCyanGlassesSession> log,
         WindowsBluetoothEnumerator btEnumerator,
-        WindowsBluetoothOutputEnumerator btOutputEnumerator)
+        WindowsBluetoothOutputEnumerator btOutputEnumerator,
+        WindowsGlassesWiFiManager? wifiManager = null,
+        WindowsWiFiDirectManager? wifiDirectManager = null)
     {
         _log = log;
         _btEnumerator = btEnumerator;
         _btOutputEnumerator = btOutputEnumerator;
+        _wifiManager = wifiManager;
+        _wifiDirectManager = wifiDirectManager;
     }
 
     public HeyCyanState State
@@ -241,8 +265,8 @@ internal sealed class WindowsHeyCyanGlassesSession : IHeyCyanGlassesSession
             if (serviceResult.Status != GattCommunicationStatus.Success || serviceResult.Services.Count == 0)
                 throw new InvalidOperationException($"Serial port service not found on {device.Name}");
 
-            var service = serviceResult.Services[0];
-            var charsResult = await service.GetCharacteristicsAsync(BluetoothCacheMode.Uncached)
+            _gattService = serviceResult.Services[0];
+            var charsResult = await _gattService.GetCharacteristicsAsync(BluetoothCacheMode.Uncached)
                 .AsTask(ct).ConfigureAwait(false);
             if (charsResult.Status != GattCommunicationStatus.Success)
                 throw new InvalidOperationException("Failed to discover GATT characteristics");
@@ -258,13 +282,19 @@ internal sealed class WindowsHeyCyanGlassesSession : IHeyCyanGlassesSession
             if (_rxCharacteristic is null)
                 throw new InvalidOperationException("Notify characteristic not found");
 
-            // Subscribe to notifications
+            // GattSession keeps the connection alive — without this, Windows silently
+            // drops GATT subscriptions and notifications stop being delivered.
+            _gattSession = await GattSession.FromDeviceIdAsync(_bleDevice.BluetoothDeviceId).AsTask(ct).ConfigureAwait(false);
+            _gattSession.MaintainConnection = true;
+
+            // Subscribe to notifications — handler MUST be registered before CCCD write
+            // per Windows BLE stack requirements (ValueChanged won't fire otherwise).
+            _rxCharacteristic.ValueChanged += OnCharacteristicValueChanged;
+
             var notifyResult = await _rxCharacteristic.WriteClientCharacteristicConfigurationDescriptorAsync(
                 GattClientCharacteristicConfigurationDescriptorValue.Notify).AsTask(ct).ConfigureAwait(false);
             if (notifyResult != GattCommunicationStatus.Success)
                 throw new InvalidOperationException($"Failed to enable notifications: {notifyResult}");
-
-            _rxCharacteristic.ValueChanged += OnCharacteristicValueChanged;
 
             // Attempt BLE-level pairing (for GATT bonding, separate from Classic BT audio)
             var pairing = _bleDevice.DeviceInformation.Pairing;
@@ -359,20 +389,10 @@ internal sealed class WindowsHeyCyanGlassesSession : IHeyCyanGlassesSession
                 if (await TryForceProfileConnectionAsync(classicDevice, mac, ct).ConfigureAwait(false))
                     return GetBtAudioResult(mac);
 
-                _log.LogWarning("EnsureBtAudio: profile forcing failed for {Mac}, trying unpair+repair", mac);
-                // Strategy 2: Unpair and re-pair as nuclear option
-                var unpairResult = await classicDevice.DeviceInformation.Pairing.UnpairAsync()
-                    .AsTask(ct).ConfigureAwait(false);
-                if (unpairResult.Status == global::Windows.Devices.Enumeration.DeviceUnpairingResultStatus.Unpaired)
-                {
-                    _log.LogDebug("EnsureBtAudio: unpaired successfully, re-pairing");
-                    await Task.Delay(2000, ct).ConfigureAwait(false);
-                    // Fall through to Phase C
-                }
-                else
-                {
-                    _log.LogWarning("EnsureBtAudio: unpair returned {Status}", unpairResult.Status);
-                }
+                // Profile forcing failed — log warning but do NOT unpair.
+                // Unpairing a dual-mode device destroys the BLE bond, which
+                // breaks GATT notification delivery (see RCA-808).
+                _log.LogWarning("EnsureBtAudio: profile forcing failed for {Mac} — continuing without audio (preserving BLE bond)", mac);
             }
 
             // Phase C: Not paired (or was just unpaired) — full pairing sequence
@@ -607,12 +627,12 @@ internal sealed class WindowsHeyCyanGlassesSession : IHeyCyanGlassesSession
 
     public async Task<HeyCyanBattery> GetBatteryAsync(CancellationToken ct)
     {
-        // Send battery poll command and wait for notify response (type 0x05)
+        // Send battery poll command and wait for notify response (action 0x42)
         await SendCommandAsync(HeyCyanCommands.GetBattery(), ct).ConfigureAwait(false);
 
         try
         {
-            var payload = await WaitForNotifyAsync(0x05, TimeSpan.FromSeconds(3), ct).ConfigureAwait(false);
+            var payload = await WaitForNotifyAsync(0x42, TimeSpan.FromSeconds(3), ct).ConfigureAwait(false);
             return HeyCyanFrameParser.ParseBattery(payload);
         }
         catch (TimeoutException)
@@ -645,21 +665,106 @@ internal sealed class WindowsHeyCyanGlassesSession : IHeyCyanGlassesSession
 
     public async Task<HeyCyanTransferSession> EnterTransferModeAsync(CancellationToken ct)
     {
+        // Create a channel to capture ALL 0x41 notifications during transfer.
+        _transferNotifyChannel = Channel.CreateUnbounded<byte[]>(
+            new UnboundedChannelOptions { SingleReader = false, SingleWriter = true });
+
+        // Send EnterTransferMode BLE command — glasses will respond with
+        // a notification containing SSID + password for their hidden WiFi.
         await SendCommandAsync(HeyCyanCommands.EnterTransferMode(), ct).ConfigureAwait(false);
         State = HeyCyanState.TransferMode;
 
-        // Wait for the IP address notify frame (type 0x08)
-        IPAddress? glassesIp;
+        IPAddress? glassesIp = null;
+
         try
         {
-            var frame = await WaitForNotifyAsync(0x08, TimeSpan.FromSeconds(15), ct).ConfigureAwait(false);
-            if (!HeyCyanFrameParser.TryParseTransferIp(frame, out glassesIp) || glassesIp is null)
-                throw new InvalidOperationException("Failed to parse glasses IP from notify frame");
+            // Wait for BLE notification with SSID+password (up to 30s)
+            using var notifyCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            notifyCts.CancelAfter(TimeSpan.FromSeconds(30));
+
+            await foreach (var payload in _transferNotifyChannel.Reader.ReadAllAsync(notifyCts.Token).ConfigureAwait(false))
+            {
+                Console.Error.WriteLine($"[BLE-0x41] Transfer notify ({payload.Length}B): {BitConverter.ToString(payload)}");
+
+                // Direct IP notification (0x08): payload[1..4] = IPv4
+                if (payload.Length >= 5 && payload[0] == 0x08)
+                {
+                    glassesIp = new IPAddress(payload.AsSpan(1, 4));
+                    _log.LogInformation("Got glasses IP from BLE 0x08 notify: {Ip}", glassesIp);
+                    break;
+                }
+
+                // SSID+password notification: [02-01-04-01][ssidLen LE16][pwdLen LE16][ssid][pwd]
+                if (payload.Length >= 8 && payload[0] == 0x02 && payload[1] == 0x01
+                    && payload[2] == 0x04 && payload[3] == 0x01)
+                {
+                    var ssidLen = payload[4] | (payload[5] << 8);
+                    var pwdLen = payload[6] | (payload[7] << 8);
+
+                    if (payload.Length >= 8 + ssidLen + pwdLen && ssidLen > 0)
+                    {
+                        var ssid = System.Text.Encoding.UTF8.GetString(payload, 8, ssidLen);
+                        var password = pwdLen > 0
+                            ? System.Text.Encoding.UTF8.GetString(payload, 8 + ssidLen, pwdLen)
+                            : "123456789";
+
+                        _bleTransferSsid = ssid;
+                        _bleTransferPassword = password;
+                        Console.Error.WriteLine($"[BLE-0x41] SSID='{ssid}' password=({password.Length} chars)");
+                        _log.LogInformation("BLE transfer credentials: SSID='{Ssid}'", ssid);
+                        break;
+                    }
+                }
+            }
+
+            // Connect to the glasses WiFi network.
+            if (glassesIp is null && _bleTransferSsid is not null && _wifiManager is not null)
+            {
+                // iOS SDK critical step: poll getDeviceWifiIPSuccess to confirm AP is ready.
+                // The glasses won't fully start the WiFi radio until this is polled.
+                Console.Error.WriteLine("[BLE] Polling GetWifiIP to trigger/confirm AP startup...");
+                var bleIp = await PollWifiIpReadyAsync(ct).ConfigureAwait(false);
+
+                // iOS SDK: "CRITICAL: Wait for hotspot to actually start broadcasting"
+                // The firmware reports IP before the WiFi radio is fully up.
+                // iOS waits 15s in WiFi-dense environments. Glasses AP takes 30-60s total.
+                Console.Error.WriteLine("[WIFI] Waiting 15s for glasses AP to start broadcasting...");
+                await Task.Delay(15000, ct).ConfigureAwait(false);
+
+                // Now switch WiFi to the glasses network
+                Console.Error.WriteLine($"[WIFI] AP confirmed ready, joining '{_bleTransferSsid}'...");
+                var joinedIp = await _wifiManager.ForceJoinAsync(
+                    _bleTransferSsid,
+                    _bleTransferPassword ?? WindowsGlassesWiFiManager.DefaultPassword,
+                    ct).ConfigureAwait(false);
+
+                // Prefer BLE-reported IP, fall back to DHCP-discovered IP
+                glassesIp = bleIp ?? joinedIp;
+
+                if (glassesIp is null)
+                {
+                    Console.Error.WriteLine("[WIFI] ForceJoin did not get an IP, probing candidates...");
+                    glassesIp = await ProbeCandidateIpsAsync(ct).ConfigureAwait(false);
+                }
+            }
+
+            if (glassesIp is null)
+                throw new InvalidOperationException(
+                    "Transfer mode: no glasses IP obtained. "
+                    + $"BLE SSID={_bleTransferSsid ?? "(none)"}, "
+                    + "ensure glasses are in range and WiFi adapter is available.");
         }
         catch
         {
             State = HeyCyanState.Connected;
             throw;
+        }
+        finally
+        {
+            _transferNotifyChannel.Writer.TryComplete();
+            _transferNotifyChannel = null;
+            _bleTransferSsid = null;
+            _bleTransferPassword = null;
         }
 
         var baseUrl = $"http://{glassesIp}";
@@ -667,11 +772,343 @@ internal sealed class WindowsHeyCyanGlassesSession : IHeyCyanGlassesSession
         return new HeyCyanTransferSession(baseUrl, Array.Empty<string>());
     }
 
+    /// <summary>
+    /// Polls GetWifiIP command over BLE to trigger/confirm glasses AP startup.
+    /// iOS SDK equivalent: getDeviceWifiIPSuccess with exponential backoff, up to 10 retries.
+    /// Returns the glasses IP when the AP is ready, or null after timeout.
+    /// </summary>
+    private async Task<IPAddress?> PollWifiIpReadyAsync(CancellationToken ct)
+    {
+        const int maxRetries = 10;
+
+        for (int attempt = 0; attempt < maxRetries; attempt++)
+        {
+            // Exponential backoff: 1s, 2s, 4s, 4s, 4s... (capped at 4s like iOS SDK)
+            var delay = Math.Min(1000 * (1 << attempt), 4000);
+            if (attempt > 0)
+            {
+                Console.Error.WriteLine($"[BLE] GetWifiIP attempt {attempt + 1}/{maxRetries} (waiting {delay}ms)...");
+                await Task.Delay(delay, ct).ConfigureAwait(false);
+            }
+
+            // Send [0x02, 0x03] GetWifiIP query
+            await SendCommandAsync(HeyCyanCommands.GetWifiIP(), ct).ConfigureAwait(false);
+
+            // Wait up to 3s for the 0x08 IP notification response
+            using var responseCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            responseCts.CancelAfter(TimeSpan.FromSeconds(3));
+
+            try
+            {
+                if (_transferNotifyChannel is null) return null;
+
+                await foreach (var payload in _transferNotifyChannel.Reader.ReadAllAsync(responseCts.Token).ConfigureAwait(false))
+                {
+                    Console.Error.WriteLine($"[BLE-0x41] WifiIP response ({payload.Length}B): {BitConverter.ToString(payload)}");
+
+                    // Response format: [0x02, 0x03, IP1, IP2, IP3, IP4, ...]
+                    if (payload.Length >= 6 && payload[0] == 0x02 && payload[1] == 0x03)
+                    {
+                        var ip = new IPAddress(payload.AsSpan(2, 4));
+                        if (!ip.Equals(IPAddress.Any))
+                        {
+                            Console.Error.WriteLine($"[BLE] Glasses AP ready! IP={ip}");
+                            _log.LogInformation("GetWifiIP success: glasses AP at {Ip}", ip);
+                            return ip;
+                        }
+                    }
+                }
+            }
+            catch (OperationCanceledException) when (responseCts.IsCancellationRequested && !ct.IsCancellationRequested)
+            {
+                // Timeout waiting for response — retry
+                Console.Error.WriteLine($"[BLE] GetWifiIP attempt {attempt + 1} - no IP response yet");
+            }
+        }
+
+        Console.Error.WriteLine($"[BLE] GetWifiIP failed after {maxRetries} attempts - AP may not have started");
+        return null;
+    }
+
+    /// <summary>
+    /// Reads the transfer notification channel waiting for the 0x08 IP payload.
+    /// Per Android SDK: payload[0]==0x08, payload[1..4] = IPv4 octets.
+    /// </summary>
+    private async Task<IPAddress?> WaitForTransferIpNotifyAsync(CancellationToken ct)
+    {
+        if (_transferNotifyChannel is null) return null;
+
+        try
+        {
+            await foreach (var payload in _transferNotifyChannel.Reader.ReadAllAsync(ct).ConfigureAwait(false))
+            {
+                Console.Error.WriteLine($"[BLE-0x41] Transfer notify ({payload.Length}B): {BitConverter.ToString(payload)}");
+                _log.LogInformation("Transfer 0x41 notify ({Length}B): {Hex}",
+                    payload.Length, BitConverter.ToString(payload));
+
+                // Android SDK: payload[0]==0x08 means IP notification, bytes [1..4] are IPv4
+                if (payload.Length >= 5 && payload[0] == 0x08)
+                {
+                    var ip = new IPAddress(payload.AsSpan(1, 4));
+                    _log.LogInformation("Got glasses IP from BLE 0x08 notify: {Ip}", ip);
+                    return ip;
+                }
+
+                // Parse SSID+password notification (iOS flow):
+                // Format: [02-01-04][status][ssid_len LE16][pwd_len LE16][ssid bytes][pwd bytes]
+                if (payload.Length >= 8 && payload[0] == 0x02 && payload[1] == 0x01 && payload[2] == 0x04
+                    && payload[3] == 0x01) // status == success
+                {
+                    var ssidLen = payload[4] | (payload[5] << 8);
+                    var pwdLen = payload[6] | (payload[7] << 8);
+
+                    if (payload.Length >= 8 + ssidLen + pwdLen && ssidLen > 0)
+                    {
+                        var ssid = System.Text.Encoding.UTF8.GetString(payload, 8, ssidLen);
+                        var password = pwdLen > 0
+                            ? System.Text.Encoding.UTF8.GetString(payload, 8 + ssidLen, pwdLen)
+                            : "123456789";
+
+                        _log.LogInformation("BLE transfer credentials: SSID='{Ssid}' pwd=({PwdLen} chars)",
+                            ssid, password.Length);
+                        Console.Error.WriteLine($"[BLE-0x41] SSID='{ssid}' password=({password.Length} chars)");
+
+                        // Store for other strategies
+                        _bleTransferSsid = ssid;
+                        _bleTransferPassword = password;
+
+                        // Feed the password to WiFi Direct manager for pairing
+                        if (_wifiDirectManager is not null)
+                            _wifiDirectManager.GroupPassword = password;
+
+                        // Immediately connect to the glasses' hidden WiFi network.
+                        // The glasses create a hidden AP with this SSID — connect directly
+                        // rather than waiting for WiFi Direct peer discovery.
+                        if (_wifiManager is not null)
+                        {
+                            _log.LogInformation("Connecting directly to glasses hidden WiFi '{Ssid}'...", ssid);
+                            Console.Error.WriteLine($"[WIFI] Connecting directly to hidden network '{ssid}'...");
+
+                            var glassesIpResult = await _wifiManager.ForceJoinAsync(ssid, password, ct)
+                                .ConfigureAwait(false);
+
+                            if (glassesIpResult is not null)
+                            {
+                                _log.LogInformation("Connected to glasses WiFi, IP: {Ip}", glassesIpResult);
+                                Console.Error.WriteLine($"[WIFI] Connected! Glasses at: {glassesIpResult}");
+                                return glassesIpResult;
+                            }
+
+                            Console.Error.WriteLine("[WIFI] Force-join didn't yield an IP, continuing...");
+                        }
+                    }
+                }
+
+                // Fallback: scan for 192.168.x.x pattern anywhere in payload
+                if (payload.Length >= 6)
+                {
+                    for (int i = 0; i <= payload.Length - 4; i++)
+                    {
+                        if (payload[i] == 192 && payload[i + 1] == 168)
+                        {
+                            var ip = new IPAddress(payload.AsSpan(i, 4));
+                            _log.LogInformation("Got glasses IP from 0x41 payload scan: {Ip}", ip);
+                            return ip;
+                        }
+                    }
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Overall timeout or channel completed — return null (best-effort strategy)
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// WiFi Direct strategy — discover peer and connect to get remote IP.
+    /// Retries discovery once if the peer isn't found on the first attempt
+    /// (handles case where previous failed connection left stale state).
+    /// </summary>
+    private async Task<IPAddress?> TryWiFiDirectAsync(CancellationToken ct)
+    {
+        try
+        {
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            cts.CancelAfter(TimeSpan.FromSeconds(45));
+
+            try
+            {
+                var remoteIp = await _wifiDirectManager!.WaitForPeerAndConnectAsync(cts.Token)
+                    .ConfigureAwait(false);
+
+                if (IPAddress.TryParse(remoteIp, out var ip))
+                {
+                    _log.LogInformation("WiFi Direct connected, glasses IP: {Ip}", ip);
+                    return ip;
+                }
+            }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            {
+                // First attempt timed out — restart discovery and try again
+                _log.LogInformation("WiFi Direct peer not found, restarting discovery...");
+                Console.Error.WriteLine("[WIFIDIRECT] Peer not found, restarting discovery...");
+                _wifiDirectManager!.Disconnect();
+                _wifiDirectManager.StartDiscovery();
+
+                using var retryCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                retryCts.CancelAfter(TimeSpan.FromSeconds(20));
+
+                try
+                {
+                    var remoteIp = await _wifiDirectManager.WaitForPeerAndConnectAsync(retryCts.Token)
+                        .ConfigureAwait(false);
+
+                    if (IPAddress.TryParse(remoteIp, out var ip))
+                    {
+                        _log.LogInformation("WiFi Direct connected on retry, glasses IP: {Ip}", ip);
+                        return ip;
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    // Retry also timed out — give up on WiFi Direct
+                    _log.LogWarning("WiFi Direct retry also timed out");
+                    Console.Error.WriteLine("[WIFIDIRECT] Retry also timed out");
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Overall cancellation — return null to let other strategies try
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "WiFi Direct failed");
+            Console.Error.WriteLine($"[WIFIDIRECT] Failed: {ex.Message}");
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// WiFi hotspot strategy — scan for glasses SSID, join, get gateway IP.
+    /// Extended to 30+ seconds with more retries (per RCA-810 fix plan).
+    /// </summary>
+    private async Task<IPAddress?> TryWiFiHotspotAsync(CancellationToken ct)
+    {
+        try
+        {
+            await Task.Delay(2000, ct).ConfigureAwait(false);
+
+            string? ssid = null;
+            // Extended scan: 8 attempts × 4s = ~32 seconds total
+            for (int attempt = 0; attempt < 8 && ssid is null; attempt++)
+            {
+                if (attempt > 0)
+                    await Task.Delay(4000, ct).ConfigureAwait(false);
+                ssid = await _wifiManager!.DiscoverGlassesSsidAsync(ct).ConfigureAwait(false);
+            }
+
+            if (ssid is null) return null;
+
+            await _wifiManager!.JoinAsync(ssid, WindowsGlassesWiFiManager.DefaultPassword, ct)
+                .ConfigureAwait(false);
+            await Task.Delay(2000, ct).ConfigureAwait(false);
+
+            var gatewayIp = _wifiManager.GetGatewayIp();
+            if (gatewayIp is not null)
+            {
+                _log.LogInformation("WiFi hotspot connected, gateway IP: {Ip}", gatewayIp);
+                return gatewayIp;
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+        {
+            _log.LogWarning(ex, "WiFi hotspot fallback failed");
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Probe known candidate IPs for the glasses HTTP server (iOS fallback).
+    /// </summary>
+    private async Task<IPAddress?> ProbeCandidateIpsAsync(CancellationToken ct)
+    {
+        // Try the glasses-typical subnets first. NEVER try 192.168.1.1 — that's
+        // almost always the home router and will return HTTP 200 (router login page).
+        var candidates = new[]
+        {
+            "192.168.43.1",  // Android hotspot / WiFi Direct GO default
+            "192.168.4.1",   // ESP32 / common IoT default
+            "192.168.49.1",  // WiFi Direct (Android 10+)
+            "192.168.0.1",   // Generic router default
+        };
+
+        using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(3) };
+
+        foreach (var candidate in candidates)
+        {
+            ct.ThrowIfCancellationRequested();
+            try
+            {
+                Console.Error.WriteLine($"[WIFI] Probing http://{candidate}/files/media.config ...");
+                var response = await httpClient.GetAsync($"http://{candidate}/files/media.config", ct)
+                    .ConfigureAwait(false);
+                if (response.IsSuccessStatusCode)
+                {
+                    // Validate response is actually from the glasses (plain text file list),
+                    // not a router login page returning HTTP 200.
+                    var content = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+                    if (content.Contains("<!DOCTYPE", StringComparison.OrdinalIgnoreCase)
+                        || content.Contains("<html", StringComparison.OrdinalIgnoreCase))
+                    {
+                        Console.Error.WriteLine($"[WIFI] Probe {candidate} returned HTML (router?), skipping");
+                        _log.LogWarning("Probe {Ip} returned HTML (likely a router), skipping", candidate);
+                        continue;
+                    }
+
+                    _log.LogInformation("Candidate IP probe succeeded: {Ip}", candidate);
+                    Console.Error.WriteLine($"[WIFI] Probe {candidate} OK! Glasses found.");
+                    return IPAddress.Parse(candidate);
+                }
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _log.LogDebug("Probe {Ip} failed: {Msg}", candidate, ex.Message);
+            }
+        }
+
+        return null;
+    }
+
     public async Task ExitTransferModeAsync(CancellationToken ct)
     {
+        // Disconnect WiFi Direct first (tears down P2P group)
+        _wifiDirectManager?.Disconnect();
+
+        // Leave glasses WiFi hotspot if connected (restores previous network)
+        _wifiManager?.Leave();
+
         await SendCommandAsync(HeyCyanCommands.ExitTransferMode(), ct).ConfigureAwait(false);
         State = HeyCyanState.Connected;
     }
+
+    // ── Diagnostic helpers (internal for test access) ────────────────────────
+
+    /// <summary>
+    /// Send a raw BLE command (diagnostic use only — bypasses HeyCyanCommands).
+    /// </summary>
+    internal Task SendRawDiagnosticCommandAsync(byte[] command, CancellationToken ct)
+        => SendCommandAsync(command, ct);
+
+    /// <summary>
+    /// Access the underlying BLE device for GATT service enumeration (diagnostic only).
+    /// </summary>
+    internal BluetoothLEDevice? DiagnosticBleDevice => _bleDevice;
 
     // ── BLE helpers ─────────────────────────────────────────────────────────
 
@@ -680,6 +1117,10 @@ internal sealed class WindowsHeyCyanGlassesSession : IHeyCyanGlassesSession
         if (_txCharacteristic is null)
             throw new InvalidOperationException("Not connected — no write characteristic available");
 
+        _log.LogDebug("BLE write ({Length} bytes): {Hex}",
+            command.Length, BitConverter.ToString(command));
+        Console.Error.WriteLine($"[BLE-WRITE] ({command.Length}B) {BitConverter.ToString(command)}");
+
         await _commandLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
@@ -687,7 +1128,7 @@ internal sealed class WindowsHeyCyanGlassesSession : IHeyCyanGlassesSession
             writer.WriteBytes(command);
             var result = await _txCharacteristic.WriteValueWithResultAsync(
                 writer.DetachBuffer(),
-                GattWriteOption.WriteWithoutResponse).AsTask(ct).ConfigureAwait(false);
+                GattWriteOption.WriteWithResponse).AsTask(ct).ConfigureAwait(false);
 
             if (result.Status != GattCommunicationStatus.Success)
                 throw new InvalidOperationException($"BLE write failed: {result.Status}");
@@ -753,24 +1194,84 @@ internal sealed class WindowsHeyCyanGlassesSession : IHeyCyanGlassesSession
     private void OnCharacteristicValueChanged(GattCharacteristic sender, GattValueChangedEventArgs args)
     {
         var bytes = args.CharacteristicValue.ToArray();
-        if (bytes.Length < 7)
+
+        // Always log raw bytes for protocol debugging
+        _log.LogDebug("BLE notify raw ({Length} bytes): {Hex}",
+            bytes.Length, BitConverter.ToString(bytes));
+        Console.Error.WriteLine($"[BLE-NOTIFY] ({bytes.Length}B) {BitConverter.ToString(bytes)}");
+
+        RawNotifyReceived?.Invoke(this, bytes);
+
+        // Parse Serial Port protocol frame: [0xBC][action][len_lo][len_hi][crc_lo][crc_hi][payload...]
+        if (bytes.Length < 6 || bytes[0] != 0xBC)
         {
-            _log.LogDebug("Notify frame too short ({Length} bytes)", bytes.Length);
+            _log.LogDebug("Notify frame not Serial Port protocol ({Length}B, first=0x{First:X2})",
+                bytes.Length, bytes.Length > 0 ? bytes[0] : 0);
             return;
         }
 
-        var notifyType = bytes[6];
+        var action = bytes[1];
+        var payloadLen = bytes[2] | (bytes[3] << 8); // LE
+        var payload = bytes.Length > 6 ? bytes.AsSpan(6).ToArray() : Array.Empty<byte>();
 
-        // Complete any pending one-shot waiter for this type
-        if (_pendingResponses.TryRemove(notifyType, out var tcs))
+        // Complete any pending one-shot waiter for this action
+        if (_pendingResponses.TryRemove(action, out var tcs))
         {
-            tcs.TrySetResult(bytes);
+            // During transfer mode, also feed 0x41 payloads into the channel
+            // so the transfer logic can see ALL notifications (not just the first).
+            if (action == 0x41 && _transferNotifyChannel is not null)
+                _transferNotifyChannel.Writer.TryWrite(payload);
+
+            tcs.TrySetResult(payload);
             return;
         }
 
-        // Dispatch by type
-        switch (notifyType)
+        // Feed transfer channel for 0x41 even when no one-shot waiter is registered
+        if (action == 0x41 && _transferNotifyChannel is not null)
         {
+            _transferNotifyChannel.Writer.TryWrite(payload);
+        }
+
+        // Dispatch by action
+        switch (action)
+        {
+            case 0x41: // GlassesControl response (buttons, mode changes, transfer)
+                DispatchGlassesControl(payload);
+                break;
+
+            case 0x42: // Battery
+                if (payload.Length >= 2)
+                {
+                    var battery = HeyCyanFrameParser.ParseBattery(payload);
+                    _log.LogDebug("Battery: {Pct}% charging={Charging}", battery.Percentage, battery.IsCharging);
+                    BatteryUpdated?.Invoke(this, battery);
+                }
+                break;
+
+            case 0x45: // Heartbeat
+                _log.LogDebug("Heartbeat response: {Hex}", BitConverter.ToString(payload));
+                break;
+
+            default:
+                _log.LogDebug("Unhandled notify action 0x{Action:X2} ({Length}B payload)",
+                    action, payload.Length);
+                break;
+        }
+    }
+
+    private void DispatchGlassesControl(byte[] payload)
+    {
+        if (payload.Length == 0) return;
+
+        var subType = payload[0];
+        switch (subType)
+        {
+            case 0x01 when payload.Length >= 2: // Mode-change / transfer response
+                var subAction = payload[1];
+                _log.LogInformation("GlassesControl mode response: sub=0x{Sub:X2}, payload={Hex}",
+                    subAction, BitConverter.ToString(payload));
+                break;
+
             case 0x02: // AI-photo button
                 ButtonPressed?.Invoke(this, new HeyCyanButtonEvent(HeyCyanButtonGesture.Tap, DateTimeOffset.UtcNow));
                 break;
@@ -779,29 +1280,14 @@ internal sealed class WindowsHeyCyanGlassesSession : IHeyCyanGlassesSession
                 ButtonPressed?.Invoke(this, new HeyCyanButtonEvent(HeyCyanButtonGesture.DoubleTap, DateTimeOffset.UtcNow));
                 break;
 
-            case 0x05: // Battery
-                if (bytes.Length >= 9)
-                {
-                    var battery = HeyCyanFrameParser.ParseBattery(bytes.AsSpan(7, 2).ToArray());
-                    _log.LogDebug("Battery: {Pct}% charging={Charging}", battery.Percentage, battery.IsCharging);
-                    BatteryUpdated?.Invoke(this, battery);
-                }
-                break;
-
-            case 0x08: // Transfer IP
-                _log.LogDebug("Transfer IP notify received");
-                break;
-
-            case 0x09: // P2P error
-                var errorKind = HeyCyanFrameParser.ClassifyP2pError(bytes);
-                if (errorKind == HeyCyanP2pErrorKind.Fatal)
-                    _log.LogWarning("P2P fatal error in notify frame");
-                else
-                    _log.LogDebug("P2P noisy error (0xFF) — ignoring");
+            case 0x04: // Media counts / other sub-response
+                _log.LogDebug("GlassesControl sub=0x04 ({Length}B): {Hex}",
+                    payload.Length, BitConverter.ToString(payload));
                 break;
 
             default:
-                _log.LogDebug("Unknown notify type 0x{Type:X2}", notifyType);
+                _log.LogDebug("GlassesControl unknown sub=0x{Sub:X2} ({Length}B)",
+                    subType, payload.Length);
                 break;
         }
     }
@@ -839,6 +1325,18 @@ internal sealed class WindowsHeyCyanGlassesSession : IHeyCyanGlassesSession
         }
 
         _txCharacteristic = null;
+
+        if (_gattSession is not null)
+        {
+            _gattSession.Dispose();
+            _gattSession = null;
+        }
+
+        if (_gattService is not null)
+        {
+            _gattService.Dispose();
+            _gattService = null;
+        }
 
         if (_bleDevice is not null)
         {

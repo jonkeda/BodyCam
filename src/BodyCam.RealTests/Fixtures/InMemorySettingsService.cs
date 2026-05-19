@@ -60,6 +60,12 @@ public sealed class InMemorySettingsService : ISettingsService
     public string? LastHeyCyanDeviceName { get; set; }
     public bool HeyCyanAutoReconnect { get; set; } = true;
 
+    // A9 Camera
+    public string? A9CameraIp { get; set; }
+    public string? A9CameraUid { get; set; }
+    public string? A9CameraUsername { get; set; }
+    public string? A9CameraPassword { get; set; }
+
     // Setup
     public bool SetupCompleted { get; set; }
 }

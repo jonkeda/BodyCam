@@ -4,6 +4,7 @@ using BodyCam.Services;
 using BodyCam.Services.Audio;
 using BodyCam.Services.Audio.WebRtcApm;
 using BodyCam.Services.Camera;
+using BodyCam.Services.Camera.A9;
 using BodyCam.Services.Input;
 using BodyCam.Services.Barcode;
 using BodyCam.Services.QrCode;
@@ -152,6 +153,9 @@ public static class ServiceExtensions
 
 		services.AddSingleton<PhoneCameraProvider>();
 		services.AddSingleton<ICameraProvider>(sp => sp.GetRequiredService<PhoneCameraProvider>());
+
+		services.AddSingleton<A9CameraProvider>();
+		services.AddSingleton<ICameraProvider>(sp => sp.GetRequiredService<A9CameraProvider>());
 
 #if ANDROID
 		// Use HeyCyan-aware selector on Android; default selector elsewhere
@@ -316,7 +320,17 @@ public static class ServiceExtensions
 		services.AddSingleton<Services.Glasses.HeyCyan.Media.IMediaStore, BodyCam.Platforms.iOS.HeyCyan.IosMediaStore>();
 		services.AddSingleton<Services.Glasses.HeyCyan.Media.IMediaDurationProbe, BodyCam.Platforms.iOS.HeyCyan.IosMediaDurationProbe>();
 #elif WINDOWS
-		services.AddSingleton<Services.Glasses.HeyCyan.IHeyCyanGlassesSession, BodyCam.Platforms.Windows.HeyCyan.WindowsHeyCyanGlassesSession>();
+		services.AddSingleton<BodyCam.Platforms.Windows.HeyCyan.WindowsGlassesWiFiManager>();
+		services.AddSingleton<BodyCam.Platforms.Windows.HeyCyan.WindowsWiFiDirectManager>(sp =>
+			new BodyCam.Platforms.Windows.HeyCyan.WindowsWiFiDirectManager(
+				sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<BodyCam.Platforms.Windows.HeyCyan.WindowsWiFiDirectManager>>()));
+		services.AddSingleton<Services.Glasses.HeyCyan.IHeyCyanGlassesSession>(sp =>
+			new BodyCam.Platforms.Windows.HeyCyan.WindowsHeyCyanGlassesSession(
+				sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<BodyCam.Platforms.Windows.HeyCyan.WindowsHeyCyanGlassesSession>>(),
+				sp.GetRequiredService<BodyCam.Platforms.Windows.Audio.WindowsBluetoothEnumerator>(),
+				sp.GetRequiredService<BodyCam.Platforms.Windows.Audio.WindowsBluetoothOutputEnumerator>(),
+				sp.GetRequiredService<BodyCam.Platforms.Windows.HeyCyan.WindowsGlassesWiFiManager>(),
+				sp.GetRequiredService<BodyCam.Platforms.Windows.HeyCyan.WindowsWiFiDirectManager>()));
 		services.AddSingleton<Services.Glasses.HeyCyan.IHeyCyanHttpClientFactory, BodyCam.Platforms.Windows.HeyCyan.WindowsHeyCyanHttpClientFactory>();
 		services.AddSingleton<Services.Glasses.HeyCyan.Media.IMediaStore, Services.Glasses.HeyCyan.Media.NoopMediaStore>();
 		services.AddSingleton<Services.Glasses.HeyCyan.Media.IMediaDurationProbe, Services.Glasses.HeyCyan.Media.NoopMediaDurationProbe>();

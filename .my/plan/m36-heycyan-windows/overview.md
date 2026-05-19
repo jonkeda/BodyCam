@@ -66,5 +66,6 @@ discovered via GATT enumeration or BLE traffic sniffing.
 - [Phase 3 — Windows WiFi Transfer](phase-3-windows-wifi/overview.md)
 - [Phase 4 — Integration & Testing](phase-4-integration/overview.md)
 - [Phase 5 — Windows WiFi Hotspot Joining](phase-5-wifi-joining/overview.md)
-- [Phase 6 — BLE Audio Streaming](phase-6-ble-audio/overview.md)
+- [Phase 6 — WiFi Photo Transfer](phase-6-wifi-photos/overview.md)
+- [Phase 6b — BLE Audio Streaming](phase-6-ble-audio/overview.md)
 - [Phase 7 — Classic Bluetooth Audio Pairing](phase-7-classic-bt-pairing/overview.md)

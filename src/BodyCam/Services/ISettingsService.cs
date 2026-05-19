@@ -54,6 +54,12 @@ public interface ISettingsService
     string? LastHeyCyanDeviceName { get; set; }
     bool HeyCyanAutoReconnect { get; set; }
 
+    // A9 Camera
+    string? A9CameraIp { get; set; }
+    string? A9CameraUid { get; set; }
+    string? A9CameraUsername { get; set; }
+    string? A9CameraPassword { get; set; }
+
     // Setup
     bool SetupCompleted { get; set; }
 }
