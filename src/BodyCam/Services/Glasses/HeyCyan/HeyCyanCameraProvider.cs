@@ -14,9 +14,12 @@ public sealed class HeyCyanCameraProvider : ICameraProvider
 {
     public string ProviderId => "heycyan-glasses";
     public string DisplayName => "HeyCyan Glasses Camera";
+    public bool SupportsVideoRecording => false;
 
     public bool IsAvailable =>
         _session.State is HeyCyanState.Connected or HeyCyanState.TransferMode;
+
+    public bool IsStoredImageDownloadFallback => _transfer is IHeyCyanStoredImageMediaTransfer;
 
     public event EventHandler? Disconnected;
 
@@ -63,6 +66,23 @@ public sealed class HeyCyanCameraProvider : ICameraProvider
 
         try
         {
+            if (_transfer is IHeyCyanStoredImageMediaTransfer storedImageTransfer)
+            {
+                _log.LogWarning(
+                    "HeyCyan: triggering real photo capture, then using stored-image download fallback");
+                await _session.TakePhotoAsync(ct).ConfigureAwait(false);
+
+                var fallbackJpg = await _transfer
+                    .DownloadAsync(storedImageTransfer.FallbackFileName, ct)
+                    .ConfigureAwait(false);
+                AssertJpegMagic(fallbackJpg);
+
+                _log.LogWarning(
+                    "HeyCyan: stored-image download fallback returned {Size} bytes",
+                    fallbackJpg.Length);
+                return fallbackJpg;
+            }
+
             // 1. Snapshot the current photo count so we can detect the new file
             var beforeCount = _session.LastMediaCount?.Photos ?? 0;
             List<string>? beforeNames = null;

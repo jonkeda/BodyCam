@@ -69,3 +69,4 @@ discovered via GATT enumeration or BLE traffic sniffing.
 - [Phase 6 — WiFi Photo Transfer](phase-6-wifi-photos/overview.md)
 - [Phase 6b — BLE Audio Streaming](phase-6-ble-audio/overview.md)
 - [Phase 7 — Classic Bluetooth Audio Pairing](phase-7-classic-bt-pairing/overview.md)
+- [Phase 10 — Windows Audio Endpoint Activation](phase-10-windows-audio-activation/overview.md)

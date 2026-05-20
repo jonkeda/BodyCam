@@ -11,6 +11,7 @@ public class TestCameraProvider : ICameraProvider
     public string DisplayName => "Test Camera";
     public string ProviderId => "test-camera";
     public bool IsAvailable { get; set; } = true;
+    public bool SupportsVideoRecording { get; set; } = true;
 
     public event EventHandler? Disconnected;
 

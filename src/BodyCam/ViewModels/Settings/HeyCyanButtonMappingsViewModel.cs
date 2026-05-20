@@ -14,7 +14,7 @@ public sealed class HeyCyanButtonMappingsViewModel : ViewModelBase
     {
         AvailableActions = Enum.GetValues<ButtonAction>();
         Rows = HeyCyanButtonDefaults.SupportedGestures
-            .Select(g => new HeyCyanGestureRowViewModel(
+            .Select(g => new GestureRowViewModel(
                 store,
                 HeyCyanButtonDefaults.ProviderId,
                 HeyCyanButtonDefaults.ButtonId,
@@ -23,5 +23,5 @@ public sealed class HeyCyanButtonMappingsViewModel : ViewModelBase
     }
 
     public IReadOnlyList<ButtonAction> AvailableActions { get; }
-    public IReadOnlyList<HeyCyanGestureRowViewModel> Rows { get; }
+    public IReadOnlyList<GestureRowViewModel> Rows { get; }
 }

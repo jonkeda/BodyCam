@@ -21,7 +21,8 @@ public sealed class GlassesViewModelTests
         _glasses = CreateManager(_session);
     }
 
-    private GlassesViewModel CreateVm() => new(_glasses, new FakeSettingsService());
+    private GlassesViewModel CreateVm(IHeyCyanAudioEndpointActivationService? activation = null)
+        => new(_glasses, new FakeSettingsService(), activation ?? new NullHeyCyanAudioEndpointActivationService());
 
     private static HeyCyanGlassesDeviceManager CreateManager(IHeyCyanGlassesSession session)
     {
@@ -427,6 +428,40 @@ public sealed class GlassesViewModelTests
         // Assert — should have toggled IsScanning true then false
         changedProperties.Should().Contain(nameof(vm.IsScanning));
     }
+
+    [Fact]
+    public async Task ConnectCommand_WhenActivationMustRunFirst_RunsAudioActivationBeforeGlassesConnect()
+    {
+        var activation = new FakeActivationService();
+        activation.IsGlassesConnectedAtBegin = () => _glasses.State == GlassesConnectionState.Connected;
+        var vm = CreateVm(activation);
+        vm.SelectedDevice = new HeyCyanDeviceInfo("TestGlasses", "AA:BB:CC:DD:EE:FF", -60);
+
+        await vm.ConnectCommand.ExecuteAsync(null);
+
+        activation.BeginActivationCalls.Should().Be(1);
+        activation.LastSelectedDevice.Should().Be(vm.SelectedDevice);
+        activation.WasGlassesConnectedAtBegin.Should().BeFalse();
+        _glasses.State.Should().Be(GlassesConnectionState.Connected);
+        vm.ConnectionDetailStatus.Should().Be("HeyCyan microphone and speaker ready.");
+    }
+
+    [Fact]
+    public async Task ConnectCommand_WhenPreBleActivationIsNotReady_DoesNotConnectBle()
+    {
+        var activation = new FakeActivationService
+        {
+            Snapshot = FakeActivationService.CreatePendingSnapshot()
+        };
+        var vm = CreateVm(activation);
+        vm.SelectedDevice = new HeyCyanDeviceInfo("TestGlasses", "AA:BB:CC:DD:EE:FF", -60);
+
+        await vm.ConnectCommand.ExecuteAsync(null);
+
+        activation.BeginActivationCalls.Should().Be(1);
+        _glasses.State.Should().Be(GlassesConnectionState.Disconnected);
+        vm.ConnectionDetailStatus.Should().Contain("The app has not connected BLE yet");
+    }
 }
 
 // Extension method to simplify async command execution in tests
@@ -438,4 +473,60 @@ file static class AsyncRelayCommandExtensions
         // Wait a bit for the async operation to complete
         await Task.Delay(50);
     }
+}
+
+file sealed class FakeActivationService : IHeyCyanAudioEndpointActivationService
+{
+    public bool IsSupported => true;
+    public bool RequiresActivationBeforeBleConnect { get; init; } = true;
+    public int BeginActivationCalls { get; private set; }
+    public HeyCyanDeviceInfo? LastSelectedDevice { get; private set; }
+    public HeyCyanAudioEndpointSnapshot? Current { get; private set; }
+    public HeyCyanAudioEndpointSnapshot Snapshot { get; init; } = CreateReadySnapshot();
+    public Func<bool>? IsGlassesConnectedAtBegin { get; set; }
+    public bool? WasGlassesConnectedAtBegin { get; private set; }
+
+    public event EventHandler<HeyCyanAudioEndpointSnapshot>? Updated;
+
+    public Task<HeyCyanAudioEndpointSnapshot> RefreshAsync(CancellationToken ct)
+        => PublishAsync(Snapshot);
+
+    public Task<HeyCyanAudioEndpointSnapshot> BeginActivationAsync(
+        HeyCyanDeviceInfo? selectedDevice,
+        CancellationToken ct)
+    {
+        BeginActivationCalls++;
+        LastSelectedDevice = selectedDevice;
+        WasGlassesConnectedAtBegin = IsGlassesConnectedAtBegin?.Invoke();
+        return PublishAsync(Snapshot);
+    }
+
+    public Task OpenBluetoothSettingsAsync(CancellationToken ct) => Task.CompletedTask;
+
+    private Task<HeyCyanAudioEndpointSnapshot> PublishAsync(HeyCyanAudioEndpointSnapshot snapshot)
+    {
+        Current = snapshot;
+        Updated?.Invoke(this, snapshot);
+        return Task.FromResult(snapshot);
+    }
+
+    public static HeyCyanAudioEndpointSnapshot CreateReadySnapshot() => new(
+        MacAddress: "AA:BB:CC:DD:EE:FF",
+        Summary: "HeyCyan microphone and speaker ready.",
+        CaptureStatus: HeyCyanEndpointStatus.Active,
+        RenderStatus: HeyCyanEndpointStatus.Active,
+        CaptureEndpoints: [],
+        RenderEndpoints: [],
+        ProfileNodes: [],
+        RequiresUserAction: false);
+
+    public static HeyCyanAudioEndpointSnapshot CreatePendingSnapshot() => new(
+        MacAddress: "AA:BB:CC:DD:EE:FF",
+        Summary: "Windows sees TestGlasses, but audio endpoints are not active.",
+        CaptureStatus: HeyCyanEndpointStatus.NotPresent,
+        RenderStatus: HeyCyanEndpointStatus.NotPresent,
+        CaptureEndpoints: [],
+        RenderEndpoints: [],
+        ProfileNodes: [],
+        RequiresUserAction: true);
 }

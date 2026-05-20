@@ -256,6 +256,18 @@ public static class ServiceExtensions
 
 	public static IServiceCollection AddOrchestration(this IServiceCollection services)
 	{
+		// Source profiles
+#if ANDROID || IOS
+		services.AddSingleton<ISourceProfile, PhoneSourceProfile>();
+#elif WINDOWS
+		services.AddSingleton<ISourceProfile, LaptopSourceProfile>();
+#endif
+		services.AddSingleton<ISourceProfile, HeyCyanSourceProfile>();
+		services.AddSingleton<ISourceProfile, BluetoothSourceProfile>();
+		services.AddSingleton<ISourceProfile, CustomSourceProfile>();
+		services.AddSingleton<SourceProfileManager>();
+		services.AddSingleton<KnownDeviceService>();
+
 		// Button input
 #if WINDOWS
 		services.AddSingleton<IButtonInputProvider, BodyCam.Platforms.Windows.Input.KeyboardShortcutProvider>();
@@ -313,12 +325,14 @@ public static class ServiceExtensions
 		services.AddSingleton<Services.Glasses.HeyCyan.IHeyCyanHttpClientFactory, BodyCam.Platforms.Android.HeyCyan.AndroidHeyCyanHttpClientFactory>();
 		services.AddSingleton<Services.Glasses.HeyCyan.Media.IMediaStore, BodyCam.Platforms.Android.HeyCyan.AndroidMediaStore>();
 		services.AddSingleton<Services.Glasses.HeyCyan.Media.IMediaDurationProbe, BodyCam.Platforms.Android.HeyCyan.AndroidMediaDurationProbe>();
+		services.AddSingleton<Services.Glasses.HeyCyan.IHeyCyanAudioEndpointActivationService, Services.Glasses.HeyCyan.NullHeyCyanAudioEndpointActivationService>();
 #elif IOS
 		services.AddSingleton<BodyCam.Platforms.iOS.HeyCyan.HotspotHttpClient>();
 		services.AddSingleton<Services.Glasses.HeyCyan.IHeyCyanHttpClientFactory, BodyCam.Platforms.iOS.HeyCyan.IosHeyCyanHttpClientFactory>();
 		services.AddSingleton<Services.Glasses.HeyCyan.IHeyCyanGlassesSession, BodyCam.Platforms.iOS.HeyCyan.IosHeyCyanGlassesSession>();
 		services.AddSingleton<Services.Glasses.HeyCyan.Media.IMediaStore, BodyCam.Platforms.iOS.HeyCyan.IosMediaStore>();
 		services.AddSingleton<Services.Glasses.HeyCyan.Media.IMediaDurationProbe, BodyCam.Platforms.iOS.HeyCyan.IosMediaDurationProbe>();
+		services.AddSingleton<Services.Glasses.HeyCyan.IHeyCyanAudioEndpointActivationService, Services.Glasses.HeyCyan.NullHeyCyanAudioEndpointActivationService>();
 #elif WINDOWS
 		services.AddSingleton<BodyCam.Platforms.Windows.HeyCyan.WindowsGlassesWiFiManager>();
 		services.AddSingleton<BodyCam.Platforms.Windows.HeyCyan.WindowsWiFiDirectManager>(sp =>
@@ -334,11 +348,13 @@ public static class ServiceExtensions
 		services.AddSingleton<Services.Glasses.HeyCyan.IHeyCyanHttpClientFactory, BodyCam.Platforms.Windows.HeyCyan.WindowsHeyCyanHttpClientFactory>();
 		services.AddSingleton<Services.Glasses.HeyCyan.Media.IMediaStore, Services.Glasses.HeyCyan.Media.NoopMediaStore>();
 		services.AddSingleton<Services.Glasses.HeyCyan.Media.IMediaDurationProbe, Services.Glasses.HeyCyan.Media.NoopMediaDurationProbe>();
+		services.AddSingleton<Services.Glasses.HeyCyan.IHeyCyanAudioEndpointActivationService, BodyCam.Platforms.Windows.HeyCyan.WindowsHeyCyanAudioEndpointActivationService>();
 #else
 		services.AddSingleton<Services.Glasses.HeyCyan.IHeyCyanGlassesSession, Services.Glasses.HeyCyan.NullHeyCyanGlassesSession>();
 		services.AddSingleton<Services.Glasses.HeyCyan.IHeyCyanHttpClientFactory, Services.Glasses.HeyCyan.NullHeyCyanHttpClientFactory>();
 		services.AddSingleton<Services.Glasses.HeyCyan.Media.IMediaStore, Services.Glasses.HeyCyan.Media.NoopMediaStore>();
 		services.AddSingleton<Services.Glasses.HeyCyan.Media.IMediaDurationProbe, Services.Glasses.HeyCyan.Media.NoopMediaDurationProbe>();
+		services.AddSingleton<Services.Glasses.HeyCyan.IHeyCyanAudioEndpointActivationService, Services.Glasses.HeyCyan.NullHeyCyanAudioEndpointActivationService>();
 #endif
 
 		// Cross-platform HeyCyan providers (consume IHeyCyanGlassesSession)
@@ -347,7 +363,16 @@ public static class ServiceExtensions
 		services.AddSingleton<Services.Glasses.HeyCyan.HeyCyanButtonProvider>();
 		services.AddSingleton<IButtonInputProvider>(sp => sp.GetRequiredService<Services.Glasses.HeyCyan.HeyCyanButtonProvider>());
 		services.AddSingleton<Services.Glasses.HeyCyan.Media.ISidecarWriter, Services.Glasses.HeyCyan.Media.JsonSidecarWriter>();
-		services.AddSingleton<Services.Glasses.HeyCyan.IHeyCyanMediaTransfer, Services.Glasses.HeyCyan.HeyCyanMediaTransfer>();
+		services.AddSingleton<Services.Glasses.HeyCyan.HeyCyanMediaTransfer>();
+		services.AddSingleton<Services.Glasses.HeyCyan.StoredImageHeyCyanMediaTransfer>();
+		services.AddSingleton<Services.Glasses.HeyCyan.IHeyCyanMediaTransfer>(sp =>
+		{
+#if WINDOWS
+			return sp.GetRequiredService<Services.Glasses.HeyCyan.StoredImageHeyCyanMediaTransfer>();
+#else
+			return sp.GetRequiredService<Services.Glasses.HeyCyan.HeyCyanMediaTransfer>();
+#endif
+		});
 		services.AddSingleton<Services.Glasses.HeyCyan.Media.IHeyCyanRecordedMediaService, Services.Glasses.HeyCyan.Media.HeyCyanRecordedMediaService>();
 	// Glasses device manager (aggregates session + providers)
 	services.AddSingleton<Services.Glasses.HeyCyan.HeyCyanGlassesDeviceManager>();
@@ -365,7 +390,6 @@ public static class ServiceExtensions
 		services.AddTransient<ViewModels.Settings.DeviceViewModel>();
 		services.AddTransient<ViewModels.Settings.AdvancedViewModel>();
 		services.AddTransient<ViewModels.Settings.GlassesCameraSectionViewModel>();
-		services.AddTransient<ViewModels.Settings.HeyCyanButtonMappingsViewModel>();
 		services.AddTransient<MediaGalleryViewModel>();
 		services.AddTransient<GlassesViewModel>();
 		services.AddTransient<Pages.Setup.SetupPage>();

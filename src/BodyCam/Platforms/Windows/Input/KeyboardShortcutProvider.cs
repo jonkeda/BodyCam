@@ -15,6 +15,14 @@ public class KeyboardShortcutProvider : IButtonInputProvider
     public bool IsAvailable => true;
     public bool IsActive { get; private set; }
 
+    public IReadOnlyList<ButtonDescriptor> Buttons { get; } = [
+        new("look", "Look (F5)", [ButtonGesture.SingleTap]),
+        new("photo", "Photo (F6)", [ButtonGesture.SingleTap]),
+        new("read", "Read (F7)", [ButtonGesture.SingleTap]),
+        new("find", "Find (F8)", [ButtonGesture.SingleTap]),
+        new("toggle-session", "Toggle Session (F9)", [ButtonGesture.SingleTap]),
+    ];
+
     public event EventHandler<RawButtonEvent>? RawButtonEvent;
     public event EventHandler<ButtonGestureEvent>? PreRecognizedGesture;
     public event EventHandler? Disconnected;

@@ -54,9 +54,17 @@ public class AsyncRelayCommand : ICommand
 
     public void RaiseCanExecuteChanged()
     {
-        if (MainThread.IsMainThread)
+        try
+        {
+            if (MainThread.IsMainThread)
+                CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+            else
+                MainThread.BeginInvokeOnMainThread(() => CanExecuteChanged?.Invoke(this, EventArgs.Empty));
+        }
+        catch
+        {
+            // Headless unit tests do not always have a MAUI dispatcher.
             CanExecuteChanged?.Invoke(this, EventArgs.Empty);
-        else
-            MainThread.BeginInvokeOnMainThread(() => CanExecuteChanged?.Invoke(this, EventArgs.Empty));
+        }
     }
 }

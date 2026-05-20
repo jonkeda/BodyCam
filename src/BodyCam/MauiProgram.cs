@@ -26,6 +26,7 @@ public static class MauiProgram
 
 		// Settings
 		var settingsService = new SettingsService();
+		settingsService.MigrateDeviceSettings();
 		builder.Services.AddSingleton<ISettingsService>(settingsService);
 
 		var settings = new AppSettings();

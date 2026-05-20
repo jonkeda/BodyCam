@@ -122,6 +122,9 @@ public sealed class HeyCyanAudioRouter : IAsyncDisposable
                 await _input .UnregisterProviderAsync("heycyan-glasses").ConfigureAwait(false);
                 await _output.UnregisterProviderAsync("heycyan-glasses").ConfigureAwait(false);
 
+                await RestoreInputProviderAsync(inFallback).ConfigureAwait(false);
+                await RestoreOutputProviderAsync(outFallback).ConfigureAwait(false);
+
                 _previousInputId  = null;
                 _previousOutputId = null;
                 _log.LogInformation(
@@ -133,6 +136,24 @@ public sealed class HeyCyanAudioRouter : IAsyncDisposable
             default:
                 break;
         }
+    }
+
+    private async Task RestoreInputProviderAsync(string providerId)
+    {
+        if (_input.ActiveProviderId == providerId)
+            return;
+
+        if (_input.Providers.Any(p => p.ProviderId == providerId))
+            await _input.SetActiveProviderAsync(providerId).ConfigureAwait(false);
+    }
+
+    private async Task RestoreOutputProviderAsync(string providerId)
+    {
+        if (_output.ActiveProviderId == providerId)
+            return;
+
+        if (_output.Providers.Any(p => p.ProviderId == providerId))
+            await _output.SetActiveProviderAsync(providerId).ConfigureAwait(false);
     }
 
     private async Task TryAutoSelectAsync()

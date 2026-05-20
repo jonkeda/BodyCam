@@ -115,4 +115,5 @@ public class AppSettingsTests
         var settings = new AppSettings();
         settings.AzureApiVersion.Should().Be("2025-04-01-preview");
     }
+
 }

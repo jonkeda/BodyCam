@@ -32,6 +32,9 @@ public sealed class AudioInputManager : IAudioInputService, IAsyncDisposable
     /// <summary>Fires when providers are added or removed (hot-plug).</summary>
     public event EventHandler? ProvidersChanged;
 
+    /// <summary>Fires when the active input provider changes.</summary>
+    public event EventHandler? ActiveProviderChanged;
+
     /// <summary>
     /// Count of audio chunks dropped due to AEC processing backlog.
     /// Monitored by Phase 6 metrics.
@@ -184,6 +187,7 @@ public sealed class AudioInputManager : IAudioInputService, IAsyncDisposable
         _settings.ActiveAudioInputProvider = providerId;
         _active.AudioChunkAvailable += OnProviderChunk;
         _active.Disconnected += OnProviderDisconnected;
+        ActiveProviderChanged?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>

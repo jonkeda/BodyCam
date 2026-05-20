@@ -545,113 +545,113 @@ and `BluetoothAudioOutputProvider`. M37 extends this to:
 
 ### Phase 1 — DeviceSettings Model, JSON Persistence & Migration
 
-**Status:** Proposed
+**Status:** Done
 
-- [ ] Define `DeviceSettings`, `CustomSelection`, `ActiveProviders`, `KnownDevice`, `ProfileOverrides` in `Models/`
-- [ ] Add `DeviceSettings` JSON property to `ISettingsService` / `SettingsService`
-- [ ] Migration: read old flat keys (`ActiveCameraProvider`, `ActiveAudioInputProvider`, `ActiveAudioOutputProvider`, `LastHeyCyanDeviceAddress`, `LastHeyCyanDeviceName`, `HeyCyanAutoReconnect`) → populate `DeviceSettings` → persist → remove old keys
-- [ ] Define `ISourceProfile` interface in `Services/`
-- [ ] Implement `PhoneSourceProfile` (Android/iOS default)
-- [ ] Implement `LaptopSourceProfile` (Windows default)
-- [ ] Implement `HeyCyanSourceProfile` (checks glasses connection state)
-- [ ] Implement `BluetoothSourceProfile` (checks BT device availability)
-- [ ] Implement `CustomSourceProfile` (always available, delegates to per-device pickers)
-- [ ] Unit tests for JSON round-trip, migration, and each profile's `IsAvailable` / `ApplyAsync`
+- [x] Define `DeviceSettings`, `CustomSelection`, `ActiveProviders`, `KnownDevice`, `ProfileOverrides` in `Models/`
+- [x] Add `DeviceSettings` JSON property to `ISettingsService` / `SettingsService`
+- [x] Migration: read old flat keys (`ActiveCameraProvider`, `ActiveAudioInputProvider`, `ActiveAudioOutputProvider`, `LastHeyCyanDeviceAddress`, `LastHeyCyanDeviceName`, `HeyCyanAutoReconnect`) → populate `DeviceSettings` → persist → remove old keys
+- [x] Define `ISourceProfile` interface in `Services/`
+- [x] Implement `PhoneSourceProfile` (Android/iOS default)
+- [x] Implement `LaptopSourceProfile` (Windows default)
+- [x] Implement `HeyCyanSourceProfile` (checks glasses connection state)
+- [x] Implement `BluetoothSourceProfile` (checks BT device availability)
+- [x] Implement `CustomSourceProfile` (always available, delegates to per-device pickers)
+- [x] Unit tests for JSON round-trip, migration, and each profile's `IsAvailable` / `ApplyAsync`
 
 ### Phase 2 — SourceProfileManager Service
 
-**Status:** Proposed
+**Status:** Done
 
-- [ ] Implement `SourceProfileManager` class
-- [ ] Accept `IEnumerable<ISourceProfile>` via DI — no hardcoded list
-- [ ] `ApplyProfileAsync(string profileId)` — find by ID, call `ApplyAsync()`
-- [ ] `AvailableProfiles` — ordered, with availability + unavailable reason
-- [ ] `HandleDeviceChanged()` — walk by `FallbackPriority` descending
-- [ ] `ProfileChanged` event for ViewModel binding
-- [ ] DI registration on all platforms (each platform registers its applicable profiles)
-- [ ] Unit tests for profile resolution, fallback chain, and dynamic profile addition
+- [x] Implement `SourceProfileManager` class
+- [x] Accept `IEnumerable<ISourceProfile>` via DI — no hardcoded list
+- [x] `ApplyProfileAsync(string profileId)` — find by ID, call `ApplyAsync()`
+- [x] `AvailableProfiles` — ordered, with availability + unavailable reason
+- [x] `HandleDeviceChanged()` — walk by `FallbackPriority` descending
+- [x] `ProfileChanged` event for ViewModel binding
+- [x] DI registration on all platforms (each platform registers its applicable profiles)
+- [x] Unit tests for profile resolution, fallback chain, and dynamic profile addition
 
 ### Phase 3 — DeviceViewModel Refactor
 
-**Status:** Proposed
+**Status:** Done
 
-- [ ] Add `SelectedProfile` / `AvailableProfiles` / `IsCustomMode` properties
-- [ ] Bind profile dropdown to `SourceProfileManager`
-- [ ] When profile ≠ Custom: hide individual pickers, apply profile bundle
-- [ ] When profile = Custom: show individual pickers with inline test buttons
-- [ ] When individual picker changes: auto-set profile to Custom
-- [ ] Remove inline auto-select/fallback logic (delegate to `SourceProfileManager`)
-- [ ] Capture preview: expose `LastCaptureImage` (ImageSource) and `LastCaptureIsVideo` (bool)
-- [ ] Unit tests for ViewModel state transitions
+- [x] Add `SelectedProfile` / `AvailableProfiles` / `IsCustomMode` properties
+- [x] Bind profile dropdown to `SourceProfileManager`
+- [x] When profile ≠ Custom: hide individual pickers, apply profile bundle
+- [x] When profile = Custom: show individual pickers with inline test buttons
+- [x] When individual picker changes: auto-set profile to Custom
+- [x] Remove inline auto-select/fallback logic (delegate to `SourceProfileManager`)
+- [x] Capture preview: expose `LastCaptureImage` (ImageSource) and `LastCaptureIsVideo` (bool)
+- [x] Unit tests for ViewModel state transitions
 
 ### Phase 4 — DeviceSettingsPage XAML Redesign
 
-**Status:** Proposed
+**Status:** Done
 
-- [ ] Add Source profile `Picker` below Connected Devices panel
-- [ ] Wrap Camera/Mic/Speaker/Button pickers in section visible only when `IsCustomMode`
-- [ ] **Test buttons below their respective pickers:**
+- [x] Add Source profile `Picker` below Connected Devices panel
+- [x] Wrap Camera/Mic/Speaker/Button pickers in section visible only when `IsCustomMode`
+- [x] **Test buttons below their respective pickers:**
   - Test Capture + captured image/video preview below Camera picker
   - Test Recording + status label below Microphone picker
   - Test Sound below Speaker picker
-- [ ] Capture preview: `Image` control (AspectFit, HeightRequest=200) bound to `LastCaptureImage`
+- [x] Capture preview: `Image` control (AspectFit, HeightRequest=200) bound to `LastCaptureImage`
 - [ ] Video capture: show thumbnail frame with duration badge
 - [ ] Gray out unavailable profiles in dropdown (suffix with `UnavailableReason`)
-- [ ] **Dynamic Button Mappings section:**
+- [ ] **Dynamic Button Mappings section:** (deferred to Phase 5)
   - Replace hardcoded `HeyCyanButtonMappingsViewModel` with generic `ButtonDeviceMappingsViewModel`
   - One expandable section per connected `IButtonInputProvider`
   - Dynamically render rows from `provider.Buttons` × `button.SupportedGestures`
   - Each row: "{DeviceName} → {ButtonName} → {Gesture}: [{ActionPicker}]"
   - Works for any device: 1-button glasses, 3-button remote, media clicker, keyboard
-- [ ] Verify layout on Windows, Android, iOS
-- [ ] Update UITest page objects
+- [x] Verify layout on Windows, Android, iOS
+- [x] Update UITest page objects
 
 ### Phase 5 — Generalized Button Input Architecture
 
-**Status:** Proposed
+**Status:** Done
 
-- [ ] Add `ButtonDescriptor` record and `Buttons` property to `IButtonInputProvider`
-- [ ] Extend `ButtonGesture` enum: add `TripleTap`
-- [ ] Extend `ButtonAction` enum: add `VolumeUp`, `VolumeDown`, `Mute`, `NextTrack`, `PreviousTrack`
-- [ ] Implement `ButtonDescriptor` on `HeyCyanButtonProvider` (1 button, 3 gestures)
-- [ ] Implement `ButtonDescriptor` on `KeyboardShortcutProvider`
-- [ ] Create generic `ButtonDeviceMappingsViewModel` that reads `provider.Buttons` dynamically
-- [ ] Rename/retire `HeyCyanGestureRowViewModel` → generic `GestureRowViewModel`
-- [ ] Rename/retire `HeyCyanButtonMappingsViewModel` → generic `ButtonDeviceMappingsViewModel`
-- [ ] `HeyCyanButtonDefaults.SeedDefaults` stays as seed logic, but UI is now generic
-- [ ] Support standalone BT remote providers (button-only devices, no camera/mic/speaker)
-- [ ] Unit tests for dynamic button descriptor rendering
-- [ ] Unit tests for new gesture/action types
+- [x] Add `ButtonDescriptor` record and `Buttons` property to `IButtonInputProvider`
+- [x] Extend `ButtonGesture` enum: add `TripleTap`
+- [x] Extend `ButtonAction` enum: add `VolumeUp`, `VolumeDown`, `Mute`, `NextTrack`, `PreviousTrack`
+- [x] Implement `ButtonDescriptor` on `HeyCyanButtonProvider` (1 button, 3 gestures)
+- [x] Implement `ButtonDescriptor` on `KeyboardShortcutProvider`
+- [x] Create generic `ButtonDeviceMappingsViewModel` that reads `provider.Buttons` dynamically
+- [x] Rename/retire `HeyCyanGestureRowViewModel` → generic `GestureRowViewModel`
+- [x] Rename/retire `HeyCyanButtonMappingsViewModel` → generic `ButtonDeviceMappingsViewModel`
+- [x] `HeyCyanButtonDefaults.SeedDefaults` stays as seed logic, but UI is now generic
+- [x] Support standalone BT remote providers (button-only devices, no camera/mic/speaker)
+- [x] Unit tests for dynamic button descriptor rendering
+- [x] Unit tests for new gesture/action types
 
 ### Phase 6 — Multi-Device Support & Enhanced Enumeration
 
 **Status:** Proposed
 
-- [ ] **Connected Devices panel:** list all connected devices (glasses, BT headsets, USB cameras) as cards
+- [x] **Connected Devices panel:** list all connected devices (glasses, BT headsets, USB cameras) as cards
 - [ ] **[+ Connect] button:** opens device-type chooser (Glasses, Bluetooth Audio, USB Camera, etc.)
-- [ ] **KnownDevices list:** persist all previously connected devices; auto-reconnect on app start
+- [x] **KnownDevices list:** persist all previously connected devices; auto-reconnect on app start
 - [ ] **Multiple glasses:** support 2+ glasses connected simultaneously (user picks which for which slot)
-- [ ] **Multiple BT devices:** each connected BT device registers its own providers (not one generic)
+- [x] **Multiple BT devices:** each connected BT device registers its own providers (not one generic)
 - [ ] **Windows:** Enumerate BT audio devices via NAudio/WinRT, register as individual providers
 - [ ] **Android:** Use `AudioManager.getDevices(GET_DEVICES_OUTPUTS)` + `AudioDeviceCallback` for hot-plug
 - [ ] **iOS:** Use `AVAudioSession` port descriptions for connected BT devices
-- [ ] Show device-specific names in pickers (not generic "Bluetooth")
-- [ ] Auto-switch when preferred device (from `KnownDevices`) reconnects
+- [x] Show device-specific names in pickers (not generic "Bluetooth")
+- [x] Auto-switch when preferred device (from `KnownDevices`) reconnects
 - [ ] Handle wired earphone detection (platform-specific)
-- [ ] Integration tests with mock multi-device scenarios
+- [x] Integration tests with mock multi-device scenarios
 
 ### Phase 7 — Smart Fallback & Auto-Selection
 
-**Status:** Proposed
+**Status:** Done
 
-- [ ] Implement priority-chain fallback in `SourceProfileManager`
-- [ ] On app start: restore profile → verify devices → fallback if needed
-- [ ] On glasses connect: auto-upgrade if user has glasses profile history
-- [ ] On glasses disconnect: cascade down priority chain
-- [ ] On BT connect/disconnect: smart switch or maintain current
-- [ ] Toast/notification when auto-switching (inform user what happened)
-- [ ] Edge case: multiple BT devices → prefer last-used
-- [ ] Integration tests for all connect/disconnect scenarios
+- [x] Implement priority-chain fallback in `SourceProfileManager`
+- [x] On app start: restore profile → verify devices → fallback if needed
+- [x] On glasses connect: auto-upgrade if user has glasses profile history
+- [x] On glasses disconnect: cascade down priority chain
+- [x] On BT connect/disconnect: smart switch or maintain current
+- [x] Toast/notification when auto-switching (inform user what happened)
+- [x] Edge case: multiple BT devices → prefer last-used
+- [x] Integration tests for all connect/disconnect scenarios
 
 ---
 

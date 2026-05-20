@@ -88,6 +88,7 @@
 	<ItemGroup>
 		<InternalsVisibleTo Include="BodyCam.Tests" />
 		<InternalsVisibleTo Include="BodyCam.RealTests" />
+		<InternalsVisibleTo Include="BodyCam.HeyCyan.Probe" />
 	</ItemGroup>
 
 	<!-- WebRTC APM native binaries -->
@@ -100,7 +101,7 @@
 	</ItemGroup>
 
 	<!-- Auto-increment build number -->
-	<Target Name="IncrementBuildNumber" BeforeTargets="CoreCompile" Condition="'$(DesignTimeBuild)' != 'true'">
+	<Target Name="IncrementBuildNumber" BeforeTargets="CoreCompile" Condition="'$(DesignTimeBuild)' != 'true' And '$(SkipBuildNumberIncrement)' != 'true'">
 		<ReadLinesFromFile File="$(MSBuildProjectDirectory)\build-number.txt">
 			<Output TaskParameter="Lines" ItemName="_BuildNumberLines" />
 		</ReadLinesFromFile>

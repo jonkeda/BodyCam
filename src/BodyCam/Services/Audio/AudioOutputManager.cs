@@ -41,6 +41,9 @@ public sealed class AudioOutputManager : IAudioOutputService, IAsyncDisposable
     /// <summary>Fires when providers are added or removed (BT connect/disconnect).</summary>
     public event EventHandler? ProvidersChanged;
 
+    /// <summary>Fires when the active output provider changes.</summary>
+    public event EventHandler? ActiveProviderChanged;
+
     /// <summary>Currently active audio output provider.</summary>
     public IAudioOutputProvider? Active => _active;
 
@@ -180,6 +183,7 @@ public sealed class AudioOutputManager : IAudioOutputService, IAsyncDisposable
 
         // Update AEC stream delay
         _aec?.UpdateStreamDelay(_active.EstimatedOutputLatencyMs);
+        ActiveProviderChanged?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>

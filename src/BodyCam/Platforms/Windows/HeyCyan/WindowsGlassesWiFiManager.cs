@@ -17,9 +17,13 @@ internal sealed class WindowsGlassesWiFiManager
 
     private WiFiAdapter? _adapter;
     private string? _joinedSsid;
+    private readonly HashSet<string> _profilesSetManual = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Default hotspot password used by HeyCyan glasses (from iOS SDK fallback).</summary>
     public const string DefaultPassword = "123456789";
+
+    /// <summary>Home WiFi SSID to reconnect to after leaving glasses network.</summary>
+    private const string HomeWifiSsid = "jobaboe";
 
     public WindowsGlassesWiFiManager(ILogger<WindowsGlassesWiFiManager> log)
     {
@@ -106,10 +110,16 @@ internal sealed class WindowsGlassesWiFiManager
     /// Returns the inferred glasses server IP, or null if connection failed.
     /// This works even when the SSID is not visible in WiFi scans (hidden network).
     /// </summary>
-    public async Task<System.Net.IPAddress?> ForceJoinAsync(string ssid, string password, CancellationToken ct)
+    public async Task<System.Net.IPAddress?> ForceJoinAsync(string ssid, string password, CancellationToken ct,
+        Func<CancellationToken, Task>? bleKeepalive = null)
     {
         _log.LogInformation("Force-joining WiFi '{Ssid}' via WLAN profile...", ssid);
         Console.Error.WriteLine($"[WIFI] Force-joining '{ssid}' via WLAN profile...");
+
+        // Strategy: Install a hidden-network profile and use netsh wlan connect.
+        // Don't waste time on WinRT ScanAsync (can't find hidden networks).
+        // Don't change band preference (adapter reset loses BSS cache).
+        // Let netsh connect handle disconnect atomically.
 
         var profileXml = $"""
             <?xml version="1.0"?>
@@ -126,8 +136,8 @@ internal sealed class WindowsGlassesWiFiManager
                 <MSM>
                     <security>
                         <authEncryption>
-                            <authentication>WPAPSK</authentication>
-                            <encryption>TKIP</encryption>
+                            <authentication>WPA2PSK</authentication>
+                            <encryption>AES</encryption>
                             <useOneX>false</useOneX>
                         </authEncryption>
                         <sharedKey>
@@ -140,81 +150,153 @@ internal sealed class WindowsGlassesWiFiManager
             </WLANProfile>
             """;
 
-        // Write profile to temp file
         var profilePath = Path.Combine(Path.GetTempPath(), $"bodycam_wifi_{Guid.NewGuid():N}.xml");
+
+        // Disable auto-connect on saved profiles so the adapter doesn't snap back
+        // to home WiFi after each failed association attempt.
+        Console.Error.WriteLine("[WIFI] Disabling auto-connect on saved profiles...");
+        var savedProfiles = await RunNetshAsync("wlan show profiles", ct).ConfigureAwait(false);
+        var autoConnectProfiles = new List<string>();
+        foreach (var profileLine in savedProfiles.Split('\n'))
+        {
+            var match = System.Text.RegularExpressions.Regex.Match(
+                profileLine, @"All User Profile\s*:\s*(.+)");
+            if (match.Success)
+            {
+                var profileName = match.Groups[1].Value.Trim();
+                if (!string.Equals(profileName, ssid, StringComparison.OrdinalIgnoreCase))
+                {
+                    await RunNetshAsync(
+                        $"wlan set profileparameter name=\"{profileName}\" connectionMode=manual",
+                        ct).ConfigureAwait(false);
+                    autoConnectProfiles.Add(profileName);
+                }
+            }
+        }
+        Console.Error.WriteLine($"[WIFI] Disabled auto-connect on {autoConnectProfiles.Count} profiles");
+
+        var joined = false;
         try
         {
             await File.WriteAllTextAsync(profilePath, profileXml, ct).ConfigureAwait(false);
-
-            // Add the profile
-            var addResult = await RunNetshAsync($"wlan add profile filename=\"{profilePath}\"", ct)
+            await RunNetshAsync($"wlan delete profile name=\"{ssid}\"", ct).ConfigureAwait(false);
+            var addResult = await RunNetshAsync($"wlan add profile filename=\"{profilePath}\" user=current", ct)
                 .ConfigureAwait(false);
-            _log.LogDebug("netsh add profile: {Result}", addResult);
             Console.Error.WriteLine($"[WIFI] Profile add: {addResult.TrimEnd()}");
 
-            // The AP readiness is confirmed by BLE GetWifiIP polling before this method is called.
-            // Disconnect from current network and connect to glasses.
-            Console.Error.WriteLine("[WIFI] Disconnecting from current WiFi to switch to glasses...");
-            await RunNetshAsync("wlan disconnect interface=\"Wi-Fi\"", ct).ConfigureAwait(false);
-            await Task.Delay(2000, ct).ConfigureAwait(false);
-
-            // Attempt to connect multiple times.
-            // The glasses AP takes 30-60s to be fully ready for WPA2 associations.
-            const int maxConnectAttempts = 8;
+            // Don't explicitly disconnect — let netsh connect handle it atomically.
+            // This avoids a window where the adapter is idle and not scanning.
+            const int maxConnectAttempts = 6;
             for (int attempt = 0; attempt < maxConnectAttempts; attempt++)
             {
-                if (attempt > 0)
-                {
-                    Console.Error.WriteLine($"[WIFI] Connect attempt {attempt + 1}/{maxConnectAttempts}...");
-                    // Disconnect first to prevent auto-reconnect to home WiFi
-                    await RunNetshAsync("wlan disconnect interface=\"Wi-Fi\"", ct).ConfigureAwait(false);
-                    await Task.Delay(3000, ct).ConfigureAwait(false);
-                }
+                Console.Error.WriteLine($"[WIFI] Connect attempt {attempt + 1}/{maxConnectAttempts}...");
 
                 var connectResult = await RunNetshAsync(
-                    $"wlan connect name=\"{ssid}\" interface=\"Wi-Fi\"", ct)
+                    $"wlan connect name=\"{ssid}\" ssid=\"{ssid}\" interface=\"Wi-Fi\"", ct)
                     .ConfigureAwait(false);
-                _log.LogDebug("netsh connect: {Result}", connectResult);
                 Console.Error.WriteLine($"[WIFI] Connect: {connectResult.TrimEnd()}");
 
-                // Wait up to 10 seconds for association to complete
-                for (int i = 0; i < 10; i++)
+                // Wait up to 15s for association — directed probes for hidden networks
+                // need time to scan through all channels.
+                bool sawAssociating = false;
+                for (int i = 0; i < 15; i++)
                 {
                     await Task.Delay(1000, ct).ConfigureAwait(false);
                     var showResult = await RunNetshAsync("wlan show interfaces", ct).ConfigureAwait(false);
 
-                    // Log state at every second for first attempt, 1s and 5s for subsequent
                     var stateLine = showResult.Split('\n')
-                        .FirstOrDefault(l => l.Contains("State", StringComparison.OrdinalIgnoreCase))
+                        .FirstOrDefault(l => l.Contains("State", StringComparison.OrdinalIgnoreCase)
+                            && !l.Contains("Hosted", StringComparison.OrdinalIgnoreCase))
                         ?.Trim() ?? "no state";
-                    if (attempt == 0 || i == 0 || i == 4)
+                    var ssidLine = showResult.Split('\n')
+                        .FirstOrDefault(l => l.TrimStart().StartsWith("SSID", StringComparison.OrdinalIgnoreCase)
+                            && !l.Contains("BSSID", StringComparison.OrdinalIgnoreCase))
+                        ?.Trim() ?? "";
+                    Console.Error.WriteLine($"[WIFI] @{i + 1}s: {stateLine} | {ssidLine}");
+
+                    if (stateLine.Contains("associating", StringComparison.OrdinalIgnoreCase) ||
+                        stateLine.Contains("authenticating", StringComparison.OrdinalIgnoreCase) ||
+                        stateLine.Contains("discovering", StringComparison.OrdinalIgnoreCase))
                     {
-                        Console.Error.WriteLine($"[WIFI] Interface state @{i + 1}s: {stateLine}");
+                        sawAssociating = true;
+                        continue; // Keep waiting — the adapter is actively trying
                     }
+
                     if (showResult.Contains(ssid, StringComparison.OrdinalIgnoreCase))
                     {
-                        Console.Error.WriteLine($"[WIFI] Associated with '{ssid}' after {i + 1}s");
-                        // Connected! Now wait for DHCP IP assignment.
+                        Console.Error.WriteLine($"[WIFI] Associated with '{ssid}' after {i + 1}s!");
                         var ip = await WaitForDhcpIpAsync(ssid, ct).ConfigureAwait(false);
                         if (ip is not null)
                         {
                             _joinedSsid = ssid;
+                            joined = true;
+                            foreach (var profileName in autoConnectProfiles)
+                                _profilesSetManual.Add(profileName);
                             return ip;
                         }
-                        // Got association but no IP — might need to retry
                         break;
                     }
+
+                    // If we've been disconnected for 5s+ (no progress), break for retry
+                    if (!sawAssociating && i >= 5)
+                        break;
+                    // If we saw associating then lost it, wait a bit longer then retry
+                    if (sawAssociating && i >= 3)
+                        break;
+                }
+
+                // Send BLE keepalive between attempts
+                if (bleKeepalive is not null)
+                {
+                    try { await bleKeepalive(ct).ConfigureAwait(false); }
+                    catch { /* keepalive failure is non-fatal */ }
                 }
             }
 
-            _log.LogWarning("Force-join to '{Ssid}' - could not connect after {Attempts} attempts", ssid, maxConnectAttempts);
-            Console.Error.WriteLine($"[WIFI] Force-join '{ssid}' - no connection after {maxConnectAttempts} attempts");
+            // Log WLAN event log for diagnostics
+            try
+            {
+                var wlanLog = await RunPowershellAsync(
+                    "Get-WinEvent -LogName 'Microsoft-Windows-WLAN-AutoConfig/Operational' -MaxEvents 10 | " +
+                    "Select-Object -Property TimeCreated, Id, Message | " +
+                    "ForEach-Object { \"[$($_.TimeCreated.ToString('HH:mm:ss'))] Event $($_.Id): $($_.Message.Split([Environment]::NewLine)[0])\" }",
+                    ct).ConfigureAwait(false);
+                Console.Error.WriteLine("[WIFI-DIAG] Recent WLAN events:");
+                foreach (var line in wlanLog.Split('\n').Take(10))
+                {
+                    var trimmed = line.TrimEnd();
+                    if (!string.IsNullOrWhiteSpace(trimmed))
+                        Console.Error.WriteLine($"[WIFI-DIAG]   {trimmed}");
+                }
+            }
+            catch { /* diagnostic only */ }
+
+            _log.LogWarning("Force-join to '{Ssid}' failed after {Attempts} attempts", ssid, maxConnectAttempts);
+            Console.Error.WriteLine($"[WIFI] Force-join '{ssid}' failed after {maxConnectAttempts} attempts");
             return null;
         }
         finally
         {
-            // Clean up temp file only — keep profile so we stay connected
             try { File.Delete(profilePath); } catch { /* best effort */ }
+
+            if (!joined)
+            {
+                // Restore auto-connect on all profiles we disabled if we failed.
+                // On success, keep them manual until LeaveAndReconnectAsync so Windows
+                // does not snap back to home WiFi before the HTTP download starts.
+                Console.Error.WriteLine($"[WIFI] Restoring auto-connect on {autoConnectProfiles.Count} profiles...");
+                foreach (var profileName in autoConnectProfiles)
+                {
+                    await RunNetshAsync(
+                        $"wlan set profileparameter name=\"{profileName}\" connectionMode=auto",
+                        ct).ConfigureAwait(false);
+                }
+
+                Console.Error.WriteLine("[WIFI] Reconnecting to home WiFi...");
+                await RunNetshAsync($"wlan connect name=\"{HomeWifiSsid}\" interface=\"Wi-Fi\"", ct)
+                    .ConfigureAwait(false);
+                await Task.Delay(2000, ct).ConfigureAwait(false);
+            }
         }
     }
 
@@ -325,8 +407,79 @@ internal sealed class WindowsGlassesWiFiManager
         return output;
     }
 
+    private static async Task<string> RunPowershellAsync(string command, CancellationToken ct)
+    {
+        using var process = new System.Diagnostics.Process();
+        process.StartInfo = new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = "powershell",
+            Arguments = $"-NoProfile -Command \"{command}\"",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+        };
+        process.Start();
+        var output = await process.StandardOutput.ReadToEndAsync(ct).ConfigureAwait(false);
+        await process.WaitForExitAsync(ct).ConfigureAwait(false);
+        return output;
+    }
+
     /// <summary>
-    /// Leave the glasses' WiFi. Windows auto-reconnects to the previous known network.
+    /// Leave the glasses' WiFi and reconnect to the previous home network.
+    /// </summary>
+    public async Task LeaveAndReconnectAsync(CancellationToken ct = default)
+    {
+        var glassesSsid = _joinedSsid;
+        _log.LogInformation("Leaving glasses WiFi '{Ssid}'", glassesSsid ?? "(none)");
+
+        // Disconnect from glasses
+        _adapter?.Disconnect();
+        await RunNetshAsync("wlan disconnect interface=\"Wi-Fi\"", ct).ConfigureAwait(false);
+        _joinedSsid = null;
+
+        // Clean up the glasses profile
+        if (glassesSsid is not null)
+        {
+            await RunNetshAsync($"wlan delete profile name=\"{glassesSsid}\"", ct).ConfigureAwait(false);
+            Console.Error.WriteLine($"[WIFI] Deleted glasses profile '{glassesSsid}'");
+        }
+
+        // Restore profiles that were temporarily set to manual during ForceJoinAsync.
+        if (_profilesSetManual.Count > 0)
+        {
+            Console.Error.WriteLine($"[WIFI] Restoring auto-connect on {_profilesSetManual.Count} profiles...");
+            foreach (var profileName in _profilesSetManual.ToArray())
+            {
+                await RunNetshAsync(
+                    $"wlan set profileparameter name=\"{profileName}\" connectionMode=auto",
+                    ct).ConfigureAwait(false);
+                _profilesSetManual.Remove(profileName);
+            }
+        }
+
+        // Reconnect to home WiFi — try known home SSID, fall back to any saved profile
+        var homeResult = await RunNetshAsync($"wlan connect name=\"{HomeWifiSsid}\" interface=\"Wi-Fi\"", ct)
+            .ConfigureAwait(false);
+        Console.Error.WriteLine($"[WIFI] Reconnecting to home WiFi: {homeResult.TrimEnd()}");
+
+        // Wait up to 10s for home WiFi to come back
+        for (int i = 0; i < 10; i++)
+        {
+            await Task.Delay(1000, ct).ConfigureAwait(false);
+            var showResult = await RunNetshAsync("wlan show interfaces", ct).ConfigureAwait(false);
+            if (showResult.Contains(HomeWifiSsid, StringComparison.OrdinalIgnoreCase))
+            {
+                Console.Error.WriteLine($"[WIFI] Reconnected to home WiFi after {i + 1}s");
+                return;
+            }
+        }
+
+        Console.Error.WriteLine("[WIFI] Could not reconnect to home WiFi within 10s");
+    }
+
+    /// <summary>
+    /// Leave the glasses' WiFi. Legacy sync version — prefer <see cref="LeaveAndReconnectAsync"/>.
     /// </summary>
     public void Leave()
     {

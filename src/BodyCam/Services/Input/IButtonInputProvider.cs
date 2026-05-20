@@ -11,6 +11,12 @@ public interface IButtonInputProvider : IDisposable
     bool IsAvailable { get; }
     bool IsActive { get; }
 
+    /// <summary>
+    /// The buttons this device has, and which gestures each supports.
+    /// Used by the settings UI to dynamically render mapping rows.
+    /// </summary>
+    IReadOnlyList<ButtonDescriptor> Buttons => [];
+
     Task StartAsync(CancellationToken ct = default);
     Task StopAsync();
 

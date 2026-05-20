@@ -27,6 +27,7 @@ public sealed class A9CameraProvider : ICameraProvider
     public string DisplayName => "A9 Camera";
     public string ProviderId => "a9-camera";
     public bool IsAvailable => _session?.IsStreaming == true;
+    public bool SupportsVideoRecording => true;
 
     public event EventHandler? Disconnected;
 

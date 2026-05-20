@@ -12,7 +12,7 @@ namespace BodyCam.Platforms.Windows.HeyCyan;
 /// via regular WiFi scans. This replaces the Android <c>WifiP2pManager</c>
 /// and the iOS hotspot approach.
 /// </summary>
-internal sealed class WindowsWiFiDirectManager : IDisposable
+internal sealed class WindowsWiFiDirectManager : IWindowsWiFiDirectConnector
 {
     private readonly ILogger<WindowsWiFiDirectManager> _log;
     private readonly string? _bleMac; // e.g. "D879B87FE6C9" (no colons)
@@ -109,36 +109,19 @@ internal sealed class WindowsWiFiDirectManager : IDisposable
                     .ConfigureAwait(false);
             }
 
+            var connectionParams = CreateConnectionParameters(WiFiDirectConfigurationMethod.PushButton);
+
             if (deviceInfo.Pairing.CanPair && !deviceInfo.Pairing.IsPaired)
             {
-                var pin = GroupPassword ?? "123456789";
-                _log.LogInformation("Pairing WiFi Direct device with PIN ({Length} chars)...", pin.Length);
-                Console.Error.WriteLine($"[WIFIDIRECT] Pairing with PIN ({pin.Length} chars)...");
+                _log.LogInformation("Pairing WiFi Direct device with WPS PushButton...");
+                Console.Error.WriteLine("[WIFIDIRECT] Pairing with WPS PushButton...");
 
-                var customPairing = deviceInfo.Pairing.Custom;
-                customPairing.PairingRequested += (sender, args) =>
-                {
-                    _log.LogInformation("Pairing requested: Kind={Kind}", args.PairingKind);
-                    Console.Error.WriteLine($"[WIFIDIRECT] Pairing requested: {args.PairingKind}");
-
-                    switch (args.PairingKind)
-                    {
-                        case DevicePairingKinds.ProvidePin:
-                            args.Accept(pin);
-                            break;
-                        case DevicePairingKinds.ConfirmOnly:
-                        case DevicePairingKinds.DisplayPin:
-                            args.Accept();
-                            break;
-                        default:
-                            args.Accept(pin);
-                            break;
-                    }
-                };
-
-                var pairResult = await customPairing.PairAsync(
-                    DevicePairingKinds.ProvidePin | DevicePairingKinds.ConfirmOnly,
-                    DevicePairingProtectionLevel.None).AsTask(ct).ConfigureAwait(false);
+                var pairResult = await PairAsync(
+                    deviceInfo,
+                    connectionParams,
+                    WiFiDirectConnectionParameters.GetDevicePairingKinds(WiFiDirectConfigurationMethod.PushButton),
+                    pin: null,
+                    ct).ConfigureAwait(false);
 
                 _log.LogInformation("Pairing result: {Status}", pairResult.Status);
                 Console.Error.WriteLine($"[WIFIDIRECT] Pairing result: {pairResult.Status}");
@@ -146,15 +129,10 @@ internal sealed class WindowsWiFiDirectManager : IDisposable
                 if (pairResult.Status != DevicePairingResultStatus.Paired
                     && pairResult.Status != DevicePairingResultStatus.AlreadyPaired)
                 {
-                    _log.LogWarning("Pairing failed: {Status}, attempting connection anyway", pairResult.Status);
+                    _log.LogWarning("PushButton pairing failed: {Status}, attempting connection anyway", pairResult.Status);
+                    Console.Error.WriteLine("[WIFIDIRECT] PushButton failed; attempting connection anyway...");
                 }
             }
-
-            // Connection parameters: we want to join as client
-            var connectionParams = new WiFiDirectConnectionParameters
-            {
-                GroupOwnerIntent = 0, // prefer to be client (join glasses' group)
-            };
 
             _wifiDirectDevice = await WiFiDirectDevice.FromIdAsync(deviceId, connectionParams).AsTask(ct)
                 .ConfigureAwait(false);
@@ -209,6 +187,66 @@ internal sealed class WindowsWiFiDirectManager : IDisposable
     }
 
     public void Dispose() => Disconnect();
+
+    private static WiFiDirectConnectionParameters CreateConnectionParameters(
+        WiFiDirectConfigurationMethod configurationMethod)
+    {
+        var connectionParams = new WiFiDirectConnectionParameters
+        {
+            // Android often becomes the P2P group owner for this flow; the
+            // glasses then report their own HTTP IP over BLE. Prefer that role.
+            GroupOwnerIntent = 15,
+            PreferredPairingProcedure = WiFiDirectPairingProcedure.GroupOwnerNegotiation,
+        };
+        connectionParams.PreferenceOrderedConfigurationMethods.Add(configurationMethod);
+        return connectionParams;
+    }
+
+    private async Task<DevicePairingResult> PairAsync(
+        DeviceInformation deviceInfo,
+        WiFiDirectConnectionParameters connectionParams,
+        DevicePairingKinds pairingKinds,
+        string? pin,
+        CancellationToken ct)
+    {
+        var customPairing = deviceInfo.Pairing.Custom;
+
+        void OnPairingRequested(DeviceInformationCustomPairing sender, DevicePairingRequestedEventArgs args)
+        {
+            _log.LogInformation("Pairing requested: Kind={Kind}", args.PairingKind);
+            Console.Error.WriteLine($"[WIFIDIRECT] Pairing requested: {args.PairingKind}");
+
+            switch (args.PairingKind)
+            {
+                case DevicePairingKinds.ProvidePin when !string.IsNullOrEmpty(pin):
+                    args.Accept(pin);
+                    break;
+                case DevicePairingKinds.ConfirmOnly:
+                case DevicePairingKinds.DisplayPin:
+                    args.Accept();
+                    break;
+                default:
+                    if (!string.IsNullOrEmpty(pin))
+                        args.Accept(pin);
+                    else
+                        args.Accept();
+                    break;
+            }
+        }
+
+        customPairing.PairingRequested += OnPairingRequested;
+        try
+        {
+            return await customPairing.PairAsync(
+                pairingKinds,
+                DevicePairingProtectionLevel.None,
+                connectionParams).AsTask(ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            customPairing.PairingRequested -= OnPairingRequested;
+        }
+    }
 
     // ── Device watcher callbacks ────────────────────────────────────────
 

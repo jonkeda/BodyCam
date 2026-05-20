@@ -1,3 +1,6 @@
+using System.Text.Json;
+using BodyCam.Models;
+
 namespace BodyCam.Services;
 
 public class SettingsService : ISettingsService
@@ -221,6 +224,69 @@ public class SettingsService : ISettingsService
     {
         get { var v = Preferences.Get(nameof(A9CameraPassword), string.Empty); return v.Length == 0 ? null : v; }
         set { lock (_prefsLock) Preferences.Set(nameof(A9CameraPassword), value ?? string.Empty); }
+    }
+
+    // Device Settings (JSON)
+    public DeviceSettings DeviceSettings
+    {
+        get
+        {
+            var json = Preferences.Get(nameof(DeviceSettings), "{}");
+            return JsonSerializer.Deserialize<DeviceSettings>(json) ?? new();
+        }
+        set
+        {
+            lock (_prefsLock)
+                Preferences.Set(nameof(DeviceSettings), JsonSerializer.Serialize(value));
+        }
+    }
+
+    /// <summary>
+    /// Migrate legacy flat device keys into the new DeviceSettings JSON object.
+    /// Call once on startup — idempotent (skips if DeviceSettings already has a non-default profile).
+    /// </summary>
+    public void MigrateDeviceSettings()
+    {
+        // Skip if already migrated (profile was explicitly set to something)
+        var existing = Preferences.Get(nameof(DeviceSettings), "");
+        if (!string.IsNullOrEmpty(existing) && existing != "{}")
+            return;
+
+        var ds = new DeviceSettings();
+
+        // Migrate active providers
+        var camera = ActiveCameraProvider;
+        var mic = ActiveAudioInputProvider;
+        var speaker = ActiveAudioOutputProvider;
+
+        ds.Active.CameraProviderId = camera;
+        ds.Active.AudioInputProviderId = mic;
+        ds.Active.AudioOutputProviderId = speaker;
+
+        // If the user had custom selections, set profile to custom
+        if (camera is not null || mic is not null || speaker is not null)
+        {
+            ds.ActiveProfileId = "custom";
+            ds.Custom.CameraProviderId = camera;
+            ds.Custom.AudioInputProviderId = mic;
+            ds.Custom.AudioOutputProviderId = speaker;
+        }
+
+        // Migrate HeyCyan known device
+        var hcAddr = LastHeyCyanDeviceAddress;
+        var hcName = LastHeyCyanDeviceName;
+        if (!string.IsNullOrEmpty(hcAddr))
+        {
+            ds.KnownDevices.Add(new KnownDevice
+            {
+                DeviceId = hcAddr,
+                DisplayName = hcName ?? "HeyCyan Glasses",
+                DeviceType = "heycyan-glasses",
+                AutoReconnect = HeyCyanAutoReconnect,
+            });
+        }
+
+        DeviceSettings = ds;
     }
 
     public bool SetupCompleted

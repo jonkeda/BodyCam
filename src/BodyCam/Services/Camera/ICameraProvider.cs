@@ -27,6 +27,9 @@ public interface ICameraProvider : IAsyncDisposable
     /// <summary>Stream continuous JPEG frames.</summary>
     IAsyncEnumerable<byte[]> StreamFramesAsync(CancellationToken ct);
 
+    /// <summary>Whether this camera supports video recording (not just snapshots).</summary>
+    bool SupportsVideoRecording { get; }
+
     /// <summary>Raised when the camera disconnects unexpectedly.</summary>
     event EventHandler? Disconnected;
 }

@@ -15,6 +15,7 @@ public sealed class PhoneCameraProvider : ICameraProvider
     public string DisplayName => "Phone Camera";
     public string ProviderId => "phone";
     public bool IsAvailable => _cameraView is not null;
+    public bool SupportsVideoRecording => true;
 
     public event EventHandler? Disconnected;
 

@@ -12,4 +12,9 @@ public enum ButtonAction
     Photo,
     ToggleSleepActive,
     PushToTalk,
+    VolumeUp,
+    VolumeDown,
+    Mute,
+    NextTrack,
+    PreviousTrack,
 }

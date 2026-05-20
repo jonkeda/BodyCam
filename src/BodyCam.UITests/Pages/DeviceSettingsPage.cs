@@ -7,7 +7,10 @@ public class DeviceSettingsPage : PageObjectBase<DeviceSettingsPage>
     public override string Name => "DeviceSettingsPage";
 
     public override bool IsLoaded(int? timeoutMs = null)
-        => CameraSourcePicker.IsExists();
+        => CameraSourcePicker.IsExists() || SourceProfilePicker.IsExists();
+
+    // Source Profile
+    public Picker<DeviceSettingsPage> SourceProfilePicker => Picker("SourceProfilePicker");
 
     // Camera
     public Picker<DeviceSettingsPage> CameraSourcePicker => Picker("CameraSourcePicker");

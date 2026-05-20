@@ -91,6 +91,29 @@ public class HeyCyanCameraProviderTests
     }
 
     [Fact]
+    public async Task CaptureFrameAsync_with_stored_image_transfer_triggers_photo_then_downloads_without_wifi_listing()
+    {
+        var session = new FakeSession();
+        var jpegBytes = new byte[] { 0xFF, 0xD8, 0x11, 0x22 };
+        var transfer = new FakeStoredImageTransfer(jpegBytes);
+        var provider = new HeyCyanCameraProvider(
+            session,
+            transfer,
+            NullLogger<HeyCyanCameraProvider>.Instance);
+
+        session.SetState(HeyCyanState.Connected);
+
+        var result = await provider.CaptureFrameAsync(CancellationToken.None);
+
+        result.Should().BeEquivalentTo(jpegBytes);
+        provider.IsStoredImageDownloadFallback.Should().BeTrue();
+        session.TakePhotoCallCount.Should().Be(1);
+        transfer.DownloadCallCount.Should().Be(1);
+        transfer.DownloadedFile.Should().Be(transfer.FallbackFileName);
+        transfer.ListCallCount.Should().Be(0, "fallback mode should not attempt WiFi media.config listing");
+    }
+
+    [Fact]
     public async Task CaptureFrameAsync_when_media_count_notify_times_out_falls_back_to_newest_entry()
     {
         var (provider, session, transfer) = Build();
@@ -447,6 +470,49 @@ public class HeyCyanCameraProviderTests
         }
 
         public Task ExitAsync(CancellationToken _) => Task.CompletedTask;
+
+        public ValueTask DisposeAsync() => default;
+    }
+
+    private sealed class FakeStoredImageTransfer : IHeyCyanStoredImageMediaTransfer
+    {
+        private readonly byte[] _bytes;
+
+        public FakeStoredImageTransfer(byte[] bytes)
+        {
+            _bytes = bytes;
+        }
+
+        public string FallbackFileName => "stored-fallback.jpg";
+        public bool IsWarm => false;
+        public int ListCallCount { get; private set; }
+        public int DownloadCallCount { get; private set; }
+        public string? DownloadedFile { get; private set; }
+
+        public Task<IReadOnlyList<HeyCyanMediaEntry>> ListAsync(CancellationToken ct)
+        {
+            ListCallCount++;
+            return Task.FromResult<IReadOnlyList<HeyCyanMediaEntry>>(
+            [
+                new HeyCyanMediaEntry(FallbackFileName, _bytes.Length, DateTimeOffset.UtcNow, HeyCyanMediaKind.Photo)
+            ]);
+        }
+
+        public Task<byte[]> DownloadAsync(string fileName, CancellationToken ct)
+        {
+            DownloadCallCount++;
+            DownloadedFile = fileName;
+            return Task.FromResult(_bytes);
+        }
+
+        public Task<Stream> OpenAsync(string fileName, CancellationToken ct)
+        {
+            DownloadCallCount++;
+            DownloadedFile = fileName;
+            return Task.FromResult<Stream>(new MemoryStream(_bytes));
+        }
+
+        public Task ExitAsync(CancellationToken ct) => Task.CompletedTask;
 
         public ValueTask DisposeAsync() => default;
     }

@@ -2,140 +2,258 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:BodyCam.ViewModels.Settings"
+             xmlns:m="clr-namespace:BodyCam.Models"
              x:Class="BodyCam.Pages.Settings.DeviceSettingsPage"
              x:DataType="vm:DeviceViewModel"
              Shell.TabBarIsVisible="False"
              Title="Devices">
 
     <ScrollView>
-        <VerticalStackLayout Padding="16" Spacing="12" MaximumWidthRequest="500">
+        <VerticalStackLayout Padding="16" Spacing="10" MaximumWidthRequest="500">
 
-            <!-- Glasses Connection -->
-            <Button Text="Connect Glasses"
-                    Command="{Binding ConnectGlassesCommand}"
-                    AutomationId="ConnectGlassesButton"
-                    IsVisible="{Binding IsGlassesConnected, Converter={StaticResource InvertBoolConverter}}"
-                    StyleClass="OutlineButton" />
-
-            <!-- Inline glasses status (visible when connected) -->
-            <Frame Padding="12" CornerRadius="10"
-                   IsVisible="{Binding IsGlassesConnected}">
-                <VerticalStackLayout Spacing="8">
-
-                    <HorizontalStackLayout Spacing="8">
-                        <Label Text="🔋" FontSize="20" />
-                        <ProgressBar
-                            Progress="{Binding GlassesBatteryPct,
-                                       Converter={StaticResource PercentConverter}}"
-                            WidthRequest="180" VerticalOptions="Center" />
-                        <Label Text="{Binding GlassesBatteryPct, StringFormat='{0}%'}"
-                               VerticalOptions="Center" />
-                        <Label Text="⚡" IsVisible="{Binding GlassesIsCharging}"
-                               VerticalOptions="Center" />
-                    </HorizontalStackLayout>
-
-                    <Grid ColumnDefinitions="120,*"
-                          RowDefinitions="Auto,Auto,Auto" RowSpacing="4">
-                        <Label Grid.Row="0" Grid.Column="0" Text="MAC" TextColor="Gray" />
-                        <Label Grid.Row="0" Grid.Column="1" Text="{Binding GlassesMac}" />
-                        <Label Grid.Row="1" Grid.Column="0" Text="Firmware" TextColor="Gray" />
-                        <Label Grid.Row="1" Grid.Column="1" Text="{Binding GlassesFirmware}" />
-                        <Label Grid.Row="2" Grid.Column="0" Text="Hardware" TextColor="Gray" />
-                        <Label Grid.Row="2" Grid.Column="1" Text="{Binding GlassesHardware}" />
-                    </Grid>
-
-                    <HorizontalStackLayout Spacing="14">
-                        <Label Text="{Binding GlassesPhotos,     StringFormat='📷 {0}'}" />
-                        <Label Text="{Binding GlassesVideos,     StringFormat='🎬 {0}'}" />
-                        <Label Text="{Binding GlassesAudioFiles, StringFormat='🎙️ {0}'}" />
-                    </HorizontalStackLayout>
-
-                    <Button Text="Disconnect"
-                            Command="{Binding DisconnectGlassesCommand}"
-                            BackgroundColor="Red" TextColor="White"
-                            Margin="0,4,0,0" />
-                </VerticalStackLayout>
+            <!-- Auto-switch notification -->
+            <Frame Padding="8" CornerRadius="8"
+                   BackgroundColor="{AppThemeBinding Light=#E3F2FD, Dark=#1A237E}"
+                   IsVisible="{Binding HasAutoSwitchMessage}"
+                   AutomationId="AutoSwitchNotification">
+                <Label Text="{Binding AutoSwitchMessage}"
+                       FontSize="12" FontAttributes="Italic"
+                       TextColor="{AppThemeBinding Light=#1565C0, Dark=#90CAF9}" />
             </Frame>
 
-            <!-- Glasses Button -->
-            <VerticalStackLayout IsVisible="{Binding HeyCyanButtonMappings, Converter={StaticResource IsNotNullConverter}}"
-                                 Spacing="8" Margin="0,12,0,0">
-                <Label Text="Glasses Button" FontSize="Subtitle" FontAttributes="Bold"
-                       SemanticProperties.HeadingLevel="Level1" />
-                <Label Text="Configure tap, double-tap and long-press for the HeyCyan glasses."
-                       FontSize="Small"
-                       TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
-                <CollectionView ItemsSource="{Binding HeyCyanButtonMappings.Rows}">
-                    <CollectionView.ItemTemplate>
-                        <DataTemplate x:DataType="vm:HeyCyanGestureRowViewModel">
-                            <Grid ColumnDefinitions="*,2*" Padding="0,6">
-                                <Label Grid.Column="0" Text="{Binding Label}" VerticalOptions="Center" />
-                                <Picker Grid.Column="1"
-                                        ItemsSource="{Binding Source={RelativeSource AncestorType={x:Type vm:DeviceViewModel}}, Path=HeyCyanButtonMappings.AvailableActions}"
-                                        SelectedItem="{Binding Action, Mode=TwoWay}"
-                                        AutomationId="{Binding Label, StringFormat='GlassesButton{0}Picker'}" />
-                            </Grid>
-                        </DataTemplate>
-                    </CollectionView.ItemTemplate>
-                </CollectionView>
+            <!-- Connect Device button -->
+            <Button Text="+ Connect Device"
+                    Command="{Binding ConnectGlassesCommand}"
+                    Style="{StaticResource SettingsOutlineButton}"
+                    AutomationId="ConnectDeviceButton" />
+
+            <!-- Connected Devices -->
+            <Label Text="CONNECTED DEVICES" Style="{StaticResource SettingsSectionHeader}"
+                   SemanticProperties.HeadingLevel="Level1"
+                   IsVisible="{Binding HasConnectedDevices}" />
+
+            <!-- Glasses device (expandable) -->
+            <VerticalStackLayout IsVisible="{Binding IsGlassesConnected}"
+                                 Margin="0,0,0,8"
+                                 AutomationId="GlassesInfoPanel">
+
+                <!-- Header (tappable to expand) -->
+                <HorizontalStackLayout Spacing="8" Padding="4,8">
+                    <HorizontalStackLayout.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding ToggleGlassesDetailCommand}" />
+                    </HorizontalStackLayout.GestureRecognizers>
+                    <Label VerticalOptions="Center" FontSize="12">
+                        <Label.Triggers>
+                            <DataTrigger TargetType="Label" Binding="{Binding IsGlassesDetailExpanded}" Value="True">
+                                <Setter Property="Text" Value="▼" />
+                            </DataTrigger>
+                            <DataTrigger TargetType="Label" Binding="{Binding IsGlassesDetailExpanded}" Value="False">
+                                <Setter Property="Text" Value="▶" />
+                            </DataTrigger>
+                        </Label.Triggers>
+                    </Label>
+                    <Label Text="🕶️" FontSize="16" VerticalOptions="Center" />
+                    <Label Text="{Binding GlassesName}"
+                           Style="{StaticResource SettingsDeviceHeader}"
+                           VerticalOptions="Center" />
+                    <Label Text="{Binding GlassesBatteryPct, StringFormat='🔋 {0}%'}"
+                           FontSize="12" VerticalOptions="Center" />
+                    <Label Text="⚡" FontSize="12"
+                           IsVisible="{Binding GlassesIsCharging}"
+                           VerticalOptions="Center" />
+                </HorizontalStackLayout>
+
+                <!-- Expandable detail -->
+                <VerticalStackLayout Spacing="6" Padding="28,0,0,0"
+                                     IsVisible="{Binding IsGlassesDetailExpanded}">
+
+                    <Grid ColumnDefinitions="90,*"
+                          RowDefinitions="Auto,Auto,Auto" RowSpacing="2">
+                        <Label Grid.Row="0" Grid.Column="0" Text="MAC" Style="{StaticResource SettingsDetailLabel}" />
+                        <Label Grid.Row="0" Grid.Column="1" Text="{Binding GlassesMac}" Style="{StaticResource SettingsDetailValue}" />
+                        <Label Grid.Row="1" Grid.Column="0" Text="Firmware" Style="{StaticResource SettingsDetailLabel}" />
+                        <Label Grid.Row="1" Grid.Column="1" Text="{Binding GlassesFirmware}" Style="{StaticResource SettingsDetailValue}" />
+                        <Label Grid.Row="2" Grid.Column="0" Text="Hardware" Style="{StaticResource SettingsDetailLabel}" />
+                        <Label Grid.Row="2" Grid.Column="1" Text="{Binding GlassesHardware}" Style="{StaticResource SettingsDetailValue}" />
+                    </Grid>
+
+                    <HorizontalStackLayout Spacing="12">
+                        <Label Text="{Binding GlassesPhotos,     StringFormat='📷 {0}'}" FontSize="12" />
+                        <Label Text="{Binding GlassesVideos,     StringFormat='🎬 {0}'}" FontSize="12" />
+                        <Label Text="{Binding GlassesAudioFiles, StringFormat='🎙️ {0}'}" FontSize="12" />
+                    </HorizontalStackLayout>
+
+                    <HorizontalStackLayout Spacing="10" Margin="0,6,0,0">
+                        <Button Text="Disconnect"
+                                Command="{Binding DisconnectGlassesCommand}"
+                                Style="{StaticResource SettingsDangerButton}" />
+                        <Button Text="Remove"
+                                Command="{Binding RemoveGlassesCommand}"
+                                Style="{StaticResource SettingsOutlineButton}" />
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
             </VerticalStackLayout>
 
-            <!-- Camera Source -->
-            <Label Text="Camera Source" FontSize="Subtitle" FontAttributes="Bold" Margin="0,12,0,0"
-                   SemanticProperties.HeadingLevel="Level1" />
-            <Picker AutomationId="CameraSourcePicker"
-                    ItemsSource="{Binding CameraProviders}"
-                    ItemDisplayBinding="{Binding DisplayName}"
-                    SelectedItem="{Binding SelectedCameraProvider}"
-                    SemanticProperties.Description="Camera source" />
+            <!-- Other connected devices (BT audio etc.) -->
+            <CollectionView ItemsSource="{Binding ConnectedDevices}"
+                            IsVisible="{Binding HasConnectedDevices}"
+                            AutomationId="ConnectedDevicesPanel">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="m:ConnectedDeviceInfo">
+                        <HorizontalStackLayout Spacing="8" Padding="4,6">
+                            <Label Text="{Binding DisplayName}"
+                                   Style="{StaticResource SettingsDeviceHeader}"
+                                   VerticalOptions="Center" />
+                            <Label Text="{Binding BatteryPct, StringFormat='🔋 {0}%'}"
+                                   IsVisible="{Binding BatteryPct, Converter={StaticResource IsNotNullConverter}}"
+                                   FontSize="12" VerticalOptions="Center" />
+                            <Label Text="⚡" FontSize="12"
+                                   IsVisible="{Binding IsCharging}"
+                                   VerticalOptions="Center" />
+                        </HorizontalStackLayout>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
 
-            <Button Text="Test Capture"
-                    Command="{Binding GlassesCameraSection.TestCaptureCommand}"
-                    IsEnabled="{Binding GlassesCameraSection.IsTestCaptureEnabled}"
-                    AutomationId="TestCaptureButton" />
+            <!-- Source Profile -->
+            <VerticalStackLayout IsVisible="{Binding ShowSourceProfilePicker}"
+                                 Spacing="6">
+                <Label Text="SOURCE" Style="{StaticResource SettingsSectionHeader}"
+                       SemanticProperties.HeadingLevel="Level1" />
+                <Picker AutomationId="SourceProfilePicker"
+                        Style="{StaticResource SettingsPicker}"
+                        ItemsSource="{Binding AvailableProfiles}"
+                        ItemDisplayBinding="{Binding DisplayName}"
+                        SelectedItem="{Binding SelectedProfile}"
+                        SemanticProperties.Description="Source profile" />
+            </VerticalStackLayout>
 
-            <Label Text="{Binding GlassesCameraSection.LastCaptureLatencyMs, StringFormat='Latency: {0} ms'}"
-                   IsVisible="{Binding GlassesCameraSection.LastCaptureLatencyMs, Converter={StaticResource IsNotNullConverter}}"
-                   FontSize="Small"
-                   TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+            <!-- Individual pickers (visible only in Custom mode or when no profile manager) -->
+            <VerticalStackLayout IsVisible="{Binding IsCustomMode}" Spacing="10">
 
-            <Image Source="{Binding GlassesCameraSection.LastCaptureImage}"
-                   IsVisible="{Binding GlassesCameraSection.LastCaptureImage, Converter={StaticResource IsNotNullConverter}}"
-                   Aspect="AspectFit"
-                   HeightRequest="200"
-                   AutomationId="LastCaptureImage" />
+                <!-- Camera Source -->
+                <Label Text="CAMERA SOURCE" Style="{StaticResource SettingsSectionHeader}"
+                       SemanticProperties.HeadingLevel="Level1" />
+                <Picker AutomationId="CameraSourcePicker"
+                        Style="{StaticResource SettingsPicker}"
+                        ItemsSource="{Binding CameraProviders}"
+                        ItemDisplayBinding="{Binding DisplayName}"
+                        SelectedItem="{Binding SelectedCameraProvider}"
+                        SemanticProperties.Description="Camera source" />
 
-            <!-- Microphone -->
-            <Label Text="Microphone" FontSize="Subtitle" FontAttributes="Bold" Margin="0,12,0,0"
-                   SemanticProperties.HeadingLevel="Level1" />
-            <Picker AutomationId="AudioInputPicker"
-                    ItemsSource="{Binding AudioInputProviders}"
-                    ItemDisplayBinding="{Binding DisplayName}"
-                    SelectedItem="{Binding SelectedAudioInputProvider}"
-                    SemanticProperties.Description="Microphone" />
+                <Button Text="Take Picture"
+                        Command="{Binding TakePictureCommand}"
+                        IsEnabled="{Binding IsTakingPicture, Converter={StaticResource InvertBoolConverter}}"
+                        Style="{StaticResource SettingsButton}"
+                        AutomationId="TakePictureButton" />
 
-            <Button Text="Test Recording"
-                    Command="{Binding TestRecordingCommand}"
-                    IsEnabled="{Binding IsTestingRecording, Converter={StaticResource InvertBoolConverter}}"
-                    AutomationId="TestRecordingButton" />
+                <Button Text="Record Video"
+                        IsVisible="{Binding ShowRecordVideo}"
+                        Style="{StaticResource SettingsButton}"
+                        AutomationId="RecordVideoButton" />
 
-            <Label Text="{Binding TestRecordingStatus}"
-                   IsVisible="{Binding TestRecordingStatus, Converter={StaticResource IsNotNullConverter}}"
-                   FontSize="Small"
-                   TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+                <Label Text="{Binding TakePictureStatus}"
+                       Style="{StaticResource SettingsStatusText}"
+                       AutomationId="TakePictureStatusLabel" />
 
-            <!-- Speaker -->
-            <Label Text="Speaker" FontSize="Subtitle" FontAttributes="Bold" Margin="0,12,0,0"
-                   SemanticProperties.HeadingLevel="Level1" />
-            <Picker AutomationId="AudioOutputPicker"
-                    ItemsSource="{Binding AudioOutputProviders}"
-                    ItemDisplayBinding="{Binding DisplayName}"
-                    SelectedItem="{Binding SelectedAudioOutputProvider}"
-                    SemanticProperties.Description="Speaker" />
+                <Label Text="{Binding LastPictureLatencyMs, StringFormat='Latency: {0} ms'}"
+                       IsVisible="{Binding LastPictureLatencyMs, Converter={StaticResource IsNotNullConverter}}"
+                       Style="{StaticResource SettingsStatusText}" />
 
-            <Button Text="Test Sound"
-                    Command="{Binding TestSoundCommand}"
-                    AutomationId="TestSoundButton" />
+                <Image Source="{Binding LastPictureImage}"
+                       IsVisible="{Binding LastPictureImage, Converter={StaticResource IsNotNullConverter}}"
+                       Aspect="AspectFit"
+                       HeightRequest="200"
+                       AutomationId="LastPictureImage" />
+
+                <!-- Microphone -->
+                <Label Text="MICROPHONE" Style="{StaticResource SettingsSectionHeader}"
+                       SemanticProperties.HeadingLevel="Level1" />
+                <Picker AutomationId="AudioInputPicker"
+                        Style="{StaticResource SettingsPicker}"
+                        ItemsSource="{Binding AudioInputProviders}"
+                        ItemDisplayBinding="{Binding DisplayName}"
+                        SelectedItem="{Binding SelectedAudioInputProvider}"
+                        SemanticProperties.Description="Microphone" />
+                <Label Text="{Binding HeyCyanAudioInputStatus}"
+                       IsVisible="{Binding HeyCyanAudioInputStatus, Converter={StaticResource IsNotNullConverter}}"
+                       Style="{StaticResource SettingsStatusText}" />
+
+                <Button Text="Test Recording"
+                        Command="{Binding TestRecordingCommand}"
+                        IsEnabled="{Binding IsTestingRecording, Converter={StaticResource InvertBoolConverter}}"
+                        Style="{StaticResource SettingsButton}"
+                        AutomationId="TestRecordingButton" />
+
+                <Label Text="{Binding TestRecordingStatus}"
+                       IsVisible="{Binding TestRecordingStatus, Converter={StaticResource IsNotNullConverter}}"
+                       Style="{StaticResource SettingsStatusText}" />
+
+                <!-- Speaker -->
+                <Label Text="SPEAKER" Style="{StaticResource SettingsSectionHeader}"
+                       SemanticProperties.HeadingLevel="Level1" />
+                <Picker AutomationId="AudioOutputPicker"
+                        Style="{StaticResource SettingsPicker}"
+                        ItemsSource="{Binding AudioOutputProviders}"
+                        ItemDisplayBinding="{Binding DisplayName}"
+                        SelectedItem="{Binding SelectedAudioOutputProvider}"
+                        SemanticProperties.Description="Speaker" />
+                <Label Text="{Binding HeyCyanAudioOutputStatus}"
+                       IsVisible="{Binding HeyCyanAudioOutputStatus, Converter={StaticResource IsNotNullConverter}}"
+                       Style="{StaticResource SettingsStatusText}" />
+
+                <Button Text="Test Sound"
+                        Command="{Binding TestSoundCommand}"
+                        Style="{StaticResource SettingsButton}"
+                        AutomationId="TestSoundButton" />
+
+            </VerticalStackLayout>
+
+            <!-- Button Mappings (one section per connected button device, expandable) -->
+            <CollectionView ItemsSource="{Binding ButtonDeviceMappings}"
+                            AutomationId="ButtonDeviceMappingsCollection">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ButtonDeviceMappingsViewModel">
+                        <VerticalStackLayout Spacing="6" Margin="0,16,0,0">
+                            <!-- Tappable header -->
+                            <HorizontalStackLayout Spacing="6" Padding="4,8">
+                                <HorizontalStackLayout.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding ToggleExpandedCommand}" />
+                                </HorizontalStackLayout.GestureRecognizers>
+                                <Label FontSize="12" VerticalOptions="Center">
+                                    <Label.Triggers>
+                                        <DataTrigger TargetType="Label" Binding="{Binding IsExpanded}" Value="True">
+                                            <Setter Property="Text" Value="▼" />
+                                        </DataTrigger>
+                                        <DataTrigger TargetType="Label" Binding="{Binding IsExpanded}" Value="False">
+                                            <Setter Property="Text" Value="▶" />
+                                        </DataTrigger>
+                                    </Label.Triggers>
+                                </Label>
+                                <Label Text="{Binding DeviceName}"
+                                       Style="{StaticResource SettingsDeviceHeader}"
+                                       SemanticProperties.HeadingLevel="Level1" />
+                            </HorizontalStackLayout>
+                            <!-- Expandable rows -->
+                            <CollectionView ItemsSource="{Binding Rows}"
+                                            IsVisible="{Binding IsExpanded}">
+                                <CollectionView.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:GestureRowViewModel">
+                                        <Grid ColumnDefinitions="*,2*" Padding="28,4,0,4">
+                                            <Label Grid.Column="0" Text="{Binding Label}"
+                                                   FontSize="12" VerticalOptions="Center" />
+                                            <Picker Grid.Column="1"
+                                                    Style="{StaticResource SettingsPicker}"
+                                                    ItemsSource="{Binding Source={RelativeSource AncestorType={x:Type vm:ButtonDeviceMappingsViewModel}}, Path=AvailableActions}"
+                                                    SelectedItem="{Binding Action, Mode=TwoWay}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </CollectionView.ItemTemplate>
+                            </CollectionView>
+                        </VerticalStackLayout>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
 
         </VerticalStackLayout>
     </ScrollView>

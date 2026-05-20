@@ -1,3 +1,4 @@
+using BodyCam.Models;
 using BodyCam.Services;
 
 namespace BodyCam.RealTests.Fixtures;
@@ -65,6 +66,9 @@ public sealed class InMemorySettingsService : ISettingsService
     public string? A9CameraUid { get; set; }
     public string? A9CameraUsername { get; set; }
     public string? A9CameraPassword { get; set; }
+
+    // Device Settings (JSON)
+    public DeviceSettings DeviceSettings { get; set; } = new();
 
     // Setup
     public bool SetupCompleted { get; set; }

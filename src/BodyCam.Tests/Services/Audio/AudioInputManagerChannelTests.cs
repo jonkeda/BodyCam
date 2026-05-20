@@ -1,3 +1,4 @@
+using BodyCam.Models;
 using BodyCam.Services;
 using BodyCam.Services.Audio;
 using BodyCam.Services.Audio.WebRtcApm;
@@ -188,6 +189,7 @@ public class AudioInputManagerChannelTests
         public string? A9CameraUid { get; set; }
         public string? A9CameraUsername { get; set; }
         public string? A9CameraPassword { get; set; }
+        public DeviceSettings DeviceSettings { get; set; } = new();
         public bool SetupCompleted { get; set; }
     }
 }

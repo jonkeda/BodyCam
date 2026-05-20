@@ -35,6 +35,11 @@ public sealed class HeyCyanButtonProvider : IButtonInputProvider
 
     public bool IsActive => _started;
 
+    public IReadOnlyList<ButtonDescriptor> Buttons { get; } = [
+        new(ButtonIdConst, "Glasses Button",
+            [ButtonGesture.SingleTap, ButtonGesture.DoubleTap, ButtonGesture.LongPress])
+    ];
+
     public event EventHandler<RawButtonEvent>? RawButtonEvent;          // never raised
     public event EventHandler<ButtonGestureEvent>? PreRecognizedGesture;
     public event EventHandler? Disconnected;

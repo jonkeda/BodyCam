@@ -1,3 +1,5 @@
+using BodyCam.Models;
+
 namespace BodyCam.Services;
 
 public interface ISettingsService
@@ -59,6 +61,9 @@ public interface ISettingsService
     string? A9CameraUid { get; set; }
     string? A9CameraUsername { get; set; }
     string? A9CameraPassword { get; set; }
+
+    // Device Settings (JSON)
+    DeviceSettings DeviceSettings { get; set; }
 
     // Setup
     bool SetupCompleted { get; set; }

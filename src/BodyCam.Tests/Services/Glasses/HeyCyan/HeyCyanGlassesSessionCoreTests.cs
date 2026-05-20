@@ -116,8 +116,12 @@ public class HeyCyanGlassesSessionCoreTests
         await s.SyncTimeAsync(default);
 
         sent.Should().NotBeNull();
-        sent![0].Should().Be(0x03);
-        // bytes 1..4 are unix timestamp LE
+        sent![0].Should().Be(0xBC);
+        sent[1].Should().Be(0x40);
+        sent[2].Should().Be(0x04);
+        sent[3].Should().Be(0x00);
+        sent.Should().HaveCount(10);
+        // bytes 6..9 are unix timestamp LE
         BitConverter.IsLittleEndian.Should().BeTrue();
     }
 

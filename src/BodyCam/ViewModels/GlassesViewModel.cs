@@ -10,14 +10,17 @@ public sealed class GlassesViewModel : ViewModelBase
 {
     private readonly HeyCyanGlassesDeviceManager _glasses;
     private readonly ISettingsService _settings;
+    private readonly IHeyCyanAudioEndpointActivationService _audioEndpointActivation;
     private CancellationTokenSource? _scanCts;
 
     public GlassesViewModel(
         HeyCyanGlassesDeviceManager glasses,
-        ISettingsService settings)
+        ISettingsService settings,
+        IHeyCyanAudioEndpointActivationService audioEndpointActivation)
     {
         _glasses = glasses;
         _settings = settings;
+        _audioEndpointActivation = audioEndpointActivation;
         _glasses.StateChanged += (_, _) => RefreshAll();
         _glasses.StatusChanged += (_, _) => RefreshAll();
 
@@ -61,6 +64,32 @@ public sealed class GlassesViewModel : ViewModelBase
     public int Videos => _glasses.MediaCount?.Videos ?? 0;
     public int AudioFiles => _glasses.MediaCount?.AudioFiles ?? 0;
 
+    private string? _connectionDetailStatus;
+    public string? ConnectionDetailStatus
+    {
+        get => _connectionDetailStatus;
+        private set
+        {
+            if (SetProperty(ref _connectionDetailStatus, value))
+                OnPropertyChanged(nameof(ShowWindowsAudioActivationStatus));
+        }
+    }
+
+    private bool _isAudioActivationRunning;
+    public bool IsAudioActivationRunning
+    {
+        get => _isAudioActivationRunning;
+        private set
+        {
+            if (SetProperty(ref _isAudioActivationRunning, value))
+                OnPropertyChanged(nameof(ShowWindowsAudioActivationStatus));
+        }
+    }
+
+    public bool ShowWindowsAudioActivationStatus =>
+        _audioEndpointActivation.IsSupported
+        && (IsAudioActivationRunning || !string.IsNullOrWhiteSpace(ConnectionDetailStatus));
+
     public string StatusText => _glasses.State switch
     {
         GlassesConnectionState.Disconnected => "Not connected",
@@ -87,7 +116,7 @@ public sealed class GlassesViewModel : ViewModelBase
         {
             Devices.Clear();
             var found = await _glasses.ScanAsync(TimeSpan.FromSeconds(8), _scanCts.Token);
-            MainThread.BeginInvokeOnMainThread(() =>
+            RunOnMainThreadOrInline(() =>
             {
                 foreach (var d in found) Devices.Add(d);
             });
@@ -109,14 +138,98 @@ public sealed class GlassesViewModel : ViewModelBase
     private async Task ConnectAsync()
     {
         if (SelectedDevice is null) return;
-        await _glasses.ConnectAsync(SelectedDevice, CancellationToken.None);
-        // Auto-return to Devices page after successful connect
-        if (_glasses.State == GlassesConnectionState.Connected)
-            await Shell.Current.GoToAsync("..");
+
+        var selectedDevice = SelectedDevice;
+        var shouldReturnToSettings = true;
+
+        try
+        {
+            if (_audioEndpointActivation.RequiresActivationBeforeBleConnect)
+            {
+                SetConnectionDetailStatus(
+                    $"Connecting Windows Bluetooth audio for {selectedDevice.Name} before BLE...");
+                IsAudioActivationRunning = true;
+
+                HeyCyanAudioEndpointSnapshot audioSnapshot;
+                try
+                {
+                    audioSnapshot = await RunAudioActivationAsync(selectedDevice);
+                }
+                finally
+                {
+                    IsAudioActivationRunning = false;
+                }
+
+                if (!audioSnapshot.IsReady)
+                {
+                    SetConnectionDetailStatus(BuildPreBleAudioPendingMessage(audioSnapshot));
+                    return;
+                }
+            }
+
+            SetConnectionDetailStatus($"Connecting to {selectedDevice.Name}...");
+            await _glasses.ConnectAsync(selectedDevice, CancellationToken.None);
+
+            if (_glasses.State == GlassesConnectionState.Connected
+                && _audioEndpointActivation.IsSupported)
+            {
+                shouldReturnToSettings = false;
+                IsAudioActivationRunning = true;
+                try
+                {
+                    SetConnectionDetailStatus("Checking Windows Bluetooth audio...");
+                    var snapshot = _audioEndpointActivation.RequiresActivationBeforeBleConnect
+                        ? await _audioEndpointActivation.RefreshAsync(CancellationToken.None)
+                        : await RunAudioActivationAsync(selectedDevice);
+
+                    SetConnectionDetailStatus(snapshot.Summary);
+                    shouldReturnToSettings = snapshot.IsReady;
+                }
+                finally
+                {
+                    IsAudioActivationRunning = false;
+                }
+            }
+
+            if (_glasses.State == GlassesConnectionState.Connected && shouldReturnToSettings)
+                await TryNavigateBackAsync();
+        }
+        catch (Exception ex)
+        {
+            IsAudioActivationRunning = false;
+            SetConnectionDetailStatus($"Connection failed: {ex.Message}");
+        }
     }
 
     private Task DisconnectAsync()
         => _glasses.DisconnectAsync(CancellationToken.None);
+
+    private async Task<HeyCyanAudioEndpointSnapshot> RunAudioActivationAsync(
+        HeyCyanDeviceInfo selectedDevice)
+    {
+        void OnActivationUpdated(object? _, HeyCyanAudioEndpointSnapshot snapshot)
+            => SetConnectionDetailStatus(snapshot.Summary);
+
+        _audioEndpointActivation.Updated += OnActivationUpdated;
+        try
+        {
+            return await _audioEndpointActivation.BeginActivationAsync(
+                selectedDevice,
+                CancellationToken.None);
+        }
+        finally
+        {
+            _audioEndpointActivation.Updated -= OnActivationUpdated;
+        }
+    }
+
+    private static string BuildPreBleAudioPendingMessage(
+        HeyCyanAudioEndpointSnapshot snapshot)
+    {
+        return snapshot.Summary
+            + " The app has not connected BLE yet, so Windows can still connect Classic Bluetooth. "
+            + "Click Connect in Windows Bluetooth settings, then press Connect here again.";
+    }
 
     /// <summary>
     /// Delegates to the manager's auto-reconnect. Fire-and-forget from page init.
@@ -143,6 +256,56 @@ public sealed class GlassesViewModel : ViewModelBase
         OnPropertyChanged(nameof(Videos));
         OnPropertyChanged(nameof(AudioFiles));
         OnPropertyChanged(nameof(StatusText));
+        OnPropertyChanged(nameof(ShowWindowsAudioActivationStatus));
         DisconnectCommand.RaiseCanExecuteChanged();
+    }
+
+    private void SetConnectionDetailStatus(string? status)
+    {
+        try
+        {
+            if (MainThread.IsMainThread)
+            {
+                ConnectionDetailStatus = status;
+                return;
+            }
+
+            MainThread.BeginInvokeOnMainThread(() => ConnectionDetailStatus = status);
+        }
+        catch
+        {
+            ConnectionDetailStatus = status;
+        }
+    }
+
+    private static void RunOnMainThreadOrInline(Action action)
+    {
+        try
+        {
+            if (MainThread.IsMainThread)
+                action();
+            else
+                MainThread.BeginInvokeOnMainThread(action);
+        }
+        catch
+        {
+            action();
+        }
+    }
+
+    private static async Task TryNavigateBackAsync()
+    {
+        var shell = Shell.Current;
+        if (shell is null)
+            return;
+
+        try
+        {
+            await shell.GoToAsync("..");
+        }
+        catch
+        {
+            // Unit tests and some shell states do not have a navigation stack.
+        }
     }
 }

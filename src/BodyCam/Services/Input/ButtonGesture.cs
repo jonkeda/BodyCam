@@ -4,6 +4,7 @@ public enum ButtonGesture
 {
     SingleTap,
     DoubleTap,
+    TripleTap,
     LongPress,
     LongPressRelease,
 }

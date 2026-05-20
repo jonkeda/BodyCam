@@ -19,6 +19,12 @@ public class DeviceSettingsTests
     }
 
     [Fact]
+    public void SourceProfilePicker_Exists()
+    {
+        Page.SourceProfilePicker.AssertExists();
+    }
+
+    [Fact]
     public void CameraSourcePicker_Exists()
     {
         Page.CameraSourcePicker.AssertExists();

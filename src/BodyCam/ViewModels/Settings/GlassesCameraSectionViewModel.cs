@@ -141,7 +141,10 @@ public sealed class GlassesCameraSectionViewModel : ViewModelBase, IDisposable
             {
                 LastCaptureImage = ImageSource.FromStream(() => new MemoryStream(jpg));
                 LastCaptureLatencyMs = sw.ElapsedMilliseconds;
-                Status = $"Captured {jpg.Length:N0} bytes in {sw.ElapsedMilliseconds} ms";
+                var suffix = _provider.IsStoredImageDownloadFallback
+                    ? " (stored image fallback)"
+                    : string.Empty;
+                Status = $"Captured {jpg.Length:N0} bytes in {sw.ElapsedMilliseconds} ms{suffix}";
             }
         }
         catch (Exception ex)

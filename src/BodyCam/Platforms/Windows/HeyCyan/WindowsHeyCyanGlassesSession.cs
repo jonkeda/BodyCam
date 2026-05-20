@@ -39,8 +39,10 @@ internal sealed class WindowsHeyCyanGlassesSession : IHeyCyanGlassesSession
     private readonly WindowsBluetoothEnumerator _btEnumerator;
     private readonly WindowsBluetoothOutputEnumerator _btOutputEnumerator;
     private readonly WindowsGlassesWiFiManager? _wifiManager;
-    private readonly WindowsWiFiDirectManager? _wifiDirectManager;
+    private readonly IWindowsWiFiDirectConnector? _wifiDirectManager;
+    private readonly bool _ensureClassicAudio;
     private readonly SemaphoreSlim _commandLock = new(1, 1);
+    private CancellationTokenSource? _classicAudioSetupCts;
 
     private BluetoothLEDevice? _bleDevice;
     private GattDeviceService? _gattService; // MUST be kept alive — GC kills notifications
@@ -73,13 +75,15 @@ internal sealed class WindowsHeyCyanGlassesSession : IHeyCyanGlassesSession
         WindowsBluetoothEnumerator btEnumerator,
         WindowsBluetoothOutputEnumerator btOutputEnumerator,
         WindowsGlassesWiFiManager? wifiManager = null,
-        WindowsWiFiDirectManager? wifiDirectManager = null)
+        IWindowsWiFiDirectConnector? wifiDirectManager = null,
+        bool ensureClassicAudio = true)
     {
         _log = log;
         _btEnumerator = btEnumerator;
         _btOutputEnumerator = btOutputEnumerator;
         _wifiManager = wifiManager;
         _wifiDirectManager = wifiDirectManager;
+        _ensureClassicAudio = ensureClassicAudio;
     }
 
     public HeyCyanState State
@@ -252,18 +256,57 @@ internal sealed class WindowsHeyCyanGlassesSession : IHeyCyanGlassesSession
         {
             var address = ParseBluetoothAddress(device.Address);
 
-            _bleDevice = await BluetoothLEDevice.FromBluetoothAddressAsync(address).AsTask(ct).ConfigureAwait(false);
-            if (_bleDevice is null)
-                throw new InvalidOperationException($"Could not connect to BLE device {device.Address}");
+            // Discover Serial Port Service (Uncached first; cached can help after
+            // Windows has already seen the device). The glasses/Windows BLE stack
+            // can report zero services on the first attempt even when a retry works.
+            GattDeviceServicesResult? serviceResult = null;
+            const int maxServiceAttempts = 4;
+            for (var attempt = 1; attempt <= maxServiceAttempts; attempt++)
+            {
+                _bleDevice = await BluetoothLEDevice.FromBluetoothAddressAsync(address).AsTask(ct).ConfigureAwait(false);
+                if (_bleDevice is null)
+                    throw new InvalidOperationException($"Could not connect to BLE device {device.Address}");
 
-            _bleDevice.ConnectionStatusChanged += OnConnectionStatusChanged;
+                serviceResult = await _bleDevice.GetGattServicesForUuidAsync(
+                    SerialPortService, BluetoothCacheMode.Uncached)
+                    .AsTask(ct).ConfigureAwait(false);
 
-            // Discover Serial Port Service (Uncached — cached mode can return empty on first connect)
-            var serviceResult = await _bleDevice.GetGattServicesForUuidAsync(
-                SerialPortService, BluetoothCacheMode.Uncached)
-                .AsTask(ct).ConfigureAwait(false);
-            if (serviceResult.Status != GattCommunicationStatus.Success || serviceResult.Services.Count == 0)
+                if (serviceResult.Status == GattCommunicationStatus.Success && serviceResult.Services.Count > 0)
+                    break;
+
+                var cachedResult = await _bleDevice.GetGattServicesForUuidAsync(
+                    SerialPortService, BluetoothCacheMode.Cached)
+                    .AsTask(ct).ConfigureAwait(false);
+
+                if (cachedResult.Status == GattCommunicationStatus.Success && cachedResult.Services.Count > 0)
+                {
+                    serviceResult = cachedResult;
+                    break;
+                }
+
+                _log.LogWarning(
+                    "Serial port service not found on {Name}, attempt {Attempt}/{MaxAttempts} (uncached {UncachedStatus}/{UncachedCount}, cached {CachedStatus}/{CachedCount})",
+                    device.Name,
+                    attempt,
+                    maxServiceAttempts,
+                    serviceResult.Status,
+                    serviceResult.Services.Count,
+                    cachedResult.Status,
+                    cachedResult.Services.Count);
+
+                _bleDevice.Dispose();
+                _bleDevice = null;
+
+                if (attempt < maxServiceAttempts)
+                    await Task.Delay(TimeSpan.FromSeconds(2), ct).ConfigureAwait(false);
+            }
+
+            if (_bleDevice is null || serviceResult is null
+                || serviceResult.Status != GattCommunicationStatus.Success
+                || serviceResult.Services.Count == 0)
+            {
                 throw new InvalidOperationException($"Serial port service not found on {device.Name}");
+            }
 
             _gattService = serviceResult.Services[0];
             var charsResult = await _gattService.GetCharacteristicsAsync(BluetoothCacheMode.Uncached)
@@ -296,6 +339,8 @@ internal sealed class WindowsHeyCyanGlassesSession : IHeyCyanGlassesSession
             if (notifyResult != GattCommunicationStatus.Success)
                 throw new InvalidOperationException($"Failed to enable notifications: {notifyResult}");
 
+            _bleDevice.ConnectionStatusChanged += OnConnectionStatusChanged;
+
             // Attempt BLE-level pairing (for GATT bonding, separate from Classic BT audio)
             var pairing = _bleDevice.DeviceInformation.Pairing;
             if (!pairing.IsPaired && pairing.CanPair)
@@ -314,19 +359,17 @@ internal sealed class WindowsHeyCyanGlassesSession : IHeyCyanGlassesSession
                 }
             }
 
-            // Classic BT audio: pair if needed AND ensure audio endpoints exist.
-            // Runs AFTER BLE GATT setup — running in parallel disrupts GATT service
-            // discovery (see RCA: serial-port-service-not-found).
-            var audioResult = await EnsureClassicBtAudioAsync(address, ct).ConfigureAwait(false);
-            if (audioResult == BtAudioResult.Success)
-                _log.LogInformation("Classic BT audio ready for {Name} — both endpoints found", device.Name);
-            else if (audioResult == BtAudioResult.PartialSuccess)
-                _log.LogWarning("Classic BT audio partial for {Name} — only some endpoints found", device.Name);
-            else
-                _log.LogWarning("Classic BT audio unavailable for {Name} — GATT-only connection", device.Name);
-
             State = HeyCyanState.Connected;
             _log.LogInformation("Connected to {Name} ({Address})", device.Name, device.Address);
+
+            // Classic BT audio remains important on Windows, but Windows may take
+            // tens of seconds to expose HFP/A2DP MMDevice endpoints. Keep that
+            // recovery running after BLE connect so mic/speaker can auto-select
+            // when the OS finally marks them active.
+            if (_ensureClassicAudio)
+                StartClassicAudioSetup(address, device.Name);
+            else
+                _log.LogInformation("Skipping Classic BT audio setup for {Name}", device.Name);
         }
         catch
         {
@@ -348,6 +391,39 @@ internal sealed class WindowsHeyCyanGlassesSession : IHeyCyanGlassesSession
         PartialSuccess,
         /// <summary>No BT audio endpoints found. GATT-only connection.</summary>
         Failure
+    }
+
+    private void StartClassicAudioSetup(ulong address, string deviceName)
+    {
+        _classicAudioSetupCts?.Cancel();
+        _classicAudioSetupCts?.Dispose();
+        _classicAudioSetupCts = new CancellationTokenSource();
+        var token = _classicAudioSetupCts.Token;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var audioResult = await EnsureClassicBtAudioAsync(address, token).ConfigureAwait(false);
+                if (token.IsCancellationRequested)
+                    return;
+
+                if (audioResult == BtAudioResult.Success)
+                    _log.LogInformation("Classic BT audio ready for {Name} — both endpoints found", deviceName);
+                else if (audioResult == BtAudioResult.PartialSuccess)
+                    _log.LogWarning("Classic BT audio partial for {Name} — only some endpoints found", deviceName);
+                else
+                    _log.LogWarning("Classic BT audio unavailable for {Name} — Windows endpoints are not active", deviceName);
+            }
+            catch (OperationCanceledException) when (token.IsCancellationRequested)
+            {
+                _log.LogDebug("Classic BT audio setup canceled for {Name}", deviceName);
+            }
+            catch (Exception ex)
+            {
+                _log.LogWarning(ex, "Classic BT audio setup failed for {Name}", deviceName);
+            }
+        });
     }
 
     /// <summary>
@@ -393,9 +469,10 @@ internal sealed class WindowsHeyCyanGlassesSession : IHeyCyanGlassesSession
                 // Unpairing a dual-mode device destroys the BLE bond, which
                 // breaks GATT notification delivery (see RCA-808).
                 _log.LogWarning("EnsureBtAudio: profile forcing failed for {Mac} — continuing without audio (preserving BLE bond)", mac);
+                return BtAudioResult.Failure;
             }
 
-            // Phase C: Not paired (or was just unpaired) — full pairing sequence
+            // Phase C: Not paired — full pairing sequence
             _log.LogDebug("EnsureBtAudio Phase C: pairing for {Mac}", mac);
             var paired = await TryPairClassicAsync(bleAddress, ct).ConfigureAwait(false);
             if (!paired)
@@ -669,12 +746,29 @@ internal sealed class WindowsHeyCyanGlassesSession : IHeyCyanGlassesSession
         _transferNotifyChannel = Channel.CreateUnbounded<byte[]>(
             new UnboundedChannelOptions { SingleReader = false, SingleWriter = true });
 
+        if (_wifiDirectManager is not null)
+        {
+            try
+            {
+                // Android starts peer discovery before asking the glasses to enter
+                // transfer mode, so keep the Windows watcher hot during the BLE flip.
+                _wifiDirectManager.Disconnect();
+                _wifiDirectManager.StartDiscovery();
+            }
+            catch (Exception ex)
+            {
+                _log.LogWarning(ex, "WiFi Direct discovery could not be started");
+                Console.Error.WriteLine($"[WIFIDIRECT] Discovery start failed: {ex.Message}");
+            }
+        }
+
         // Send EnterTransferMode BLE command — glasses will respond with
-        // a notification containing SSID + password for their hidden WiFi.
+        // a notification containing either an IP or SSID + password details.
         await SendCommandAsync(HeyCyanCommands.EnterTransferMode(), ct).ConfigureAwait(false);
         State = HeyCyanState.TransferMode;
 
         IPAddress? glassesIp = null;
+        IPAddress? bleReportedIp = null;
 
         try
         {
@@ -689,9 +783,17 @@ internal sealed class WindowsHeyCyanGlassesSession : IHeyCyanGlassesSession
                 // Direct IP notification (0x08): payload[1..4] = IPv4
                 if (payload.Length >= 5 && payload[0] == 0x08)
                 {
-                    glassesIp = new IPAddress(payload.AsSpan(1, 4));
-                    _log.LogInformation("Got glasses IP from BLE 0x08 notify: {Ip}", glassesIp);
-                    break;
+                    bleReportedIp = new IPAddress(payload.AsSpan(1, 4));
+                    _log.LogInformation("Got glasses IP from BLE 0x08 notify: {Ip}", bleReportedIp);
+                    Console.Error.WriteLine($"[BLE-0x41] Device-reported IP={bleReportedIp}");
+
+                    // A BLE IP alone is not enough on Windows; we still need a
+                    // WiFi Direct or hotspot route. In WiFi-Direct-only mode,
+                    // stop waiting for hotspot credentials and connect now.
+                    if (_wifiDirectManager is not null && _wifiManager is null)
+                        break;
+
+                    continue;
                 }
 
                 // SSID+password notification: [02-01-04-01][ssidLen LE16][pwdLen LE16][ssid][pwd]
@@ -710,6 +812,8 @@ internal sealed class WindowsHeyCyanGlassesSession : IHeyCyanGlassesSession
 
                         _bleTransferSsid = ssid;
                         _bleTransferPassword = password;
+                        if (_wifiDirectManager is not null)
+                            _wifiDirectManager.GroupPassword = password;
                         Console.Error.WriteLine($"[BLE-0x41] SSID='{ssid}' password=({password.Length} chars)");
                         _log.LogInformation("BLE transfer credentials: SSID='{Ssid}'", ssid);
                         break;
@@ -717,42 +821,171 @@ internal sealed class WindowsHeyCyanGlassesSession : IHeyCyanGlassesSession
                 }
             }
 
-            // Connect to the glasses WiFi network.
-            if (glassesIp is null && _bleTransferSsid is not null && _wifiManager is not null)
+            // Build an actual Windows network route to the transfer server.
+            // A BLE-reported IP is only the target address; without WiFi Direct
+            // or hotspot association, Windows will route HTTP over the wrong NIC.
+            if (_bleTransferSsid is not null || _wifiDirectManager is not null || _wifiManager is not null)
             {
-                // iOS SDK critical step: poll getDeviceWifiIPSuccess to confirm AP is ready.
-                // The glasses won't fully start the WiFi radio until this is polled.
-                Console.Error.WriteLine("[BLE] Polling GetWifiIP to trigger/confirm AP startup...");
-                var bleIp = await PollWifiIpReadyAsync(ct).ConfigureAwait(false);
+                // Step 2: Poll GetWifiIP to trigger/confirm AP startup.
+                Console.Error.WriteLine("[BLE] Step 2: Polling GetWifiIP to trigger/confirm AP startup...");
+                var bleIp = bleReportedIp ?? await PollWifiIpReadyAsync(ct).ConfigureAwait(false);
+                bleReportedIp ??= bleIp;
 
-                // iOS SDK: "CRITICAL: Wait for hotspot to actually start broadcasting"
-                // The firmware reports IP before the WiFi radio is fully up.
-                // iOS waits 15s in WiFi-dense environments. Glasses AP takes 30-60s total.
-                Console.Error.WriteLine("[WIFI] Waiting 15s for glasses AP to start broadcasting...");
-                await Task.Delay(15000, ct).ConfigureAwait(false);
+                // Step 3: Send GetDeviceConfig (0x47) — iOS SDK critical verification step.
+                // This signals the glasses to actually start broadcasting the WiFi radio.
+                Console.Error.WriteLine("[BLE] Step 3: Sending GetDeviceConfig (0x47) to activate AP radio...");
+                await SendCommandAsync(HeyCyanCommands.GetDeviceConfig(), ct).ConfigureAwait(false);
+                try
+                {
+                    var configPayload = await WaitForNotifyAsync(0x47, TimeSpan.FromSeconds(5), ct).ConfigureAwait(false);
+                    Console.Error.WriteLine($"[BLE] GetDeviceConfig response: {BitConverter.ToString(configPayload)}");
+                }
+                catch (TimeoutException)
+                {
+                    Console.Error.WriteLine("[BLE] GetDeviceConfig — no response (continuing anyway)");
+                }
 
-                // Now switch WiFi to the glasses network
-                Console.Error.WriteLine($"[WIFI] AP confirmed ready, joining '{_bleTransferSsid}'...");
-                var joinedIp = await _wifiManager.ForceJoinAsync(
-                    _bleTransferSsid,
-                    _bleTransferPassword ?? WindowsGlassesWiFiManager.DefaultPassword,
-                    ct).ConfigureAwait(false);
+                // Step 4: Wait 5s for the AP radio to spin up after config check.
+                // iOS SDK waits 5s — the glasses WiFi radio needs time to start.
+                Console.Error.WriteLine("[WIFI] Step 4: Waiting 5s for AP radio to start broadcasting...");
+                await Task.Delay(5000, ct).ConfigureAwait(false);
 
-                // Prefer BLE-reported IP, fall back to DHCP-discovered IP
-                glassesIp = bleIp ?? joinedIp;
+                // Step 5: Confirm AP still broadcasting via second GetWifiIP poll.
+                Console.Error.WriteLine("[BLE] Step 5: Confirming AP still broadcasting...");
+                var confirmIp = await PollWifiIpReadyAsync(ct).ConfigureAwait(false);
+                if (confirmIp is not null)
+                {
+                    bleIp ??= confirmIp;
+                    bleReportedIp ??= confirmIp;
+                    Console.Error.WriteLine($"[BLE] AP confirmed (IP={confirmIp})");
+                }
+                else
+                {
+                    Console.Error.WriteLine("[BLE] AP confirmation failed — proceeding with WiFi join anyway");
+                }
+
+                var routeReady = false;
+                var routeCandidates = new List<IPAddress>();
+
+                if (_wifiDirectManager is not null)
+                {
+                    if (_bleTransferPassword is not null)
+                        _wifiDirectManager.GroupPassword = _bleTransferPassword;
+
+                    Console.Error.WriteLine("[WIFIDIRECT] Step 6A: Connecting via WiFi Direct/P2P...");
+                    var directIp = await TryWiFiDirectAsync(ct).ConfigureAwait(false);
+                    if (directIp is not null)
+                    {
+                        routeReady = true;
+                        Console.Error.WriteLine($"[WIFIDIRECT] Route established; endpoint IP={directIp}");
+                        AddCandidate(routeCandidates, bleIp);
+                        AddCandidate(routeCandidates, directIp);
+                    }
+                    else
+                    {
+                        Console.Error.WriteLine("[WIFIDIRECT] No WiFi Direct route established.");
+                    }
+                }
+
+                if (!routeReady && _bleTransferSsid is not null && _wifiManager is not null)
+                {
+                    // Step 6B: Switch WiFi to the glasses network.
+                    // Run BLE keepalive polling in parallel to prevent AP timeout.
+                    // The glasses shut down their WiFi AP if they don't receive BLE
+                    // commands for a period of time.
+                    Console.Error.WriteLine($"[WIFI] Step 6B: Joining '{_bleTransferSsid}'...");
+
+                    IPAddress? joinedIp = null;
+                    using var joinCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+
+                    // BLE keepalive: send GetWifiIP every 10s during WiFi join
+                    var keepaliveTask = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            while (!joinCts.Token.IsCancellationRequested)
+                            {
+                                await Task.Delay(10_000, joinCts.Token).ConfigureAwait(false);
+                                Console.Error.WriteLine("[BLE] Keepalive: GetWifiIP during WiFi join...");
+                                await SendCommandAsync(HeyCyanCommands.GetWifiIP(), joinCts.Token).ConfigureAwait(false);
+                            }
+                        }
+                        catch (OperationCanceledException) { }
+                    }, joinCts.Token);
+
+                    try
+                    {
+                        joinedIp = await _wifiManager.ForceJoinAsync(
+                            _bleTransferSsid,
+                            _bleTransferPassword ?? WindowsGlassesWiFiManager.DefaultPassword,
+                            ct,
+                            bleKeepalive: async (token) =>
+                            {
+                                Console.Error.WriteLine("[BLE] Keepalive: GetWifiIP during scan wait...");
+                                await SendCommandAsync(HeyCyanCommands.GetWifiIP(), token).ConfigureAwait(false);
+                            }).ConfigureAwait(false);
+                    }
+                    finally
+                    {
+                        joinCts.Cancel();
+                        try { await keepaliveTask.ConfigureAwait(false); } catch { }
+                    }
+
+                    if (joinedIp is not null)
+                    {
+                        routeReady = true;
+                        AddCandidate(routeCandidates, bleIp);
+                        AddCandidate(routeCandidates, joinedIp);
+                    }
+                    else
+                    {
+                        Console.Error.WriteLine("[WIFI] Hotspot join did not establish a route.");
+                    }
+                }
+
+                if (routeReady)
+                {
+                    // Step 7: Send second GetDeviceConfig to keep glasses in transfer state.
+                    Console.Error.WriteLine("[BLE] Step 7: Sending second GetDeviceConfig to keep glasses alive...");
+                    await SendCommandAsync(HeyCyanCommands.GetDeviceConfig(), ct).ConfigureAwait(false);
+                    try
+                    {
+                        var configPayload2 = await WaitForNotifyAsync(0x47, TimeSpan.FromSeconds(5), ct).ConfigureAwait(false);
+                        Console.Error.WriteLine($"[BLE] GetDeviceConfig #2 response: {BitConverter.ToString(configPayload2)}");
+                    }
+                    catch (TimeoutException)
+                    {
+                        Console.Error.WriteLine("[BLE] GetDeviceConfig #2 — no response (continuing)");
+                    }
+
+                    // Step 8: Post-connect wait (15s) with BLE keepalive polling every 5s.
+                    Console.Error.WriteLine("[WIFI] Step 8: Post-connect wait (15s) with BLE keepalive...");
+                    for (int keepalive = 0; keepalive < 3; keepalive++)
+                    {
+                        await Task.Delay(5000, ct).ConfigureAwait(false);
+                        Console.Error.WriteLine($"[BLE] Keepalive GetWifiIP poll ({keepalive + 1}/3)...");
+                        await SendCommandAsync(HeyCyanCommands.GetWifiIP(), ct).ConfigureAwait(false);
+                    }
+
+                    glassesIp = await ProbeTransferEndpointAsync(routeCandidates, ct).ConfigureAwait(false)
+                        ?? routeCandidates.FirstOrDefault();
+                }
 
                 if (glassesIp is null)
                 {
-                    Console.Error.WriteLine("[WIFI] ForceJoin did not get an IP, probing candidates...");
-                    glassesIp = await ProbeCandidateIpsAsync(ct).ConfigureAwait(false);
+                    Console.Error.WriteLine("[WIFI] No routed transfer endpoint found; probing fixed fallback candidates...");
+                    glassesIp = routeReady
+                        ? await ProbeCandidateIpsAsync(ct).ConfigureAwait(false)
+                        : null;
                 }
             }
 
             if (glassesIp is null)
                 throw new InvalidOperationException(
-                    "Transfer mode: no glasses IP obtained. "
+                    "Transfer mode: no routed glasses IP obtained. "
                     + $"BLE SSID={_bleTransferSsid ?? "(none)"}, "
-                    + "ensure glasses are in range and WiFi adapter is available.");
+                    + $"BLE IP={bleReportedIp?.ToString() ?? "(none)"}. "
+                    + "Windows did not establish a WiFi Direct or hotspot route to the glasses.");
         }
         catch
         {
@@ -1033,6 +1266,62 @@ internal sealed class WindowsHeyCyanGlassesSession : IHeyCyanGlassesSession
         return null;
     }
 
+    private static void AddCandidate(List<IPAddress> candidates, IPAddress? ip)
+    {
+        if (ip is null || ip.Equals(IPAddress.Any))
+            return;
+        if (candidates.Any(existing => existing.Equals(ip)))
+            return;
+        candidates.Add(ip);
+    }
+
+    /// <summary>
+    /// Verifies which routed candidate actually serves the glasses media API.
+    /// This avoids returning a BLE-reported IP when Windows has connected via a
+    /// different WiFi Direct endpoint address.
+    /// </summary>
+    private async Task<IPAddress?> ProbeTransferEndpointAsync(
+        IEnumerable<IPAddress> candidates,
+        CancellationToken ct)
+    {
+        using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(4) };
+
+        foreach (var candidate in candidates)
+        {
+            ct.ThrowIfCancellationRequested();
+            var url = $"http://{candidate}/files/media.config";
+            Console.Error.WriteLine($"[HTTP] Probing {url} ...");
+
+            try
+            {
+                var response = await httpClient.GetAsync(url, ct).ConfigureAwait(false);
+                Console.Error.WriteLine($"[HTTP] {candidate}: {(int)response.StatusCode} {response.ReasonPhrase}");
+
+                if (!response.IsSuccessStatusCode)
+                    continue;
+
+                var content = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+                if (content.Contains("<!DOCTYPE", StringComparison.OrdinalIgnoreCase)
+                    || content.Contains("<html", StringComparison.OrdinalIgnoreCase))
+                {
+                    Console.Error.WriteLine($"[HTTP] {candidate}: HTML response, not glasses media.config");
+                    continue;
+                }
+
+                _log.LogInformation("Transfer endpoint probe succeeded: {Ip}", candidate);
+                Console.Error.WriteLine($"[HTTP] Transfer endpoint OK: {candidate}");
+                return candidate;
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                Console.Error.WriteLine($"[HTTP] {candidate}: {ex.GetType().Name}: {ex.Message}");
+                _log.LogDebug(ex, "Transfer endpoint probe failed for {Ip}", candidate);
+            }
+        }
+
+        return null;
+    }
+
     /// <summary>
     /// Probe known candidate IPs for the glasses HTTP server (iOS fallback).
     /// </summary>
@@ -1090,8 +1379,9 @@ internal sealed class WindowsHeyCyanGlassesSession : IHeyCyanGlassesSession
         // Disconnect WiFi Direct first (tears down P2P group)
         _wifiDirectManager?.Disconnect();
 
-        // Leave glasses WiFi hotspot if connected (restores previous network)
-        _wifiManager?.Leave();
+        // Leave glasses WiFi and reconnect to home network
+        if (_wifiManager is not null)
+            await _wifiManager.LeaveAndReconnectAsync(ct).ConfigureAwait(false);
 
         await SendCommandAsync(HeyCyanCommands.ExitTransferMode(), ct).ConfigureAwait(false);
         State = HeyCyanState.Connected;
@@ -1309,6 +1599,10 @@ internal sealed class WindowsHeyCyanGlassesSession : IHeyCyanGlassesSession
 
     private async Task CleanupDeviceAsync()
     {
+        _classicAudioSetupCts?.Cancel();
+        _classicAudioSetupCts?.Dispose();
+        _classicAudioSetupCts = null;
+
         if (_rxCharacteristic is not null)
         {
             _rxCharacteristic.ValueChanged -= OnCharacteristicValueChanged;
