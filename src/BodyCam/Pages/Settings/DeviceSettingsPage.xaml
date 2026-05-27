@@ -2,7 +2,6 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:BodyCam.ViewModels.Settings"
-             xmlns:m="clr-namespace:BodyCam.Models"
              x:Class="BodyCam.Pages.Settings.DeviceSettingsPage"
              x:DataType="vm:DeviceViewModel"
              Shell.TabBarIsVisible="False"
@@ -13,104 +12,107 @@
 
             <!-- Auto-switch notification -->
             <Frame Padding="8" CornerRadius="8"
-                   BackgroundColor="{AppThemeBinding Light=#E3F2FD, Dark=#1A237E}"
+                   BackgroundColor="{AppThemeBinding Light={StaticResource InfoSurface}, Dark={StaticResource InfoSurfaceDark}}"
                    IsVisible="{Binding HasAutoSwitchMessage}"
                    AutomationId="AutoSwitchNotification">
                 <Label Text="{Binding AutoSwitchMessage}"
                        FontSize="12" FontAttributes="Italic"
-                       TextColor="{AppThemeBinding Light=#1565C0, Dark=#90CAF9}" />
+                       TextColor="{AppThemeBinding Light={StaticResource InfoText}, Dark={StaticResource InfoTextDark}}" />
             </Frame>
 
             <!-- Connect Device button -->
             <Button Text="+ Connect Device"
-                    Command="{Binding ConnectGlassesCommand}"
+                    Command="{Binding ConnectDeviceCommand}"
                     Style="{StaticResource SettingsOutlineButton}"
                     AutomationId="ConnectDeviceButton" />
 
             <!-- Connected Devices -->
             <Label Text="CONNECTED DEVICES" Style="{StaticResource SettingsSectionHeader}"
-                   SemanticProperties.HeadingLevel="Level1"
-                   IsVisible="{Binding HasConnectedDevices}" />
+                   SemanticProperties.HeadingLevel="Level1" />
 
-            <!-- Glasses device (expandable) -->
-            <VerticalStackLayout IsVisible="{Binding IsGlassesConnected}"
-                                 Margin="0,0,0,8"
-                                 AutomationId="GlassesInfoPanel">
-
-                <!-- Header (tappable to expand) -->
-                <HorizontalStackLayout Spacing="8" Padding="4,8">
-                    <HorizontalStackLayout.GestureRecognizers>
-                        <TapGestureRecognizer Command="{Binding ToggleGlassesDetailCommand}" />
-                    </HorizontalStackLayout.GestureRecognizers>
-                    <Label VerticalOptions="Center" FontSize="12">
-                        <Label.Triggers>
-                            <DataTrigger TargetType="Label" Binding="{Binding IsGlassesDetailExpanded}" Value="True">
-                                <Setter Property="Text" Value="▼" />
-                            </DataTrigger>
-                            <DataTrigger TargetType="Label" Binding="{Binding IsGlassesDetailExpanded}" Value="False">
-                                <Setter Property="Text" Value="▶" />
-                            </DataTrigger>
-                        </Label.Triggers>
-                    </Label>
-                    <Label Text="🕶️" FontSize="16" VerticalOptions="Center" />
-                    <Label Text="{Binding GlassesName}"
-                           Style="{StaticResource SettingsDeviceHeader}"
-                           VerticalOptions="Center" />
-                    <Label Text="{Binding GlassesBatteryPct, StringFormat='🔋 {0}%'}"
-                           FontSize="12" VerticalOptions="Center" />
-                    <Label Text="⚡" FontSize="12"
-                           IsVisible="{Binding GlassesIsCharging}"
-                           VerticalOptions="Center" />
-                </HorizontalStackLayout>
-
-                <!-- Expandable detail -->
-                <VerticalStackLayout Spacing="6" Padding="28,0,0,0"
-                                     IsVisible="{Binding IsGlassesDetailExpanded}">
-
-                    <Grid ColumnDefinitions="90,*"
-                          RowDefinitions="Auto,Auto,Auto" RowSpacing="2">
-                        <Label Grid.Row="0" Grid.Column="0" Text="MAC" Style="{StaticResource SettingsDetailLabel}" />
-                        <Label Grid.Row="0" Grid.Column="1" Text="{Binding GlassesMac}" Style="{StaticResource SettingsDetailValue}" />
-                        <Label Grid.Row="1" Grid.Column="0" Text="Firmware" Style="{StaticResource SettingsDetailLabel}" />
-                        <Label Grid.Row="1" Grid.Column="1" Text="{Binding GlassesFirmware}" Style="{StaticResource SettingsDetailValue}" />
-                        <Label Grid.Row="2" Grid.Column="0" Text="Hardware" Style="{StaticResource SettingsDetailLabel}" />
-                        <Label Grid.Row="2" Grid.Column="1" Text="{Binding GlassesHardware}" Style="{StaticResource SettingsDetailValue}" />
-                    </Grid>
-
-                    <HorizontalStackLayout Spacing="12">
-                        <Label Text="{Binding GlassesPhotos,     StringFormat='📷 {0}'}" FontSize="12" />
-                        <Label Text="{Binding GlassesVideos,     StringFormat='🎬 {0}'}" FontSize="12" />
-                        <Label Text="{Binding GlassesAudioFiles, StringFormat='🎙️ {0}'}" FontSize="12" />
-                    </HorizontalStackLayout>
-
-                    <HorizontalStackLayout Spacing="10" Margin="0,6,0,0">
-                        <Button Text="Disconnect"
-                                Command="{Binding DisconnectGlassesCommand}"
-                                Style="{StaticResource SettingsDangerButton}" />
-                        <Button Text="Remove"
-                                Command="{Binding RemoveGlassesCommand}"
-                                Style="{StaticResource SettingsOutlineButton}" />
-                    </HorizontalStackLayout>
-                </VerticalStackLayout>
-            </VerticalStackLayout>
-
-            <!-- Other connected devices (BT audio etc.) -->
             <CollectionView ItemsSource="{Binding ConnectedDevices}"
-                            IsVisible="{Binding HasConnectedDevices}"
-                            AutomationId="ConnectedDevicesPanel">
+                            AutomationId="ConnectedDevicesList"
+                            SelectionMode="None">
+                <CollectionView.EmptyView>
+                    <Frame Padding="10" CornerRadius="8"
+                           BackgroundColor="{AppThemeBinding Light={StaticResource CardSurface}, Dark={StaticResource CardSurfaceDark}}"
+                           BorderColor="{AppThemeBinding Light={StaticResource BorderDefault}, Dark={StaticResource BorderDefaultDark}}"
+                           AutomationId="ConnectedDevicesEmptyState">
+                        <Label Text="No external devices connected. Phone/Laptop defaults are still available."
+                               AutomationId="ConnectedDevicesEmptyStateLabel"
+                               Style="{StaticResource SettingsStatusText}" />
+                    </Frame>
+                </CollectionView.EmptyView>
                 <CollectionView.ItemTemplate>
-                    <DataTemplate x:DataType="m:ConnectedDeviceInfo">
-                        <HorizontalStackLayout Spacing="8" Padding="4,6">
-                            <Label Text="{Binding DisplayName}"
-                                   Style="{StaticResource SettingsDeviceHeader}"
-                                   VerticalOptions="Center" />
-                            <Label Text="{Binding BatteryPct, StringFormat='🔋 {0}%'}"
-                                   IsVisible="{Binding BatteryPct, Converter={StaticResource IsNotNullConverter}}"
-                                   FontSize="12" VerticalOptions="Center" />
-                            <Label Text="⚡" FontSize="12"
-                                   IsVisible="{Binding IsCharging}"
-                                   VerticalOptions="Center" />
-                        </HorizontalStackLayout>
+                    <DataTemplate x:DataType="vm:ConnectedDeviceCardViewModel">
+                        <Frame Padding="10" Margin="0,0,0,8" CornerRadius="8"
+                               BackgroundColor="{AppThemeBinding Light={StaticResource CardSurface}, Dark={StaticResource CardSurfaceDark}}"
+                               BorderColor="{AppThemeBinding Light={StaticResource BorderDefault}, Dark={StaticResource BorderDefaultDark}}"
+                               AutomationId="ConnectedDeviceCard">
+                            <VerticalStackLayout Spacing="6">
+                                <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto" ColumnSpacing="8">
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding ToggleExpandedCommand}" />
+                                    </Grid.GestureRecognizers>
+                                    <Label Grid.Column="0" Text="{Binding ExpandGlyph}" FontSize="12" VerticalOptions="Center" />
+                                    <Label Grid.Column="1" Text="{Binding Icon}" FontSize="12" VerticalOptions="Center" />
+                                    <Label Grid.Column="2" Text="{Binding DisplayName}"
+                                           AutomationId="ConnectedDeviceCardTitle"
+                                           Style="{StaticResource SettingsDeviceHeader}"
+                                           VerticalOptions="Center" />
+                                    <Label Grid.Column="3" Text="{Binding BatteryText}"
+                                           IsVisible="{Binding HasBattery}"
+                                           Style="{StaticResource SettingsStatusText}"
+                                           VerticalOptions="Center" />
+                                    <Label Grid.Column="4" Text="{Binding ChargingText}"
+                                           IsVisible="{Binding IsCharging}"
+                                           Style="{StaticResource SettingsStatusText}"
+                                           VerticalOptions="Center" />
+                                </Grid>
+
+                                <Label Text="{Binding Summary}"
+                                       IsVisible="{Binding HasSummary}"
+                                       Style="{StaticResource SettingsStatusText}" />
+
+                                <VerticalStackLayout Spacing="6"
+                                                     Padding="28,0,0,0"
+                                                     IsVisible="{Binding IsExpanded}">
+                                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding DetailRows}"
+                                                         IsVisible="{Binding HasDetails}"
+                                                         Spacing="2">
+                                        <BindableLayout.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:ConnectedDeviceDetailRow">
+                                                <Grid ColumnDefinitions="90,*" ColumnSpacing="8">
+                                                    <Label Grid.Column="0"
+                                                           Text="{Binding Label}"
+                                                           Style="{StaticResource SettingsDetailLabel}" />
+                                                    <Label Grid.Column="1"
+                                                           Text="{Binding Value}"
+                                                           Style="{StaticResource SettingsDetailValue}" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </BindableLayout.ItemTemplate>
+                                    </VerticalStackLayout>
+
+                                    <Label Text="{Binding SlotSummary}"
+                                           IsVisible="{Binding HasSlotTags}"
+                                           Style="{StaticResource SettingsStatusText}" />
+
+                                    <HorizontalStackLayout Spacing="10"
+                                                           Margin="0,4,0,0"
+                                                           IsVisible="{Binding HasActions}">
+                                        <Button Text="Disconnect"
+                                                Command="{Binding DisconnectCommand}"
+                                                IsVisible="{Binding CanDisconnect}"
+                                                Style="{StaticResource SettingsDangerButton}" />
+                                        <Button Text="Remove"
+                                                Command="{Binding RemoveCommand}"
+                                                IsVisible="{Binding CanRemove}"
+                                                Style="{StaticResource SettingsOutlineButton}" />
+                                    </HorizontalStackLayout>
+                                </VerticalStackLayout>
+                            </VerticalStackLayout>
+                        </Frame>
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
             </CollectionView>

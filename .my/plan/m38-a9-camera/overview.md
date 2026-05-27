@@ -100,7 +100,7 @@ Services/Camera/A9/
 | `ISettingsService` | Add `A9CameraIp`, `A9CameraUid`, `A9CameraUsername`, `A9CameraPassword` |
 | `SettingsService`  | Back new properties with `Preferences`               |
 | `ServiceExtensions`| Register `A9CameraProvider` as `ICameraProvider`     |
-| Settings UI        | Add A9 camera configuration section (future: M37)    |
+| Settings UI        | Add A9 through Settings > Devices > AddDevices, then show it in the unified Connected Devices list |
 
 ### Key Design Decisions
 
@@ -143,6 +143,13 @@ Services/Camera/A9/
 
 ## Phases
 
+Detailed phase docs:
+
+- [Phase 1 - Protocol & Provider](./phase-1-protocol-provider.md)
+- [Phase 2 - Testing & Validation](./phase-2-testing-validation.md)
+- [Phase 3 - Settings UI](./phase-3-settings-ui.md)
+- [Phase 4 - Enhancements](./phase-4-enhancements.md)
+
 ### Phase 1 — Protocol & Provider (current)
 
 - [x] `A9Protocol.cs` — packet builders, parsers, cipher
@@ -162,10 +169,54 @@ Services/Camera/A9/
 
 ### Phase 3 — Settings UI
 
-- [ ] Add A9 camera section to DeviceSettingsPage (or integrate with M37
-      source profiles as an "A9 Camera" profile)
-- [ ] IP address entry, optional UID, username/password fields
-- [ ] Connection test button
+Settings now uses the M37 flow:
+
+1. Settings > Devices has one **+ Connect Device** entry point.
+2. **+ Connect Device** opens `AddDevicesPage`.
+3. `AddDevicesPage` lists addable device cards. It currently starts with
+   **Add Cyan Glasses**.
+4. Connected hardware renders in one unified **Connected Devices** card list on
+   `DeviceSettingsPage`; device-specific configuration should not become a
+   separate inline section there.
+
+For A9, phase 3 should plug into that flow instead of adding a standalone
+`DeviceSettingsPage` section.
+
+```markui
+# Add Devices
+
+v------------------------------------------------------v
+| #camera Add A9 Camera                                |
+| Connect an A9/X5 IP camera over iLnkP2P/PPPP.        |
+v------------------------------------------------------v
+```
+
+- [ ] Add **Add A9 Camera** as a second card option on `AddDevicesPage`.
+- [ ] Add `AddA9CameraCommand` on `AddDevicesViewModel`, routed to a new A9
+      setup page.
+- [ ] Add an A9 setup page/view model for `A9CameraIp`, optional
+      `A9CameraUid`, `A9CameraUsername`, and `A9CameraPassword`.
+- [ ] Default username/password to `admin` / `admin` when blank, matching the
+      provider behavior.
+- [ ] Add Save and Test Connection actions. Test should validate the settings by
+      starting the `A9CameraProvider` or a short-lived `A9Session`, then report
+      success/failure in-page.
+- [ ] After a successful save/test, return to Settings > Devices or leave the
+      user on the A9 setup page with a clear connected/ready status.
+- [ ] Show A9 in the unified **Connected Devices** list as a camera card when the
+      `a9-camera` provider is configured and streaming/available.
+- [ ] Do not add a separate A9 block to `DeviceSettingsPage`; keep that page to
+      connected-device cards, Source, Camera/Microphone/Speaker controls, and
+      Button Mappings.
+- [ ] Ensure `A9 Camera` can be selected from the Custom **Camera Source** picker
+      once configured.
+- [ ] Decide whether to add an `A9 Camera` source profile. If added, it should be
+      camera-only and preserve the current microphone/speaker choices.
+- [ ] Add stable automation IDs for the AddDevices card, A9 setup fields,
+      Save/Test buttons, status label, and connected-device card.
+- [ ] Unit tests cover A9 settings persistence and test-connection outcomes.
+- [ ] UI tests cover Settings > Devices > AddDevices > Add A9 Camera navigation
+      and the A9 setup fields.
 
 ### Phase 4 — Enhancements (optional)
 

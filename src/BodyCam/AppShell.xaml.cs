@@ -15,6 +15,7 @@ public partial class AppShell : Shell
 		Routing.RegisterRoute(nameof(Pages.Settings.ConnectionSettingsPage), typeof(Pages.Settings.ConnectionSettingsPage));
 		Routing.RegisterRoute(nameof(Pages.Settings.VoiceSettingsPage), typeof(Pages.Settings.VoiceSettingsPage));
 		Routing.RegisterRoute(nameof(Pages.Settings.DeviceSettingsPage), typeof(Pages.Settings.DeviceSettingsPage));
+		Routing.RegisterRoute(nameof(Pages.Settings.AddDevicesPage), typeof(Pages.Settings.AddDevicesPage));
 		Routing.RegisterRoute(nameof(Pages.Settings.AdvancedSettingsPage), typeof(Pages.Settings.AdvancedSettingsPage));
 
 		var buildNumber = typeof(AppShell).Assembly

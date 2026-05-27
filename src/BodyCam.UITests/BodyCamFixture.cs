@@ -12,6 +12,7 @@ public class BodyCamFixture : MauiTestFixtureBase
     private readonly ConnectionSettingsPage _connectionSettingsPage;
     private readonly VoiceSettingsPage _voiceSettingsPage;
     private readonly DeviceSettingsPage _deviceSettingsPage;
+    private readonly AddDevicesPage _addDevicesPage;
     private readonly AdvancedSettingsPage _advancedSettingsPage;
 
     public BodyCamFixture()
@@ -22,6 +23,7 @@ public class BodyCamFixture : MauiTestFixtureBase
         _connectionSettingsPage = new ConnectionSettingsPage(Context);
         _voiceSettingsPage = new VoiceSettingsPage(Context);
         _deviceSettingsPage = new DeviceSettingsPage(Context);
+        _addDevicesPage = new AddDevicesPage(Context);
         _advancedSettingsPage = new AdvancedSettingsPage(Context);
         DismissSetupIfShown();
     }
@@ -32,6 +34,7 @@ public class BodyCamFixture : MauiTestFixtureBase
     public ConnectionSettingsPage ConnectionSettingsPage => _connectionSettingsPage;
     public VoiceSettingsPage VoiceSettingsPage => _voiceSettingsPage;
     public DeviceSettingsPage DeviceSettingsPage => _deviceSettingsPage;
+    public AddDevicesPage AddDevicesPage => _addDevicesPage;
     public AdvancedSettingsPage AdvancedSettingsPage => _advancedSettingsPage;
 
     protected override string GetDefaultAppPath(string platform)

@@ -44,7 +44,7 @@
                         <Label Text="🎙" IsVisible="{Binding IsAudio}" FontSize="32"
                                HorizontalOptions="Center" VerticalOptions="Center"/>
                         <Label Text="{Binding Duration}" FontSize="10"
-                               BackgroundColor="#80000000" TextColor="White"
+                               BackgroundColor="{StaticResource Overlay}" TextColor="White"
                                HorizontalOptions="Start" VerticalOptions="End"
                                Padding="4,1"
                                IsVisible="{Binding Duration, Converter={StaticResource IsNotNullConverter}}"/>

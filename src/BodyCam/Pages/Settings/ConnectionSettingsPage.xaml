@@ -11,14 +11,14 @@
         <VerticalStackLayout Padding="16" Spacing="12" MaximumWidthRequest="500">
 
             <!-- Test Connection (top) -->
-            <Frame BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#1E1E1E}"
+            <Frame BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}"
                    CornerRadius="8" Padding="12" BorderColor="Transparent" HasShadow="False">
                 <VerticalStackLayout Spacing="8">
                     <Button AutomationId="TestConnectionButton"
                             Text="Test Connection"
                             Command="{Binding TestConnectionCommand}"
                             IsEnabled="{Binding IsTesting, Converter={StaticResource InvertBoolConverter}}"
-                            BackgroundColor="{AppThemeBinding Light=#512BD4, Dark=#7C4DFF}"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryAlt}}"
                             TextColor="White"
                             HorizontalOptions="Fill"
                             SemanticProperties.Description="Test connection"
@@ -61,20 +61,20 @@
                         Text="{Binding KeyToggleText}"
                         Command="{Binding ToggleKeyVisibilityCommand}"
                         Padding="8,4" Margin="0,0,8,4"
-                        BackgroundColor="{AppThemeBinding Light=#E0E0E0, Dark=#333}"
-                        TextColor="{AppThemeBinding Light=#333, Dark=#E0E0E0}"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource ButtonMuted}, Dark={StaticResource ButtonMutedDark}}"
+                        TextColor="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource TextPrimaryDark}}"
                         SemanticProperties.Description="Toggle key visibility" />
                 <Button AutomationId="ChangeApiKeyButton"
                         Text="Change" Command="{Binding ChangeApiKeyCommand}"
                         Padding="8,4" Margin="0,0,8,4"
-                        BackgroundColor="{AppThemeBinding Light=#512BD4, Dark=#7C4DFF}"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryAlt}}"
                         TextColor="White"
                         SemanticProperties.Description="Change API key" />
                 <Button AutomationId="ClearApiKeyButton"
                         Text="Clear" Command="{Binding ClearApiKeyCommand}"
                         Padding="8,4" Margin="0,0,0,4"
-                        BackgroundColor="{AppThemeBinding Light=#E0E0E0, Dark=#333}"
-                        TextColor="{AppThemeBinding Light=#333, Dark=#E0E0E0}"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource ButtonMuted}, Dark={StaticResource ButtonMutedDark}}"
+                        TextColor="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource TextPrimaryDark}}"
                         SemanticProperties.Description="Clear API key" />
             </FlexLayout>
 

@@ -1,0 +1,50 @@
+wireframe clean
+    %title: BodyCam — Main Page
+
+    // === Row 0: Status Bar ===
+    Panel padding=12
+        Horizontal justify=between
+            // Segmented state control
+            Horizontal gap=0
+                Button "Off" :btnOff
+                Button "On" :btnOn primary
+                Button "Listening" :btnListening
+            /Horizontal
+            Label "**On**" :lblState
+            Spacer
+            IconButton $delete "Clear" :btnClear
+        /Horizontal
+    /Panel
+
+    // === Row 1: Content Area — Transcript Tab ===
+    Card padding=8
+        Vertical gap=4
+            Label "*[Agent]* Analyzing the scene..." :transcriptEntry1
+            Label "*[User]* What do you see?" :transcriptEntry2
+            Label "*[Agent]* I can see a parking lot with several vehicles."
+            Image "snapshot.png" h=200
+            Label "*A snapshot from the glasses camera*"
+            Horizontal gap=8
+                Button "Save" :btnSaveAction
+                Button "Share" :btnShareAction
+            /Horizontal
+        /Vertical
+    /Card
+
+    // === Row 2: Tab Selector ===
+    Horizontal gap=0
+        Button "📝 Transcript" :btnTranscriptTab primary
+        Button "📷 Camera" :btnCameraTab
+    /Horizontal
+
+    // === Row 3: Quick Actions (2×3 grid) ===
+    Grid columns=3 gap=8 padding=12
+        Button "👁 Look" :btnLook
+        Button "📖 Read" :btnRead
+        Button "🔍 Find" :btnFind
+        Button "💬 Ask" :btnAsk
+        Button "📸 Photo" :btnPhoto
+        Button "📷 Scan" :btnScan
+    /Grid
+
+/wireframe

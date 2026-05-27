@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:BodyCam.ViewModels.Settings"
+             x:Class="BodyCam.Pages.Settings.AddDevicesPage"
+             x:DataType="vm:AddDevicesViewModel"
+             AutomationId="AddDevicesPage"
+             Shell.TabBarIsVisible="False"
+             Title="Add Devices">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="10" MaximumWidthRequest="500">
+
+            <CollectionView ItemsSource="{Binding DeviceOptions}"
+                            AutomationId="AddDevicesList"
+                            SelectionMode="None">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="vm:AddDeviceOptionViewModel">
+                        <Grid HeightRequest="88" Margin="0,0,0,8">
+                            <Frame Padding="12" CornerRadius="8"
+                                   BackgroundColor="{AppThemeBinding Light={StaticResource CardSurface}, Dark={StaticResource CardSurfaceDark}}"
+                                   BorderColor="{AppThemeBinding Light={StaticResource BorderDefault}, Dark={StaticResource BorderDefaultDark}}"
+                                   AutomationId="AddDeviceOptionCard">
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                                    <Label Text="{Binding Icon}"
+                                           FontSize="18"
+                                           VerticalOptions="Center"
+                                           HorizontalOptions="Center" />
+                                    <VerticalStackLayout Grid.Column="1" Spacing="3" VerticalOptions="Center">
+                                        <Label Text="{Binding Title}"
+                                               FontSize="15"
+                                               FontAttributes="Bold"
+                                               TextColor="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource TextPrimaryDark}}" />
+                                        <Label Text="{Binding Description}"
+                                               Style="{StaticResource SettingsStatusText}"
+                                               LineBreakMode="WordWrap" />
+                                    </VerticalStackLayout>
+                                </Grid>
+                            </Frame>
+
+                            <Button AutomationId="AddCyanGlassesButton"
+                                    Command="{Binding Command}"
+                                    BackgroundColor="Transparent"
+                                    Opacity="0.01" />
+                        </Grid>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

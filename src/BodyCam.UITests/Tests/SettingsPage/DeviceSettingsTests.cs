@@ -19,6 +19,24 @@ public class DeviceSettingsTests
     }
 
     [Fact]
+    public void ConnectDeviceButton_Exists()
+    {
+        Page.ConnectDeviceButton.AssertExists();
+    }
+
+    [Fact]
+    public void ConnectedDevicesList_Exists()
+    {
+        Page.ConnectedDevicesList.AssertExists();
+    }
+
+    [Fact]
+    public void ConnectedDeviceCardTitle_Exists()
+    {
+        Page.ConnectedDeviceCardTitle.AssertExists();
+    }
+
+    [Fact]
     public void SourceProfilePicker_Exists()
     {
         Page.SourceProfilePicker.AssertExists();

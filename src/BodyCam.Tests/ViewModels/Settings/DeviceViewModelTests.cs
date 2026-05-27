@@ -2,6 +2,7 @@ using BodyCam.Services;
 using BodyCam.Services.Audio;
 using BodyCam.Services.Camera;
 using BodyCam.Services.Glasses.HeyCyan;
+using BodyCam.Services.Input;
 using BodyCam.Tests.Services.Glasses.HeyCyan.Fakes;
 using BodyCam.ViewModels.Settings;
 using FluentAssertions;
@@ -15,16 +16,32 @@ public class DeviceViewModelTests
     private readonly ISettingsService _settings = Substitute.For<ISettingsService>();
 
     private DeviceViewModel CreateVm(
+        IEnumerable<ICameraProvider>? cameraProviders = null,
         IEnumerable<IAudioInputProvider>? inputProviders = null,
         IEnumerable<IAudioOutputProvider>? outputProviders = null,
-        SourceProfileManager? profileManager = null)
+        IEnumerable<IButtonInputProvider>? buttonProviders = null,
+        bool connectGlasses = false,
+        SourceProfileManager? profileManager = null,
+        Func<string, Task>? navigateAsync = null)
     {
         var selector = new DefaultCameraSelector();
-        var camMgr = new CameraManager([], _settings, selector, NullLogger<CameraManager>.Instance, null);
+        var camMgr = new CameraManager(cameraProviders ?? [], _settings, selector, NullLogger<CameraManager>.Instance, null);
         var audioIn = new AudioInputManager(inputProviders ?? [], _settings, NullLogger<AudioInputManager>.Instance);
         var audioOut = new AudioOutputManager(outputProviders ?? [], _settings, new AppSettings(), NullLogger<AudioOutputManager>.Instance);
         var glassesCameraSection = new GlassesCameraSectionViewModel(null, null, NullLogger<GlassesCameraSectionViewModel>.Instance);
         var glasses = CreateGlassesManager();
+        if (connectGlasses)
+        {
+            glasses.ConnectAsync(
+                new HeyCyanDeviceInfo("HeyCyan Glasses", "AA:BB:CC:DD:EE:FF", -42),
+                CancellationToken.None).GetAwaiter().GetResult();
+        }
+
+        var buttons = buttonProviders is null
+            ? null
+            : new ButtonInputManager(buttonProviders, new ActionMap(), NullLogger<ButtonInputManager>.Instance);
+        var buttonStore = buttonProviders is null ? null : Substitute.For<IButtonMappingStore>();
+
         return new DeviceViewModel(
             camMgr,
             audioIn,
@@ -34,7 +51,10 @@ public class DeviceViewModelTests
             _settings,
             new AppSettings(),
             new NullHeyCyanAudioEndpointActivationService(),
-            profileManager: profileManager);
+            buttonInputManager: buttons,
+            buttonMappingStore: buttonStore,
+            profileManager: profileManager,
+            navigateAsync: navigateAsync);
     }
 
     private static HeyCyanGlassesDeviceManager CreateGlassesManager()
@@ -105,6 +125,21 @@ public class DeviceViewModelTests
     {
         var vm = CreateVm();
         vm.Title.Should().Be("Devices");
+    }
+
+    [Fact]
+    public async Task OpenAddDevicesAsync_NavigatesToAddDevicesPage()
+    {
+        var routes = new List<string>();
+        var vm = CreateVm(navigateAsync: route =>
+        {
+            routes.Add(route);
+            return Task.CompletedTask;
+        });
+
+        await vm.OpenAddDevicesAsync();
+
+        routes.Should().Equal(DeviceViewModel.AddDevicesRoute);
     }
 
     // ── Profile-related tests (Phase 3) ─────────────────────────────────
@@ -269,10 +304,86 @@ public class DeviceViewModelTests
 
         var vm = CreateVm(inputProviders: [btInput]);
 
-        // Trigger audio provider refresh
-        vm.ConnectedDevices.Should().BeEmpty(); // no refresh yet — initial state
+        vm.ConnectedDevices.Should().ContainSingle();
+        var device = vm.ConnectedDevices.Single();
+        device.DeviceType.Should().Be("audio");
+        device.DisplayName.Should().Be("BT Headset");
+        device.SlotTags.Should().ContainSingle("Microphone");
+    }
 
-        // Force refresh by simulating property refresh
-        // BT providers are discovered on audio provider changes
+    [Fact]
+    public void ConnectedDevices_WithConnectedGlasses_IncludesGlassesCard()
+    {
+        var vm = CreateVm(connectGlasses: true);
+
+        vm.ConnectedDevices.Should().ContainSingle(d => d.DeviceType == "heycyan-glasses");
+        var glasses = vm.ConnectedDevices.Single(d => d.DeviceType == "heycyan-glasses");
+        glasses.SlotTags.Should().Contain(["Camera", "Microphone", "Speaker", "Buttons"]);
+        glasses.DetailRows.Select(r => r.Label).Should().Contain(["MAC", "Firmware", "Hardware", "Media"]);
+    }
+
+    [Fact]
+    public void ConnectedDevices_WithButtonProvider_IncludesButtonCard()
+    {
+        var provider = CreateButtonProvider("bt-remote", "BT Remote",
+            new ButtonDescriptor("button-1", "Button 1",
+                [ButtonGesture.SingleTap, ButtonGesture.DoubleTap]));
+
+        var vm = CreateVm(buttonProviders: [provider]);
+
+        vm.ConnectedDevices.Should().ContainSingle(d => d.DeviceType == "button-device");
+        var device = vm.ConnectedDevices.Single(d => d.DeviceType == "button-device");
+        device.Summary.Should().Be("Button device - 1 button");
+        device.SlotTags.Should().ContainSingle("Buttons");
+    }
+
+    [Fact]
+    public void ConnectedDevices_WithExternalCamera_IncludesCameraCard()
+    {
+        var camera = CreateCameraProvider("usb-camera", "USB Camera", isAvailable: true);
+
+        var vm = CreateVm(cameraProviders: [camera]);
+
+        vm.ConnectedDevices.Should().ContainSingle(d => d.DeviceType == "camera");
+        var device = vm.ConnectedDevices.Single(d => d.DeviceType == "camera");
+        device.DisplayName.Should().Be("USB Camera");
+        device.SlotTags.Should().ContainSingle("Camera");
+    }
+
+    [Fact]
+    public void ConnectedDevices_WithPhoneCamera_DoesNotShowBuiltInCameraCard()
+    {
+        var camera = CreateCameraProvider("phone", "Phone Camera", isAvailable: true);
+
+        var vm = CreateVm(cameraProviders: [camera]);
+
+        vm.ConnectedDevices.Should().BeEmpty();
+        vm.HasNoConnectedDevices.Should().BeTrue();
+    }
+
+    private static ICameraProvider CreateCameraProvider(
+        string providerId,
+        string displayName,
+        bool isAvailable)
+    {
+        var provider = Substitute.For<ICameraProvider>();
+        provider.ProviderId.Returns(providerId);
+        provider.DisplayName.Returns(displayName);
+        provider.IsAvailable.Returns(isAvailable);
+        provider.SupportsVideoRecording.Returns(true);
+        return provider;
+    }
+
+    private static IButtonInputProvider CreateButtonProvider(
+        string providerId,
+        string displayName,
+        params ButtonDescriptor[] buttons)
+    {
+        var provider = Substitute.For<IButtonInputProvider>();
+        provider.ProviderId.Returns(providerId);
+        provider.DisplayName.Returns(displayName);
+        provider.IsAvailable.Returns(true);
+        provider.Buttons.Returns(buttons.ToList().AsReadOnly());
+        return provider;
     }
 }

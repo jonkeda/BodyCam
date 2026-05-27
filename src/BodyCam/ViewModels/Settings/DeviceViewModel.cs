@@ -13,6 +13,8 @@ namespace BodyCam.ViewModels.Settings;
 
 public class DeviceViewModel : ViewModelBase, IDisposable
 {
+    public const string AddDevicesRoute = "AddDevicesPage";
+
     private readonly CameraManager _cameraManager;
     private readonly AudioInputManager _audioInputManager;
     private readonly AudioOutputManager _audioOutputManager;
@@ -22,6 +24,9 @@ public class DeviceViewModel : ViewModelBase, IDisposable
     private readonly IHeyCyanAudioEndpointActivationService _audioEndpointActivation;
     private readonly SourceProfileManager? _profileManager;
     private readonly KnownDeviceService? _knownDeviceService;
+    private readonly ButtonInputManager? _buttonInputManager;
+    private readonly Func<string, Task> _navigateAsync;
+    private readonly HashSet<string> _expandedConnectedDeviceIds = new(StringComparer.OrdinalIgnoreCase);
 
     public DeviceViewModel(
         CameraManager cameraManager,
@@ -35,7 +40,8 @@ public class DeviceViewModel : ViewModelBase, IDisposable
         ButtonInputManager? buttonInputManager = null,
         IButtonMappingStore? buttonMappingStore = null,
         SourceProfileManager? profileManager = null,
-        KnownDeviceService? knownDeviceService = null)
+        KnownDeviceService? knownDeviceService = null,
+        Func<string, Task>? navigateAsync = null)
     {
         _cameraManager = cameraManager;
         _audioInputManager = audioInputManager;
@@ -46,6 +52,8 @@ public class DeviceViewModel : ViewModelBase, IDisposable
         _audioEndpointActivation = audioEndpointActivation;
         _profileManager = profileManager;
         _knownDeviceService = knownDeviceService;
+        _buttonInputManager = buttonInputManager;
+        _navigateAsync = navigateAsync ?? (route => Shell.Current.GoToAsync(route));
         GlassesCameraSection = glassesCameraSection;
         Title = "Devices";
 
@@ -58,8 +66,8 @@ public class DeviceViewModel : ViewModelBase, IDisposable
                 .ToList();
         }
 
-        ConnectGlassesCommand = new AsyncRelayCommand(async () =>
-            await Shell.Current.GoToAsync("glasses"));
+        ConnectDeviceCommand = new AsyncRelayCommand(OpenAddDevicesAsync);
+        ConnectGlassesCommand = ConnectDeviceCommand;
         DisconnectGlassesCommand = new AsyncRelayCommand(
             () => _glasses.DisconnectAsync(CancellationToken.None),
             () => IsGlassesConnected);
@@ -108,11 +116,14 @@ public class DeviceViewModel : ViewModelBase, IDisposable
             _profileManager.ProfileChanged += OnProfileChanged;
             _profileManager.AutoSwitched += OnProfileAutoSwitched;
         }
+
+        RefreshConnectedDevices();
     }
 
     // ── Commands ────────────────────────────────────────────────────────────
 
     public AsyncRelayCommand ConnectGlassesCommand { get; }
+    public AsyncRelayCommand ConnectDeviceCommand { get; }
     public AsyncRelayCommand DisconnectGlassesCommand { get; }
     public AsyncRelayCommand RemoveGlassesCommand { get; }
     public AsyncRelayCommand TakePictureCommand { get; }
@@ -121,6 +132,8 @@ public class DeviceViewModel : ViewModelBase, IDisposable
     public AsyncRelayCommand RetryHeyCyanAudioCommand { get; }
     public AsyncRelayCommand RefreshHeyCyanAudioStatusCommand { get; }
     public RelayCommand ToggleGlassesDetailCommand { get; }
+
+    public Task OpenAddDevicesAsync() => _navigateAsync(AddDevicesRoute);
 
     // ── Glasses info ────────────────────────────────────────────────────────
 
@@ -145,71 +158,259 @@ public class DeviceViewModel : ViewModelBase, IDisposable
 
     // ── Connected Devices ───────────────────────────────────────────────────
 
-    private IReadOnlyList<ConnectedDeviceInfo> _connectedDevices = [];
-    public IReadOnlyList<ConnectedDeviceInfo> ConnectedDevices
+    private IReadOnlyList<ConnectedDeviceCardViewModel> _connectedDevices = [];
+    public IReadOnlyList<ConnectedDeviceCardViewModel> ConnectedDevices
     {
         get => _connectedDevices;
         private set => SetProperty(ref _connectedDevices, value);
     }
 
-    /// <summary>True when at least one device is connected (glasses or other).</summary>
-    public bool HasConnectedDevices => IsGlassesConnected || ConnectedDevices.Count > 0;
+    /// <summary>True when at least one connected device card is available.</summary>
+    public bool HasConnectedDevices => ConnectedDevices.Count > 0;
+
+    /// <summary>True when the connected-devices list should show its empty state.</summary>
+    public bool HasNoConnectedDevices => !HasConnectedDevices;
 
     private void RefreshConnectedDevices()
     {
-        var devices = new List<ConnectedDeviceInfo>();
+        var devices = new List<ConnectedDeviceCardViewModel>();
 
-        // Register glasses as known device (but don't add to the list — rendered separately)
         if (_glasses.State == GlassesConnectionState.Connected)
         {
             var mac = _glasses.MacAddress ?? "unknown";
 
-            // Register as known device
             _knownDeviceService?.AddOrUpdate(mac, _settingsService.LastHeyCyanDeviceName ?? "HeyCyan Glasses",
                 "heycyan-glasses", new Dictionary<string, string>
                 {
                     ["firmware"] = _glasses.Version?.Firmware ?? "",
                     ["hardware"] = _glasses.Version?.Hardware ?? "",
                 });
+
+            devices.Add(CreateGlassesDeviceCard());
         }
 
-        // BT audio devices (from providers with "bt:" prefix)
-        foreach (var p in _audioInputManager.Providers.Where(
-            p => p.ProviderId.StartsWith("bt:", StringComparison.OrdinalIgnoreCase) && p.IsAvailable))
-        {
-            var mac = p.ProviderId[3..];
-            if (devices.Any(d => string.Equals(d.DeviceId, mac, StringComparison.OrdinalIgnoreCase)))
-                continue;
-
-            devices.Add(new ConnectedDeviceInfo
-            {
-                DeviceId = mac,
-                DisplayName = p.DisplayName,
-                DeviceType = "bluetooth-audio",
-                StatusLine = $"Bluetooth Audio  MAC: {mac}",
-                CanDisconnect = false,
-            });
-        }
-
-        foreach (var p in _audioOutputManager.Providers.Where(
-            p => p.ProviderId.StartsWith("bt:", StringComparison.OrdinalIgnoreCase) && p.IsAvailable))
-        {
-            var mac = p.ProviderId[3..];
-            if (devices.Any(d => string.Equals(d.DeviceId, mac, StringComparison.OrdinalIgnoreCase)))
-                continue;
-
-            devices.Add(new ConnectedDeviceInfo
-            {
-                DeviceId = mac,
-                DisplayName = p.DisplayName,
-                DeviceType = "bluetooth-audio",
-                StatusLine = $"Bluetooth Audio  MAC: {mac}",
-                CanDisconnect = false,
-            });
-        }
+        AddAudioDeviceCards(devices);
+        AddButtonDeviceCards(devices);
+        AddCameraDeviceCards(devices);
 
         ConnectedDevices = devices;
         OnPropertyChanged(nameof(HasConnectedDevices));
+        OnPropertyChanged(nameof(HasNoConnectedDevices));
+    }
+
+    private ConnectedDeviceCardViewModel CreateGlassesDeviceCard()
+    {
+        var mac = GlassesMac;
+        var deviceId = $"glasses:{mac}";
+        return new ConnectedDeviceCardViewModel(
+            deviceId: deviceId,
+            displayName: _settingsService.LastHeyCyanDeviceName ?? "HeyCyan Glasses",
+            deviceType: "heycyan-glasses",
+            icon: "#glasses",
+            summary: "Camera + mic + speaker + buttons",
+            batteryPct: _glasses.Battery?.Percentage,
+            isCharging: _glasses.Battery?.IsCharging ?? false,
+            isExpanded: IsConnectedDeviceExpanded(deviceId),
+            detailRows:
+            [
+                new("MAC", mac),
+                new("Firmware", GlassesFirmware),
+                new("Hardware", GlassesHardware),
+                new("Media", $"{GlassesPhotos} photos, {GlassesVideos} videos, {GlassesAudioFiles} audio")
+            ],
+            slotTags: ["Camera", "Microphone", "Speaker", "Buttons"],
+            disconnectCommand: DisconnectGlassesCommand,
+            removeCommand: RemoveGlassesCommand,
+            expandedChanged: OnConnectedDeviceExpansionChanged);
+    }
+
+    private void AddAudioDeviceCards(List<ConnectedDeviceCardViewModel> devices)
+    {
+        var audioDevices = new Dictionary<string, AudioDeviceAccumulator>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var provider in _audioInputManager.Providers.Where(p => p.IsAvailable))
+            AddAudioProvider(audioDevices, provider.ProviderId, provider.DisplayName, isInput: true);
+
+        foreach (var provider in _audioOutputManager.Providers.Where(p => p.IsAvailable))
+            AddAudioProvider(audioDevices, provider.ProviderId, provider.DisplayName, isInput: false);
+
+        foreach (var audio in audioDevices.Values.OrderBy(d => d.DisplayName, StringComparer.OrdinalIgnoreCase))
+        {
+            var slotTags = new List<string>();
+            if (audio.HasInput) slotTags.Add("Microphone");
+            if (audio.HasOutput) slotTags.Add("Speaker");
+
+            var deviceId = $"audio:{audio.DeviceId}";
+            devices.Add(new ConnectedDeviceCardViewModel(
+                deviceId: deviceId,
+                displayName: audio.DisplayName,
+                deviceType: "audio",
+                icon: "#headphones",
+                summary: audio.GetSummary(),
+                detailRows:
+                [
+                    new("Type", "Bluetooth audio"),
+                    new("Providers", string.Join(", ", audio.ProviderIds.Distinct(StringComparer.OrdinalIgnoreCase)))
+                ],
+                slotTags: slotTags,
+                isExpanded: IsConnectedDeviceExpanded(deviceId),
+                expandedChanged: OnConnectedDeviceExpansionChanged));
+        }
+    }
+
+    private static void AddAudioProvider(
+        IDictionary<string, AudioDeviceAccumulator> audioDevices,
+        string providerId,
+        string displayName,
+        bool isInput)
+    {
+        if (!IsConnectedAudioProvider(providerId))
+            return;
+
+        var deviceId = NormalizeAudioDeviceId(providerId);
+        if (!audioDevices.TryGetValue(deviceId, out var audio))
+        {
+            audio = new AudioDeviceAccumulator(deviceId, displayName);
+            audioDevices[deviceId] = audio;
+        }
+
+        audio.ProviderIds.Add(providerId);
+        if (isInput) audio.HasInput = true;
+        else audio.HasOutput = true;
+    }
+
+    private void AddButtonDeviceCards(List<ConnectedDeviceCardViewModel> devices)
+    {
+        if (_buttonInputManager is null)
+            return;
+
+        foreach (var provider in _buttonInputManager.Providers
+                     .Where(p => p.IsAvailable && p.Buttons.Count > 0)
+                     .OrderBy(p => p.DisplayName, StringComparer.OrdinalIgnoreCase))
+        {
+            if (IsGlassesProvider(provider.ProviderId) && IsGlassesConnected)
+                continue;
+
+            var buttonCount = provider.Buttons.Count;
+            var gestures = provider.Buttons
+                .SelectMany(b => b.SupportedGestures)
+                .Distinct()
+                .Select(FormatGesture);
+
+            var deviceId = $"buttons:{provider.ProviderId}";
+            devices.Add(new ConnectedDeviceCardViewModel(
+                deviceId: deviceId,
+                displayName: provider.DisplayName,
+                deviceType: provider.ProviderId == "keyboard" ? "keyboard" : "button-device",
+                icon: provider.ProviderId == "keyboard" ? "#keyboard" : "#buttons",
+                summary: $"Button device - {buttonCount} {Pluralize(buttonCount, "button")}",
+                detailRows:
+                [
+                    new("Buttons", string.Join(", ", provider.Buttons.Select(b => b.DisplayName))),
+                    new("Gestures", string.Join(", ", gestures))
+                ],
+                slotTags: ["Buttons"],
+                isExpanded: IsConnectedDeviceExpanded(deviceId),
+                expandedChanged: OnConnectedDeviceExpansionChanged));
+        }
+    }
+
+    private void AddCameraDeviceCards(List<ConnectedDeviceCardViewModel> devices)
+    {
+        foreach (var provider in _cameraManager.Providers
+                     .Where(p => p.IsAvailable && IsConnectedCameraProvider(p.ProviderId))
+                     .OrderBy(p => p.DisplayName, StringComparer.OrdinalIgnoreCase))
+        {
+            var deviceId = $"camera:{provider.ProviderId}";
+            devices.Add(new ConnectedDeviceCardViewModel(
+                deviceId: deviceId,
+                displayName: provider.DisplayName,
+                deviceType: "camera",
+                icon: "#camera",
+                summary: provider.SupportsVideoRecording
+                    ? "External camera - photo + video"
+                    : "External camera - photo",
+                detailRows:
+                [
+                    new("Provider", provider.ProviderId),
+                    new("Video", provider.SupportsVideoRecording ? "Supported" : "Not supported")
+                ],
+                slotTags: ["Camera"],
+                isExpanded: IsConnectedDeviceExpanded(deviceId),
+                expandedChanged: OnConnectedDeviceExpansionChanged));
+        }
+    }
+
+    private bool IsConnectedDeviceExpanded(string deviceId)
+        => _expandedConnectedDeviceIds.Contains(deviceId);
+
+    private void OnConnectedDeviceExpansionChanged(ConnectedDeviceCardViewModel device, bool isExpanded)
+    {
+        if (isExpanded)
+            _expandedConnectedDeviceIds.Add(device.DeviceId);
+        else
+            _expandedConnectedDeviceIds.Remove(device.DeviceId);
+    }
+
+    private static bool IsConnectedAudioProvider(string providerId)
+    {
+        if (IsGlassesProvider(providerId))
+            return false;
+
+        return providerId.StartsWith("bt:", StringComparison.OrdinalIgnoreCase)
+            || providerId.StartsWith("bt-out:", StringComparison.OrdinalIgnoreCase)
+            || providerId.Contains("bluetooth", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string NormalizeAudioDeviceId(string providerId)
+    {
+        if (providerId.StartsWith("bt-out:", StringComparison.OrdinalIgnoreCase))
+            return providerId["bt-out:".Length..];
+        if (providerId.StartsWith("bt:", StringComparison.OrdinalIgnoreCase))
+            return providerId["bt:".Length..];
+        return providerId;
+    }
+
+    private static bool IsConnectedCameraProvider(string providerId)
+        => !IsGlassesProvider(providerId)
+           && !string.Equals(providerId, "phone", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsGlassesProvider(string providerId)
+        => string.Equals(providerId, "heycyan-glasses", StringComparison.OrdinalIgnoreCase);
+
+    private static string Pluralize(int count, string singular)
+        => count == 1 ? singular : $"{singular}s";
+
+    private static string FormatGesture(ButtonGesture gesture) => gesture switch
+    {
+        ButtonGesture.SingleTap => "single press",
+        ButtonGesture.DoubleTap => "double press",
+        ButtonGesture.TripleTap => "triple press",
+        ButtonGesture.LongPress => "long press",
+        _ => gesture.ToString()
+    };
+
+    private sealed class AudioDeviceAccumulator
+    {
+        public AudioDeviceAccumulator(string deviceId, string displayName)
+        {
+            DeviceId = deviceId;
+            DisplayName = displayName;
+        }
+
+        public string DeviceId { get; }
+        public string DisplayName { get; }
+        public bool HasInput { get; set; }
+        public bool HasOutput { get; set; }
+        public List<string> ProviderIds { get; } = [];
+
+        public string GetSummary() => (HasInput, HasOutput) switch
+        {
+            (true, true) => "Bluetooth microphone + speaker",
+            (true, false) => "Bluetooth microphone",
+            (false, true) => "Bluetooth speaker",
+            _ => "Bluetooth audio"
+        };
     }
 
     // ── Glasses persistence ─────────────────────────────────────────────────

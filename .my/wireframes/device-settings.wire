@@ -1,0 +1,133 @@
+wireframe clean
+    %title: BodyCam — Device Settings
+
+    Scroll
+        Vertical gap=10 padding=16
+
+            // Auto-switch notification
+            Alert "Audio input automatically switched to Glasses Mic" type=info
+
+            // Connect button
+            Button "+ Connect Device" :btnConnect
+
+            // === Connected Devices ===
+            Label "**CONNECTED DEVICES**"
+
+            // Glasses device (expanded)
+            Card padding=8
+                Vertical gap=6
+                    Horizontal gap=8
+                        Label "▼"
+                        Label "🕶️"
+                        Label "**HeyCyan G1**"
+                        Label "🔋 85%"
+                        Label "⚡"
+                    /Horizontal
+
+                    // Expanded details
+                    Vertical gap=2 padding=28
+                        Horizontal gap=8
+                            Label "MAC"
+                            Label "AA:BB:CC:DD:EE:FF"
+                        /Horizontal
+                        Horizontal gap=8
+                            Label "Firmware"
+                            Label "v2.1.0"
+                        /Horizontal
+                        Horizontal gap=8
+                            Label "Hardware"
+                            Label "Rev C"
+                        /Horizontal
+                        Horizontal gap=12
+                            Label "📷 12"
+                            Label "🎬 3"
+                            Label "🎙️ 7"
+                        /Horizontal
+                        Horizontal gap=10
+                            Button "Disconnect" :btnDisconnect
+                            Button "Remove" :btnRemove
+                        /Horizontal
+                    /Vertical
+                /Vertical
+            /Card
+
+            // Other connected device
+            Horizontal gap=8 padding=4
+                Label "**Jabra Elite 7**"
+                Label "🔋 62%"
+            /Horizontal
+
+            // === Source Profile ===
+            Label "**SOURCE**"
+            Dropdown :ddlProfile
+                Option "HeyCyan Glasses"
+                Option "Phone Built-in"
+                Option "Custom"
+            /Dropdown
+
+            // === Custom mode pickers ===
+            Label "**CAMERA SOURCE**"
+            Dropdown :ddlCamera
+                Option "Glasses Camera"
+                Option "Phone Camera (Rear)"
+                Option "Phone Camera (Front)"
+            /Dropdown
+            Button "Take Picture" :btnTakePicture
+            Label "*Captured in 245 ms*"
+            Image "last-picture.png" h=200
+
+            Label "**MICROPHONE**"
+            Dropdown :ddlMic
+                Option "Glasses Mic"
+                Option "Phone Mic"
+                Option "Bluetooth Mic"
+            /Dropdown
+            Label "*HeyCyan audio: streaming*"
+            Button "Test Recording" :btnTestRecording
+
+            Label "**SPEAKER**"
+            Dropdown :ddlSpeaker
+                Option "Phone Speaker"
+                Option "Bluetooth Speaker"
+            /Dropdown
+            Button "Test Sound" :btnTestSound
+
+            // === Button Mappings ===
+            Card padding=8
+                Vertical gap=6
+                    Horizontal gap=6
+                        Label "▼"
+                        Label "**HeyCyan G1 Buttons**"
+                    /Horizontal
+                    Vertical padding=28
+                        Horizontal gap=8
+                            Label "Single press"
+                            Dropdown :ddlSingle
+                                Option "Look"
+                                Option "Photo"
+                                Option "Scan"
+                            /Dropdown
+                        /Horizontal
+                        Horizontal gap=8
+                            Label "Double press"
+                            Dropdown :ddlDouble
+                                Option "Read"
+                                Option "Ask"
+                                Option "Find"
+                            /Dropdown
+                        /Horizontal
+                        Horizontal gap=8
+                            Label "Long press"
+                            Dropdown :ddlLong
+                                Option "Listen"
+                                Option "Off"
+                            /Dropdown
+                        /Horizontal
+                    /Vertical
+                /Vertical
+            /Card
+
+        /Vertical
+    /Scroll
+
+/wireframe

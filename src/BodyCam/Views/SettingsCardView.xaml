@@ -6,8 +6,8 @@
     <Grid>
         <!-- Visual card -->
         <Border StrokeShape="RoundRectangle 12"
-                Stroke="{AppThemeBinding Light=#E0E0E0, Dark=#333333}"
-                BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#2A2A2A}"
+                Stroke="{AppThemeBinding Light={StaticResource BorderDefault}, Dark={StaticResource BorderDefaultDark}}"
+                BackgroundColor="{AppThemeBinding Light={StaticResource CardSurface}, Dark={StaticResource CardSurfaceDark}}"
                 Padding="16,0"
                 HeightRequest="72">
             <Grid ColumnDefinitions="48,*">
@@ -18,10 +18,10 @@
                 <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="2">
                     <Label x:Name="TitleLabel"
                            FontSize="16" FontAttributes="Bold"
-                           TextColor="{AppThemeBinding Light=#333333, Dark=#E0E0E0}" />
+                           TextColor="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource TextPrimaryDark}}" />
                     <Label x:Name="DescriptionLabel"
                            FontSize="12"
-                           TextColor="{AppThemeBinding Light=#666666, Dark=#999999}" />
+                           TextColor="{AppThemeBinding Light={StaticResource TextMuted}, Dark={StaticResource TextMutedDark}}" />
                 </VerticalStackLayout>
             </Grid>
         </Border>

@@ -8,13 +8,13 @@
     <Grid IsVisible="{Binding DebugVisible}"
           VerticalOptions="End"
           MaximumHeightRequest="250"
-          BackgroundColor="{AppThemeBinding Light=#F5F5F5CC, Dark=#1A1A1ACC}">
+          BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceTranslucent}, Dark={StaticResource SurfaceTranslucentDark}}">
         <VerticalStackLayout Spacing="4" Padding="8">
             <!-- Phase 6.1: AEC metrics overlay -->
             <Label x:Name="AecDebugLabel"
                    Text="{Binding AecDebugText}"
                    FontFamily="Consolas" FontSize="10"
-                   BackgroundColor="#80000000" TextColor="Lime"
+                   BackgroundColor="{StaticResource Overlay}" TextColor="Lime"
                    Padding="6,2"
                    IsVisible="{Binding DebugVisible}" />
 

@@ -5,7 +5,7 @@
              x:Class="BodyCam.Pages.Main.Views.TranscriptView">
 
     <Frame IsVisible="{Binding ShowTranscriptTab}"
-           BorderColor="{AppThemeBinding Light=#E0E0E0, Dark=#333}" Padding="8" CornerRadius="4">
+           BorderColor="{AppThemeBinding Light={StaticResource BorderDefault}, Dark={StaticResource BorderDefaultDark}}" Padding="8" CornerRadius="4">
         <CollectionView x:Name="TranscriptList"
                         AutomationId="TranscriptList"
                         ItemsSource="{Binding Entries}">
@@ -38,8 +38,8 @@
                                             HeightRequest="32"
                                             Padding="8,0"
                                             CornerRadius="4"
-                                            BackgroundColor="{AppThemeBinding Light=#E3F2FD, Dark=#1A3A5C}"
-                                            TextColor="{AppThemeBinding Light=#1565C0, Dark=#64B5F6}" />
+                                            BackgroundColor="{AppThemeBinding Light={StaticResource InfoSurface}, Dark={StaticResource InfoSurfaceDark}}"
+                                            TextColor="{AppThemeBinding Light={StaticResource InfoText}, Dark={StaticResource InfoTextDark}}" />
                                 </DataTemplate>
                             </BindableLayout.ItemTemplate>
                         </HorizontalStackLayout>

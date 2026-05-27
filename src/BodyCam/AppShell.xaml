@@ -13,7 +13,7 @@
             <Label Text="BodyCam" FontSize="20" FontAttributes="Bold" VerticalOptions="Center" />
             <Label x:Name="BuildLabel" AutomationId="BuildLabel" Grid.Column="1" FontSize="12"
                    VerticalOptions="Center" Margin="6,0,0,0"
-                   TextColor="{AppThemeBinding Light=#999999, Dark=#777777}" />
+                   TextColor="{AppThemeBinding Light={StaticResource TextFaint}, Dark={StaticResource TextFaintDark}}" />
             
             <!-- Glasses battery widget (M33 Phase 7 Wave 3) -->
             <HorizontalStackLayout Grid.Column="3"
@@ -36,7 +36,7 @@
                     Clicked="OnNavIconTapped"
                     VerticalOptions="Center"
                     BackgroundColor="Transparent"
-                    TextColor="{AppThemeBinding Light=#333333, Dark=#E0E0E0}"
+                    TextColor="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource TextPrimaryDark}}"
                     Padding="8,0"
                     MinimumHeightRequest="36" MinimumWidthRequest="36" />
         </Grid>

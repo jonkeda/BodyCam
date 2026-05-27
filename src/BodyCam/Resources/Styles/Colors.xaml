@@ -28,6 +28,44 @@
     <Color x:Key="Gray900">#212121</Color>
     <Color x:Key="Gray950">#141414</Color>
 
+    <!-- Semantic Surfaces -->
+    <Color x:Key="Surface">#F5F5F5</Color>
+    <Color x:Key="SurfaceDark">#1A1A1A</Color>
+    <Color x:Key="SurfaceAlt">#F0F0F0</Color>
+    <Color x:Key="SurfaceAltDark">#222222</Color>
+    <Color x:Key="CardSurface">White</Color>
+    <Color x:Key="CardSurfaceDark">#2A2A2A</Color>
+    <Color x:Key="MutedSurface">#EEEEEE</Color>
+    <Color x:Key="MutedSurfaceDark">#3A3A3A</Color>
+
+    <!-- Semantic Borders -->
+    <Color x:Key="BorderDefault">#E0E0E0</Color>
+    <Color x:Key="BorderDefaultDark">#333333</Color>
+
+    <!-- Semantic Text -->
+    <Color x:Key="TextPrimary">#333333</Color>
+    <Color x:Key="TextPrimaryDark">#E0E0E0</Color>
+    <Color x:Key="TextMuted">#666666</Color>
+    <Color x:Key="TextMutedDark">#999999</Color>
+    <Color x:Key="TextFaint">#999999</Color>
+    <Color x:Key="TextFaintDark">#777777</Color>
+
+    <!-- Info / Status -->
+    <Color x:Key="InfoSurface">#E3F2FD</Color>
+    <Color x:Key="InfoSurfaceDark">#1A3A5C</Color>
+    <Color x:Key="InfoText">#1565C0</Color>
+    <Color x:Key="InfoTextDark">#90CAF9</Color>
+
+    <!-- Button Variants -->
+    <Color x:Key="PrimaryAlt">#7C4DFF</Color>
+    <Color x:Key="ButtonMuted">#E0E0E0</Color>
+    <Color x:Key="ButtonMutedDark">#333333</Color>
+
+    <!-- Overlays -->
+    <Color x:Key="Overlay">#80000000</Color>
+    <Color x:Key="SurfaceTranslucent">#F5F5F5CC</Color>
+    <Color x:Key="SurfaceTranslucentDark">#1A1A1ACC</Color>
+
     <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource Primary}"/>
     <SolidColorBrush x:Key="SecondaryBrush" Color="{StaticResource Secondary}"/>
     <SolidColorBrush x:Key="TertiaryBrush" Color="{StaticResource Tertiary}"/>

@@ -7,7 +7,15 @@ public class DeviceSettingsPage : PageObjectBase<DeviceSettingsPage>
     public override string Name => "DeviceSettingsPage";
 
     public override bool IsLoaded(int? timeoutMs = null)
-        => CameraSourcePicker.IsExists() || SourceProfilePicker.IsExists();
+        => ConnectedDevicesList.IsExists() && (CameraSourcePicker.IsExists() || SourceProfilePicker.IsExists());
+
+    // Connected Devices
+    public Button<DeviceSettingsPage> ConnectDeviceButton => Button("ConnectDeviceButton");
+
+    public Brinell.Maui.Controls.Collection.CollectionView<DeviceSettingsPage> ConnectedDevicesList
+        => CollectionView("ConnectedDevicesList");
+
+    public Label<DeviceSettingsPage> ConnectedDeviceCardTitle => Label("ConnectedDeviceCardTitle");
 
     // Source Profile
     public Picker<DeviceSettingsPage> SourceProfilePicker => Picker("SourceProfilePicker");

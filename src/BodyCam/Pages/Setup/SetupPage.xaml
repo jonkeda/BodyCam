@@ -6,7 +6,7 @@
              x:DataType="vm:SetupViewModel"
              Shell.TabBarIsVisible="False"
              Shell.NavBarIsVisible="False"
-             BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#1A1A1A}">
+             BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
 
     <ScrollView VerticalOptions="Center">
         <VerticalStackLayout Padding="24" Spacing="16" MaximumWidthRequest="480" HorizontalOptions="Center">
@@ -27,7 +27,7 @@
             <Border Stroke="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}"
                     StrokeThickness="1"
                     StrokeShape="RoundRectangle 12"
-                    BackgroundColor="{AppThemeBinding Light=White, Dark=#2A2A2A}"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource CardSurface}, Dark={StaticResource CardSurfaceDark}}"
                     Padding="24"
                     Margin="0,8">
                 <VerticalStackLayout Spacing="16">

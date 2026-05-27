@@ -4,3 +4,6 @@
 [submodule "Alternative-HeyCyan-App-and-SDK"]
 	path = Alternative-HeyCyan-App-and-SDK
 	url = https://github.com/FerSaiyan/Alternative-HeyCyan-App-and-SDK.git
+[submodule "Wireframes"]
+	path = Wireframes
+	url = https://github.com/jonkeda/Wireframes.git

@@ -15,10 +15,10 @@
 
         <!-- Snapshot overlay -->
         <Grid IsVisible="{Binding ShowSnapshot}"
-              BackgroundColor="#80000000"
+              BackgroundColor="{StaticResource Overlay}"
               Padding="16">
             <Border StrokeShape="RoundRectangle 8"
-                    BackgroundColor="{AppThemeBinding Light=White, Dark=#2A2A2A}"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource CardSurface}, Dark={StaticResource CardSurfaceDark}}"
                     Padding="8"
                     VerticalOptions="Center"
                     HorizontalOptions="Center"
@@ -36,7 +36,7 @@
                             Text="Dismiss"
                             Command="{Binding DismissSnapshotCommand}"
                             HorizontalOptions="Center"
-                            BackgroundColor="{AppThemeBinding Light=#E0E0E0, Dark=#333}" />
+                            BackgroundColor="{AppThemeBinding Light={StaticResource ButtonMuted}, Dark={StaticResource ButtonMutedDark}}" />
                 </VerticalStackLayout>
             </Border>
         </Grid>

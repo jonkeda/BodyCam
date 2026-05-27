@@ -11,9 +11,9 @@
             <Setter Property="FontSize" Value="14" />
             <Setter Property="CornerRadius" Value="8" />
             <Setter Property="BackgroundColor"
-                    Value="{AppThemeBinding Light=#EEEEEE, Dark=#2A2A2A}" />
+                    Value="{AppThemeBinding Light={StaticResource MutedSurface}, Dark={StaticResource CardSurfaceDark}}" />
             <Setter Property="TextColor"
-                    Value="{AppThemeBinding Light=#333333, Dark=#E0E0E0}" />
+                    Value="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource TextPrimaryDark}}" />
         </Style>
     </ContentView.Resources>
 

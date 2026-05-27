@@ -35,7 +35,7 @@
 
         <!-- Row 2: Tab selector -->
         <Grid Grid.Row="2" ColumnDefinitions="*,*" HeightRequest="40"
-              BackgroundColor="{AppThemeBinding Light=#F0F0F0, Dark=#222222}">
+              BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAlt}, Dark={StaticResource SurfaceAltDark}}">
             <Button AutomationId="TranscriptTabButton"
                     Text="📝 Transcript"
                     Command="{Binding SwitchToTranscriptCommand}"
