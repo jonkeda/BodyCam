@@ -38,7 +38,7 @@
                                 </Grid>
                             </Frame>
 
-                            <Button AutomationId="AddCyanGlassesButton"
+                            <Button AutomationId="{Binding AutomationId}"
                                     Command="{Binding Command}"
                                     BackgroundColor="Transparent"
                                     Opacity="0.01" />

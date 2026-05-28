@@ -1,6 +1,6 @@
 # Phase 3 - Settings UI
 
-**Status:** Planned
+**Status:** Implemented
 
 ## Goal
 
@@ -56,26 +56,27 @@ v------------------------------------------------------v
 
 ## Implementation
 
-1. Add **Add A9 Camera** to `AddDevicesViewModel.DeviceOptions`.
-2. Add `AddA9CameraCommand` and route it to a new A9 setup page.
-3. Add `A9CameraSettingsPage` and `A9CameraSettingsViewModel`.
-4. Bind fields to:
+1. [x] Add **Add A9 Camera** to `AddDevicesViewModel.DeviceOptions`.
+2. [x] Add `AddA9CameraCommand` and route it to a new A9 setup page.
+3. [x] Add `A9CameraSettingsPage` and `A9CameraSettingsViewModel`.
+4. [x] Bind fields to:
    - `A9CameraIp`
    - `A9CameraUid`
    - `A9CameraUsername`
    - `A9CameraPassword`
-5. Default username/password to `admin` / `admin` when the user leaves them blank.
-6. Add Save and Test Connection commands.
-7. Test Connection should validate settings by starting `A9CameraProvider` or a
+5. [x] Default username/password to `admin` / `admin` when the user leaves them blank.
+6. [x] Add Save and Test Connection commands.
+7. [x] Test Connection should validate settings by starting `A9CameraProvider` or a
    short-lived `A9Session`, then report success/failure in the page.
-8. After save/test, either return to Settings > Devices or keep the user on the
+8. [x] After save/test, either return to Settings > Devices or keep the user on the
    setup page with a clear connected/ready status.
-9. Show A9 in the unified Connected Devices list as a camera card when
+9. [x] Show A9 in the unified Connected Devices list as a camera card when
    `a9-camera` is configured and streaming/available.
-10. Ensure `A9 Camera` can be selected from the Custom Camera Source picker once
+10. [x] Ensure `A9 Camera` can be selected from the Custom Camera Source picker once
     configured.
-11. Decide whether to add an `A9 Camera` source profile. If added, keep it
-    camera-only and preserve the current microphone/speaker choices.
+11. [x] Decide whether to add an `A9 Camera` source profile. Decision: do not add
+    an A9 source profile in this phase; A9 remains selectable through Custom Camera
+    Source so microphone/speaker choices are preserved.
 
 ## Files
 
@@ -108,14 +109,14 @@ v------------------------------------------------------v
 
 ## Acceptance Criteria
 
-- Settings > Devices **+ Connect Device** still opens `AddDevicesPage`.
-- `AddDevicesPage` shows **Add Cyan Glasses** and **Add A9 Camera**.
-- Tapping **Add A9 Camera** opens the A9 setup page.
-- Saving persists A9 settings through `ISettingsService`.
-- Blank username/password persist or resolve as `admin` / `admin`.
-- Test Connection reports clear success/failure without crashing the page.
-- A configured, streaming A9 provider appears in Connected Devices as a camera
+- [x] Settings > Devices **+ Connect Device** still opens `AddDevicesPage`.
+- [x] `AddDevicesPage` shows **Add Cyan Glasses** and **Add A9 Camera**.
+- [x] Tapping **Add A9 Camera** opens the A9 setup page.
+- [x] Saving persists A9 settings through `ISettingsService`.
+- [x] Blank username/password persist or resolve as `admin` / `admin`.
+- [x] Test Connection reports clear success/failure without crashing the page.
+- [x] A configured, streaming A9 provider appears in Connected Devices as a camera
   card.
-- `A9 Camera` is selectable in Custom Camera Source.
-- No separate A9 configuration section is added to `DeviceSettingsPage`.
-- Unit and UI tests cover the new settings flow.
+- [x] `A9 Camera` is selectable in Custom Camera Source.
+- [x] No separate A9 configuration section is added to `DeviceSettingsPage`.
+- [x] Unit and UI tests cover the new settings flow.

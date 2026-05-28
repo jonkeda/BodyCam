@@ -26,6 +26,9 @@ internal sealed class A9Session : IAsyncDisposable
     private readonly string _targetIp;
     private readonly string _username;
     private readonly string _password;
+    private readonly int _port;
+    private readonly int _timeoutMs;
+    private readonly int _keepaliveIntervalMs;
 
     private UdpClient? _udp;
     private IPEndPoint? _remoteEp;
@@ -59,12 +62,22 @@ internal sealed class A9Session : IAsyncDisposable
     /// <summary>Device ID parsed from the PunchPkt (e.g. "FTYC477360FAWUK").</summary>
     public string? DeviceId { get; private set; }
 
-    public A9Session(string targetIp, string username, string password, ILogger logger)
+    public A9Session(
+        string targetIp,
+        string username,
+        string password,
+        ILogger logger,
+        int port = A9Protocol.DefaultPort,
+        int timeoutMs = TimeoutMs,
+        int keepaliveIntervalMs = KeepaliveIntervalMs)
     {
         _targetIp = targetIp;
         _username = username;
         _password = password;
         _log = logger;
+        _port = port;
+        _timeoutMs = timeoutMs;
+        _keepaliveIntervalMs = keepaliveIntervalMs;
     }
 
     /// <summary>
@@ -74,8 +87,8 @@ internal sealed class A9Session : IAsyncDisposable
     {
         _sessionCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         _udp = new UdpClient();
-        _udp.Client.ReceiveTimeout = TimeoutMs;
-        _remoteEp = new IPEndPoint(IPAddress.Parse(_targetIp), A9Protocol.DefaultPort);
+        _udp.Client.ReceiveTimeout = _timeoutMs;
+        _remoteEp = new IPEndPoint(IPAddress.Parse(_targetIp), _port);
         _lastReceivedTicks = Environment.TickCount64;
         _outgoingCmdId = 0;
 
@@ -85,7 +98,7 @@ internal sealed class A9Session : IAsyncDisposable
         await _udp.SendAsync(lanSearch, lanSearch.Length, _remoteEp);
 
         // Step 2: Wait for PunchPkt response
-        var punchResult = await ReceiveWithTimeoutAsync(TimeoutMs, _sessionCts.Token);
+        var punchResult = await ReceiveWithTimeoutAsync(_timeoutMs, _sessionCts.Token);
         if (punchResult is null)
             throw new TimeoutException($"A9: No PunchPkt response from {_targetIp}");
 
@@ -101,7 +114,7 @@ internal sealed class A9Session : IAsyncDisposable
         await _udp.SendAsync(p2pRdy, p2pRdy.Length, _remoteEp);
 
         // Step 4: Wait for P2pRdy reply, then send ConnectUser
-        var rdyReply = await ReceiveWithTimeoutAsync(TimeoutMs, _sessionCts.Token);
+        var rdyReply = await ReceiveWithTimeoutAsync(_timeoutMs, _sessionCts.Token);
         if (rdyReply is not null)
         {
             var rdyCmd = A9Protocol.ReadCommandId(rdyReply);
@@ -115,11 +128,11 @@ internal sealed class A9Session : IAsyncDisposable
 
         // Step 5: Wait for ConnectUserAck containing the session ticket
         // The ack comes inside a Drw control packet, so we need to process it
-        var loginDeadline = Environment.TickCount64 + TimeoutMs;
+        var loginDeadline = Environment.TickCount64 + _timeoutMs;
         while (!_loggedIn && Environment.TickCount64 < loginDeadline)
         {
             _sessionCts.Token.ThrowIfCancellationRequested();
-            var pkt = await ReceiveWithTimeoutAsync(1000, _sessionCts.Token);
+            var pkt = await ReceiveWithTimeoutAsync(Math.Min(1000, _timeoutMs), _sessionCts.Token);
             if (pkt is not null)
                 ProcessPacket(pkt);
         }
@@ -154,14 +167,14 @@ internal sealed class A9Session : IAsyncDisposable
             while (!ct.IsCancellationRequested && _udp is not null)
             {
                 // Check timeout
-                if (Environment.TickCount64 - _lastReceivedTicks > TimeoutMs)
+                if (Environment.TickCount64 - _lastReceivedTicks > _timeoutMs)
                 {
                     _log.LogWarning("A9: Camera {DeviceId} timed out", DeviceId);
                     break;
                 }
 
                 // Send keepalive if needed
-                if (Environment.TickCount64 - keepaliveTimer > KeepaliveIntervalMs)
+                if (Environment.TickCount64 - keepaliveTimer > _keepaliveIntervalMs)
                 {
                     var alive = A9Protocol.BuildP2pAlive();
                     try { await _udp.SendAsync(alive, alive.Length, _remoteEp); }

@@ -576,11 +576,32 @@ public class DeviceViewModel : ViewModelBase, IDisposable
         {
             if (value is not null && value != _cameraManager.Active)
             {
-                _ = _cameraManager.SetActiveAsync(value.ProviderId);
+                _ = SetCameraProviderAsync(value.ProviderId);
                 SwitchToCustomIfNeeded();
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(ShowRecordVideo));
             }
+        }
+    }
+
+    private async Task SetCameraProviderAsync(string providerId)
+    {
+        try
+        {
+            await _cameraManager.SetActiveAsync(providerId);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Failed to set camera provider '{providerId}': {ex.Message}");
+        }
+        finally
+        {
+            RunOnMainThreadOrInline(() =>
+            {
+                OnPropertyChanged(nameof(SelectedCameraProvider));
+                OnPropertyChanged(nameof(ShowRecordVideo));
+                RefreshConnectedDevices();
+            });
         }
     }
 
@@ -681,6 +702,21 @@ public class DeviceViewModel : ViewModelBase, IDisposable
             if (!ct.IsCancellationRequested)
                 MainThread.BeginInvokeOnMainThread(() => AutoSwitchMessage = null);
         }, TaskScheduler.Default);
+    }
+
+    private static void RunOnMainThreadOrInline(Action action)
+    {
+        try
+        {
+            if (MainThread.IsMainThread)
+                action();
+            else
+                MainThread.BeginInvokeOnMainThread(action);
+        }
+        catch
+        {
+            action();
+        }
     }
 
     /// <summary>

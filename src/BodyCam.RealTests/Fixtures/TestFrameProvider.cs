@@ -42,6 +42,7 @@ public sealed class TestFrameProvider : ICameraProvider
     public string DisplayName => "Test Camera";
     public string ProviderId => "test";
     public bool IsAvailable => true;
+    public bool SupportsVideoRecording => false;
 
     public event EventHandler? Disconnected;
 

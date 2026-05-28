@@ -1,6 +1,6 @@
 # Phase 1 - Protocol & Provider
 
-**Status:** In Progress
+**Status:** Implemented
 
 ## Goal
 
@@ -22,26 +22,26 @@ abstraction without introducing a video decoder dependency.
 
 ## Implementation
 
-1. Implement `A9Protocol` helpers for:
+1. [x] Implement `A9Protocol` helpers for:
    - Command ID read/write.
    - Big-endian packet framing.
    - `LanSearch`, `P2pRdy`, `P2PAlive`, `P2PAliveAck`, `DrwAck`.
    - `ConnectUser`, `VideoParamSet`, and `StartVideo` Drw control payloads.
    - `XqBytesEnc` and `XqBytesDec`.
-2. Implement `A9Session`:
+2. [x] Implement `A9Session`:
    - Open UDP socket to port `32108`.
    - Perform LanSearch -> PunchPkt -> P2pRdy -> ConnectUser -> StartVideo.
    - Reply to keepalives.
    - Reassemble JPEG frames from Drw data packets.
    - Drop corrupt/out-of-order frames.
    - Raise disconnect when packets stop arriving.
-3. Implement `A9CameraProvider`:
+3. [x] Implement `A9CameraProvider`:
    - Read settings from `ISettingsService`.
    - Start/stop `A9Session`.
    - Return latest JPEG from `CaptureFrameAsync`.
    - Expose `StreamFramesAsync`.
    - Retry failed connections up to the configured retry limit.
-4. Register `A9CameraProvider` as an `ICameraProvider`.
+4. [x] Register `A9CameraProvider` as an `ICameraProvider`.
 
 ## Files
 
@@ -54,11 +54,11 @@ abstraction without introducing a video decoder dependency.
 
 ## Acceptance Criteria
 
-- `A9CameraProvider` is registered and visible through `CameraManager.Providers`.
-- `A9CameraProvider.ProviderId` is exactly `a9-camera`.
-- `StartAsync` no-ops cleanly when no A9 IP is configured.
-- With valid settings and a reachable camera, `StartAsync` starts the JPEG stream.
-- `CaptureFrameAsync` returns a JPEG byte array when frames are available.
-- Provider disconnects fall back through the existing camera manager behavior.
-- The app builds for `net10.0-windows10.0.19041.0`.
-- Protocol helper tests cover packet framing and cipher round trips.
+- [x] `A9CameraProvider` is registered and visible through `CameraManager.Providers`.
+- [x] `A9CameraProvider.ProviderId` is exactly `a9-camera`.
+- [x] `StartAsync` no-ops cleanly when no A9 IP is configured.
+- [x] With valid settings and a reachable camera, `StartAsync` starts the JPEG stream.
+- [x] `CaptureFrameAsync` returns a JPEG byte array when frames are available.
+- [x] Provider disconnects fall back through the existing camera manager behavior.
+- [x] The app builds for `net10.0-windows10.0.19041.0`.
+- [x] Protocol helper tests cover packet framing and cipher round trips.

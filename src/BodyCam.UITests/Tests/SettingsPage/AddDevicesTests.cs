@@ -36,4 +36,10 @@ public class AddDevicesTests
     {
         _fixture.AddDevicesPage.AddCyanGlassesButton.AssertExists();
     }
+
+    [Fact]
+    public void AddA9CameraButton_Exists()
+    {
+        _fixture.AddDevicesPage.AddA9CameraButton.AssertExists();
+    }
 }

@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:BodyCam.ViewModels.Settings"
+             x:Class="BodyCam.Pages.Settings.A9CameraSettingsPage"
+             x:DataType="vm:A9CameraSettingsViewModel"
+             AutomationId="A9CameraSettingsPage"
+             Shell.TabBarIsVisible="False"
+             Title="A9 Camera">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="12" MaximumWidthRequest="500">
+
+            <Frame Padding="12" CornerRadius="8"
+                   BackgroundColor="{AppThemeBinding Light={StaticResource CardSurface}, Dark={StaticResource CardSurfaceDark}}"
+                   BorderColor="{AppThemeBinding Light={StaticResource BorderDefault}, Dark={StaticResource BorderDefaultDark}}">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="IP Address" Style="{StaticResource SettingsDeviceHeader}" />
+                    <Entry AutomationId="A9CameraIpEntry"
+                           Text="{Binding A9CameraIp}"
+                           Placeholder="192.168.1.1"
+                           Keyboard="Url" />
+
+                    <Label Text="UID (optional)" Style="{StaticResource SettingsDeviceHeader}" Margin="0,8,0,0" />
+                    <Entry AutomationId="A9CameraUidEntry"
+                           Text="{Binding A9CameraUid}" />
+
+                    <Label Text="Username" Style="{StaticResource SettingsDeviceHeader}" Margin="0,8,0,0" />
+                    <Entry AutomationId="A9CameraUsernameEntry"
+                           Text="{Binding A9CameraUsername}"
+                           Placeholder="admin" />
+
+                    <Label Text="Password" Style="{StaticResource SettingsDeviceHeader}" Margin="0,8,0,0" />
+                    <Entry AutomationId="A9CameraPasswordEntry"
+                           Text="{Binding A9CameraPassword}"
+                           Placeholder="admin"
+                           IsPassword="True" />
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8" Margin="0,8,0,0">
+                        <Button AutomationId="A9CameraTestConnectionButton"
+                                Text="Test Connection"
+                                Command="{Binding TestConnectionCommand}"
+                                IsEnabled="{Binding IsTesting, Converter={StaticResource InvertBoolConverter}}"
+                                Style="{StaticResource SettingsOutlineButton}" />
+                        <Button AutomationId="A9CameraSaveButton"
+                                Grid.Column="1"
+                                Text="Save"
+                                Command="{Binding SaveCommand}"
+                                Style="{StaticResource SettingsButton}" />
+                    </Grid>
+
+                    <HorizontalStackLayout Spacing="8"
+                                           IsVisible="{Binding IsTesting}">
+                        <ActivityIndicator IsRunning="{Binding IsTesting}"
+                                           WidthRequest="18"
+                                           HeightRequest="18"
+                                           VerticalOptions="Center" />
+                        <Label Text="Testing"
+                               Style="{StaticResource SettingsStatusText}"
+                               VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+
+                    <Label AutomationId="A9CameraStatusLabel"
+                           Text="{Binding Status}"
+                           Style="{StaticResource SettingsStatusText}" />
+                </VerticalStackLayout>
+            </Frame>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

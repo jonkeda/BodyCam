@@ -13,4 +13,6 @@ public class AddDevicesPage : PageObjectBase<AddDevicesPage>
         => CollectionView("AddDevicesList");
 
     public Button<AddDevicesPage> AddCyanGlassesButton => Button("AddCyanGlassesButton");
+
+    public Button<AddDevicesPage> AddA9CameraButton => Button("AddA9CameraButton");
 }

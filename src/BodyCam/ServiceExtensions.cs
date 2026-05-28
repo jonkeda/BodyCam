@@ -389,6 +389,7 @@ public static class ServiceExtensions
 		services.AddTransient<ViewModels.Settings.VoiceViewModel>();
 		services.AddTransient<ViewModels.Settings.DeviceViewModel>();
 		services.AddTransient<ViewModels.Settings.AddDevicesViewModel>();
+		services.AddTransient<ViewModels.Settings.A9CameraSettingsViewModel>();
 		services.AddTransient<ViewModels.Settings.AdvancedViewModel>();
 		services.AddTransient<ViewModels.Settings.GlassesCameraSectionViewModel>();
 		services.AddTransient<MediaGalleryViewModel>();
@@ -400,6 +401,7 @@ public static class ServiceExtensions
 		services.AddTransient<Pages.Settings.VoiceSettingsPage>();
 		services.AddTransient<Pages.Settings.DeviceSettingsPage>();
 		services.AddTransient<Pages.Settings.AddDevicesPage>();
+		services.AddTransient<Pages.Settings.A9CameraSettingsPage>();
 		services.AddTransient<Pages.Settings.AdvancedSettingsPage>();
 		services.AddTransient<Pages.MediaGalleryPage>();
 		services.AddTransient<Pages.ImageViewerPage>();
