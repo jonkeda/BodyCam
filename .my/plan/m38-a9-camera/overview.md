@@ -174,14 +174,44 @@ Detailed phase docs:
 - [Phase 12 - H.264 Decoding](./phase-12-h264-decoding.md)
 - [Phase 13 - Public A9 Camera API](./phase-13-public-api.md)
 - [Phase 14 - V720/Naxclow A9 Variant](./phase-14-v720-naxclow-variant.md)
+- [Phase 15 - Vue990 VStarcam/VeePai PPCS Harness](./phase-15-vue990-vstarcam-ppcs-harness.md)
+- [Phase 16 - C#-First Vue990 Capture Download](./phase-16-csharp-capture-download.md)
+- [Phase 17 - C# Vendor Adapter And Java Reduction](./phase-17-csharp-vendor-adapter.md)
+- [Phase 18 - Pure C# VStarcam/PPCS Replacement](./phase-18-pure-csharp-ppcs-replacement.md)
+- [Phase 19 - Generated Binding Screenshot Spike](./phase-19-generated-binding-screenshot-spike.md)
+- [Phase 20 - C# Render Surface Capture Fallback](./phase-20-csharp-render-surface-capture-fallback.md)
+- [Phase 21 - C# MJPEG AVI Video Artifact](./phase-21-csharp-mjpeg-avi-video-artifact.md)
+- [Phase 22 - Windows-Native C# Capture](./phase-22-windows-native-csharp-capture.md)
+- [Phase 23 - Managed Vue990 PPCS Control And Raw Channel](./phase-23-managed-vue990-ppcs-control.md)
+- [Phase 24 - DAS And ConnectByServer Reverse Path](./phase-24-das-connectbyserver-reverse.md)
+- [Phase 25 - Managed HLP2P Relay Hello](./phase-25-managed-hlp2p-relay-hello.md)
+- [Phase 26 - Android C# Capture Stabilization And Windows Packaging](./phase-26-android-csharp-capture-stabilization.md)
+- [Phase 27 - Windows C# Android Capture Orchestration](./phase-27-windows-csharp-android-capture-orchestration.md)
+- [Phase 28 - Android Native Packet Oracle](./phase-28-native-packet-oracle.md)
+- [Phase 29 - Fake DAS Local Relay Oracle](./phase-29-fake-das-local-relay-oracle.md)
+- [Phase 30 - Native Second-Stage Packet Oracle](./phase-30-native-second-stage-oracle.md)
+- [Phase 31 - Cross-Platform C# PPCS Library](./phase-31-cross-platform-csharp-ppcs-library.md)
+- [Phase 32 - Parameterized Second-Stage Fields](./phase-32-parameterized-second-stage-fields.md)
+- [Phase 33 - Managed Android Local Stream](./phase-33-managed-android-local-stream.md)
+- [Phase 34 - Managed PPCS Relay and Channel Dump](./phase-34-managed-ppcs-relay-channel-dump.md)
+- [Phase 35 - Android Managed C# Stream Attempt](./phase-35-android-managed-csharp-stream-attempt.md)
+- [Phase 36 - Vue990 Proprietary Relay Encryption](./phase-36-vue990-proprietary-relay-encryption.md)
+- [Phase 37 - Android Managed Direct Port Matrix](./phase-37-android-managed-direct-port-matrix.md)
+- [Phase 38 - Managed TCP Relay Builder](./phase-38-managed-tcp-relay-builder.md)
+- [Phase 39 - Android C# UDP Session Opener](./phase-39-android-csharp-udp-session-opener.md)
+- [Phase 40 - Native Channel Session Oracle](./phase-40-native-channel-session-oracle.md)
+- [Phase 41 - Managed Live CGI And Channel Opener](./phase-41-managed-live-cgi-and-channel-opener.md)
+- [Phase 42 - Managed Session Transport Replacement](./phase-42-managed-session-transport-replacement.md)
+- [Phase 43 - Native HLP2P Connect-By-Server Map](./phase-43-native-hlp2p-connect-map.md)
+- [Phase 44 - Managed LAN-Hole Session Opener](./phase-44-managed-lan-hole-session-opener.md)
 
 ### Phase 0 - A9 Hardware Probe CLI And RealTests
 
-- [ ] Define the human-in-the-loop A9 probe CLI flow
-- [ ] Add a CLI that can print readable and JSON probe output
-- [ ] Document env vars and commands for running A9 hardware tests
-- [ ] Keep real tests skipped unless explicitly enabled
-- [ ] Add discovery/protocol matrix RealTests that reuse the CLI probe services
+- [x] Define the human-in-the-loop A9 probe CLI flow
+- [x] Add a CLI that can print readable and JSON probe output
+- [x] Document env vars and commands for running A9 hardware tests
+- [x] Keep real tests skipped unless explicitly enabled
+- [x] Add discovery/protocol matrix RealTests that reuse the CLI probe services
       after the user switches on one camera
 
 ### Phase 1 — Protocol & Provider
@@ -264,6 +294,60 @@ v------------------------------------------------------v
 - [ ] Phase 12: Optional H.264 decoding
 - [ ] Phase 13: Public A9 camera facade API
 - [ ] Phase 14: V720/Naxclow AP-mode protocol variant
+- [ ] Phase 15: Vue990 VStarcam/VeePai PPCS harness for `@MC-0025644`
+      (PPCS connect/control proven; player/frame metadata pending)
+- [ ] Phase 16: C#-first Vue990 capture download for explicit image/video
+      artifacts after the Phase 15 metadata path is proven
+- [ ] Phase 17: Move the proven vendor-library path into C# orchestration and
+      reduce Java to the smallest required JNI surface
+- [ ] Phase 18: Replace the vendor libraries and Java stubs with a pure C#
+      VStarcam/PPCS implementation
+- [ ] Phase 19: Use .NET Android generated bindings to run the PPCS/player
+      session from C# and try `AppPlayerApi.Screenshot` for one still image
+- [ ] Phase 20: If the vendor screenshot path fails, capture one rendered frame
+      from a C# owned Android surface
+- [x] Phase 21: If vendor video download fails, capture a bounded screenshot
+      sequence and package it into a C# MJPEG AVI artifact
+- [ ] Phase 22: Retrieve image and video directly from Windows C# without the
+      Android phone helper
+- [ ] Phase 23: Implement managed Vue990 PPCS connect/login/live-open and save
+      raw channel bytes from Windows
+- [ ] Phase 24: Recover DAS decode and native `ConnectByServer` parsing after
+      direct transport fingerprinting found no local socket signal
+- [ ] Phase 25: Implement the managed HLP2P relay hello/session-open packet
+      sequence for decoded TCP `65527` relay hosts
+- [x] Phase 26: Stabilize Android C# picture/frame download and package pulled
+      frames into a Windows C# MJPEG AVI
+- [x] Phase 27: Add a Windows C# command that drives the Android C# probe and
+      downloads picture/video artifacts
+- [x] Phase 28: Confirm native empty packet creator bytes with an Android C#
+      oracle
+- [x] Phase 29: Try fake DAS/local relay capture; blocked by likely DAS
+      checksum/token validation before any local connection is opened
+- [x] Phase 30: Recover larger native second-stage packet helpers through a
+      loopback oracle
+- [ ] Phase 31: Build the final cross-platform C#-only PPCS library
+- [ ] Phase 32: Map the dynamic fields needed for relay-accepted
+      `TCPRlyReq` / `TCPRSLgn` frames
+- [x] Phase 33: Exhaust Android local HTTP/UDP media probing without native
+      Vue990 libraries
+- [x] Phase 34: Run managed relay/channel candidate replay from Android and
+      Windows; no response bytes yet
+- [x] Phase 35: Add Android C# stream/control code and prove this camera does
+      not answer the local classic PPPP session
+- [ ] Phase 36: Port Vue990 proprietary relay encryption and reproduce a
+      relay-accepted second-stage request in C#
+- [x] Phase 37: Expand Android direct/local C# probing and rule out more local
+      endpoint/session guesses
+- [x] Phase 38: Port native TCP relay frame construction to managed C#
+- [x] Phase 39: Close Android UDP/HLP2P session opener as negative evidence
+- [x] Phase 40: Use native channel oracle to expose JPEG-in-envelope media
+- [x] Phase 41: Replace native `writeCgi` framing with C# command bytes and
+      save image/video from the resulting channel bytes
+- [ ] Phase 42: Replace the remaining native session transport/read carrier
+- [x] Phase 43: Capture native HLP2P debug logs and identify the LAN-hole
+      session path
+- [ ] Phase 44: Implement a focused managed C# LAN-hole session opener
 
 ### Phase 5 — A9 Discovery
 
@@ -332,6 +416,226 @@ v------------------------------------------------------v
 - [ ] Detect `V720NaxclowAp` separately from RTSP, HTTP MJPEG, cam-reverse
       UDP/MJPEG, and TCP PPPP/iLnk
 - [ ] Add hardware-gated V720/Naxclow RealTests
+
+### Phase 15 - Vue990 VStarcam/VeePai PPCS Harness
+
+- [x] Create the Phase 15 plan doc
+- [x] Recover Vue990 `com.vstarcam.JNIApi` signatures and call order
+- [x] Build an Android-side harness around the required VStarcam/VeePai native
+      libraries
+- [x] Connect to `@MC-0025644` with the captured VUID/client/server values
+- [x] Add VeePai player/frame metadata observation, then promote the repeatable
+      path to hardware-gated RealTests
+
+### Phase 16 - C#-First Vue990 Capture Download
+
+- [x] Create the Phase 16 plan doc
+- [x] Move Phase 15 orchestration into C# where practical while keeping only
+      minimal JNI stubs if the vendor libraries require Java class names
+- [x] Add explicit still-image capture from the proven live stream path
+- [x] Add explicit short-video capture after still image works
+- [x] Add capture-specific hardware-gated RealTests
+
+### Phase 17 - C# Vendor Adapter And Java Reduction
+
+- [x] Create the Phase 17 plan doc
+- [ ] Add C# wrappers for the known `JNIApi` and `AppPlayerApi` calls
+- [ ] Move the PPCS/player state machine out of `PpcsProbeBridge.java`
+- [ ] Keep only thin Java native declarations/interfaces if required by the
+      vendor JNI exports
+- [x] Prove the metadata and Phase 16 image-capture paths through C#
+      orchestration
+
+### Phase 18 - Pure C# VStarcam/PPCS Replacement
+
+- [x] Create the Phase 18 plan doc
+- [x] Add the PPCS protocol notes document
+- [ ] Instrument the vendor path as an oracle
+- [ ] Reverse-engineer the PPCS connect/login/channel framing
+- [ ] Implement managed C# connect/login/CGI-over-PPCS
+- [ ] Implement managed channel `1` stream read
+- [ ] Download one image without vendor libraries or Java stubs
+
+### Phase 19 - Generated Binding Screenshot Spike
+
+- [x] Create the Phase 19 plan doc
+- [x] Add screenshot/save/download declarations to `AppPlayerApi`
+- [x] Add a C# `Vue990PpcsSession` generated-binding runner
+- [x] Build and install the Android probe
+- [x] Add a hardware-gated still-image capture RealTest
+- [x] Run the explicit still-image capture while the phone is on
+      `@MC-0025644`
+
+### Phase 20 - C# Render Surface Capture Fallback
+
+- [x] Create the Phase 20 fallback plan doc
+- [ ] Try `TextureView.GetBitmap` if `AppPlayerApi.Screenshot` fails
+- [ ] Try `PixelCopy` if the texture readback path fails
+- [ ] Pull and verify one rendered-frame image artifact
+
+### Phase 21 - C# MJPEG AVI Video Artifact
+
+- [x] Create the Phase 21 fallback plan doc
+- [x] Try vendor `startDown` and record that it returns `False`
+- [x] Add C# bounded screenshot-sequence video capture
+- [x] Add pure C# MJPEG AVI writer
+- [x] Pull and verify manual AVI artifact
+- [x] Add and run hardware-gated video RealTest
+
+### Phase 22 - Windows-Native C# Capture
+
+- [x] Create the Phase 22 plan doc
+- [x] Add Windows-only status/topology probe
+- [x] Add Windows-native RealTest gates
+- [x] Prove Windows-native status while connected to `@MC-0025644`
+- [x] Add direct Windows HTTP media probe and rule out snapshot/video URLs
+- [ ] Implement managed PPCS connect/login from Windows
+- [ ] Open live channel `1` from Windows
+- [ ] Save one Windows-captured JPEG
+- [ ] Save one Windows-captured short-video artifact
+
+### Phase 23 - Managed Vue990 PPCS Control And Raw Channel
+
+- [x] Create the Phase 23 plan doc
+- [x] Add managed CGI-over-PPCS request frame builder
+- [x] Add unit tests for the CGI request frame
+- [x] Decode the `DAS-...` server parameter shape and run bounded transport
+      fingerprinting
+- [x] Add a hardware-gated Windows transport fingerprint RealTest
+- [ ] Implement managed PPCS connect/login from Windows
+- [ ] Send live-open CGI and save bounded channel `1` bytes
+
+### Phase 24 - DAS And ConnectByServer Reverse Path
+
+- [x] Create the Phase 24 plan doc
+- [x] Locate `ConnectByServer` / DAS parser paths in `libOKSMARTPPCS.so`
+- [x] Implement managed DAS decode candidates with explicit failure reporting
+- [x] Map which transport family is selected by `connectType=0x3F`,
+      `p2pType=1`
+- [x] Extract decoded relay hosts and probe them from Windows
+- [x] Return the new stop condition to Phase 23/25: decoded relay TCP `65527`
+      opens, but the managed relay hello/session-open packet is missing
+
+### Phase 25 - Managed HLP2P Relay Hello
+
+- [x] Create the Phase 25 plan doc
+- [x] Reverse native empty-header hello/server-request packet evidence
+- [x] Implement first managed C# relay hello packet builders
+- [x] Add a bounded relay-hello probe command
+- [ ] Receive first relay response bytes from TCP `65527`
+- [ ] Send live-open CGI and save bounded channel `1` bytes after session open
+
+### Phase 26 - Android C# Capture Stabilization And Windows Packaging
+
+- [x] Create the Phase 26 plan doc
+- [x] Add a timeout around Android main-thread native calls
+- [x] Save a verified frame-sequence manifest from the Android C# probe
+- [x] Pull a fresh still image and six frame JPEGs from the phone
+- [x] Assemble the pulled frame sequence into an MJPEG AVI on Windows with C#
+- [x] Update the hardware-gated video RealTest to use pulled frames plus
+      Windows C# AVI assembly
+- [x] Run the hardware-gated video RealTest successfully
+
+### Phase 27 - Windows C# Android Capture Orchestration
+
+- [x] Create the Phase 27 plan doc
+- [x] Add `BodyCam.A9Probe vue990-android-capture`
+- [x] Pull a fresh still JPEG through the Android C# probe from Windows C#
+- [x] Pull frame JPEGs and assemble a Windows C# MJPEG AVI
+- [x] Document that this works as a C# command path but is not yet pure Windows
+      PPCS replacement
+
+### Phase 28 - Android Native Packet Oracle
+
+- [x] Create the Phase 28 plan doc
+- [x] Add Android C# native oracle mode
+- [x] Confirm `create_Hello` writes `F1000000`
+- [x] Confirm `create_RlyHello` writes `F1700000`
+- [x] Confirm `create_SvrReq` writes `F2100000`
+- [x] Add a loopback socket oracle for `TCPSend_Hello`
+- [x] Add the native `TCPSend_Hello` bytes as a managed relay candidate
+
+### Phase 29 - Fake DAS Local Relay Oracle
+
+- [x] Create the Phase 29 plan doc
+- [x] Add managed DAS re-encoding round-trip helper
+- [x] Add Android fake-relay listener mode
+- [x] Add Android `serverParam` override mode
+- [x] Attempt local fake relay with short loopback, same-length loopback, and phone IP
+- [ ] Capture native connect bytes against a local fake relay
+- [x] Document blocked result: rewritten DAS values opened no local connection
+
+### Phase 30 - Native Second-Stage Packet Oracle
+
+- [x] Create the Phase 30 plan doc
+- [x] Map `TCPSend_TCPRlyReq` / `TCPSend_TCPRSLgn` signatures
+- [x] Add safe loopback oracle calls for second-stage packet helpers
+- [x] Promote stable packets into managed C# builders and tests
+- [x] Retest decoded relays with native-generated second-stage frames
+
+### Phase 31 - Cross-Platform C# PPCS Library
+
+- [x] Create the Phase 31 plan doc
+- [ ] Receive relay response bytes from managed C#
+- [ ] Complete managed login/control channel
+- [ ] Retrieve still/video from Windows without vendor native libraries
+- [ ] Retrieve still/video from Android without vendor native libraries
+
+### Phase 32 - Parameterized Second-Stage Fields
+
+- [x] Create the Phase 32 plan doc
+- [x] Add Android oracle argument-variation runs
+- [ ] Map native helper arguments to byte offsets
+- [x] Partially map `Write_TCPRlyReq` / `Write_TCPRSLgn` offsets
+- [ ] Replace fixed second-stage oracle constants with parameterized C# builders
+- [ ] Retest decoded relays with live camera/session arguments
+
+### Phase 33 - Managed Android Local Stream
+
+- [x] Create the Phase 33 plan doc
+- [x] Probe Android local HTTP/CGI/UDP without native libraries
+- [x] Confirm no local media bytes are exposed
+
+### Phase 34 - Managed PPCS Relay and Channel Dump
+
+- [x] Create the Phase 34 plan doc
+- [x] Run Android relay fallback
+- [x] Run Windows cached relay candidate replay
+- [x] Confirm fixed candidate replay opens sockets but returns no bytes
+
+### Phase 35 - Android Managed C# Stream Attempt
+
+- [x] Create the Phase 35 plan doc
+- [x] Add managed C# control-channel builders
+- [x] Add Android classic PPPP stream attempt
+- [x] Confirm this camera returns no local `PunchPkt` / `P2pReady`
+
+### Phase 36 - Vue990 Proprietary Relay Encryption
+
+- [x] Create the Phase 36 plan doc
+- [x] Port managed proprietary P2P/TCP relay codec
+- [ ] Reproduce native `TCPSend_TCPRlyReq` byte-for-byte in C#
+- [ ] Send a relay-accepted second-stage request and capture response bytes
+
+### Phase 37 - Android Managed Direct Port Matrix
+
+- [x] Create the Phase 37 plan doc
+- [x] Bind the Android C# probe to the active camera Wi-Fi network
+- [x] Acquire Android multicast and Wi-Fi locks during probing
+- [x] Expand local UDP/session probe ports and PPPP/HLP2P variants
+- [x] Test while the Vue990 vendor app is live
+- [x] Test again after force-stopping the Vue990 vendor app
+- [x] Confirm no C#-only image/video artifact is produced from local Android direct probing
+
+### Phase 38 - Managed TCP Relay Builder
+
+- [x] Create the Phase 38 plan doc
+- [x] Port native `TCPSend_MSG` wire framing to C#
+- [x] Port native TCP relay CRC to C#
+- [x] Build managed `TCPRlyReq` and `TCPRSLgn` packets
+- [x] Verify both managed packets against native Phase 32 vectors
+- [x] Send generated packets to decoded TCP `65527` relay hosts
+- [x] Confirm relays still return no response bytes
 
 ---
 

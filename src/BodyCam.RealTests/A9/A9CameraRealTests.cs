@@ -1,4 +1,5 @@
 using BodyCam.Services.Camera.A9;
+using BodyCam.Services.Camera.A9.Probe;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
@@ -25,6 +26,14 @@ public class A9CameraRealTests
 
         var ip = Environment.GetEnvironmentVariable("A9_CAMERA_IP");
         Skip.If(string.IsNullOrWhiteSpace(ip), "A9_CAMERA_IP not set");
+
+        var probe = await new A9ProbeRunner().RunAsync(A9RealTestSettings.CreateProbeOptions(
+            protocol: A9ProbeProtocol.PpppUdpMjpeg));
+        _output.WriteLine(probe.ToReadableString());
+
+        Skip.If(
+            probe.SelectedProtocol != A9ProbeProtocol.PpppUdpMjpeg,
+            "The configured camera did not answer the PPPP/MJPEG protocol used by A9Session.");
 
         var username = Environment.GetEnvironmentVariable("A9_CAMERA_USERNAME") ?? "admin";
         var password = Environment.GetEnvironmentVariable("A9_CAMERA_PASSWORD") ?? "admin";

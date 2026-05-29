@@ -9,6 +9,14 @@ bin/
 obj/
 artifacts/
 
+# Test/build logs
+*.log
+*.binlog
+*.trx
+/TestResults/
+/src/*/TestResults/
+coverage/
+
 # NuGet
 *.nupkg
 *.snupkg
@@ -20,3 +28,27 @@ Thumbs.db
 # Secrets — NEVER commit
 .env
 *.env.local
+
+# Local camera/protocol investigation artifacts
+.my/plan/m38-a9-camera/captures/
+.my/plan/m38-a9-camera/image/
+.my/tools/
+/captures/
+*.pcap
+*.pcapng
+*.hprof
+dumpstate-*.zip
+soundflow-apm.zip
+
+# Android package outputs
+*.apk
+*.aab
+*.apks
+
+# Vendor/native binary drops used only for local camera investigation
+tools/BodyCam.A9PhoneProbe/NativeLibs/
+
+# Python/cache output from local reverse-engineering helpers
+__pycache__/
+*.py[cod]
+.pytest_cache/

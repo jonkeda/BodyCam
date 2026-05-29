@@ -1,6 +1,6 @@
 # Phase 0 - A9 Hardware Probe CLI And RealTests
 
-**Status:** Planned
+**Status:** Implemented
 
 ## Goal
 
@@ -11,6 +11,24 @@ supports before changing protocol code.
 
 No special Codex skill is required. This is a normal human-in-the-loop hardware
 flow using a local CLI plus `src/BodyCam.RealTests` for repeatable gated tests.
+
+## 2026-05-28 Hardware Probe Outcome
+
+Phase 0 implementation is in place. The first live probe did not reach the
+powered-on camera from the current Windows network:
+
+- Local Wi-Fi was `10.3.81.153/22` on `Exact-WLAN`.
+- Candidate hosts were `10.3.80.1`, `192.168.1.1`, `192.168.169.1`, and
+  after follow-up variant research, `192.168.4.1`.
+- RTSP, HTTP/MJPEG, V720 TCP `6123`, PPPP UDP `32108`, and PPPP UDP `20190`
+  all timed out or appeared closed.
+- No first frame was captured because no supported protocol was selected.
+
+Saved artifacts:
+
+- High-level log: `./realtests-log.md`
+- Report: `./realtests-report-2026-05-28.md`
+- JSON probe capture: `./captures/a9-probe-latest.json`
 
 ## Why CLI First
 
