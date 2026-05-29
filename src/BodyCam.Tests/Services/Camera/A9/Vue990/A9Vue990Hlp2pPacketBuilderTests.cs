@@ -61,4 +61,13 @@ public sealed class A9Vue990Hlp2pPacketBuilderTests
                 0x00, 0x00, 0x00, 0x00,
                 0x00, 0x00, 0x00, 0x00);
     }
+
+    [Fact]
+    public void BuildP2pAlive_WritesNativeHeaderOnlyPackets()
+    {
+        A9Vue990Hlp2pPacketBuilder.BuildP2pAlive()
+            .Should().Equal(0xf1, 0xe0, 0x00, 0x00);
+        A9Vue990Hlp2pPacketBuilder.BuildP2pAliveAck()
+            .Should().Equal(0xf1, 0xe1, 0x00, 0x00);
+    }
 }

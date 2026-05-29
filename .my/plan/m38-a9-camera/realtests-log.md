@@ -501,3 +501,82 @@
 - Outcome: Native helper previews show four zero bytes between the HLP2P header and P2P id, but helper return lengths may slice through the scratch buffer; next mapping target is the send wrapper (`Send_Pkt_ListReq` / `Send_Pkt_P2PReq`) before changing managed packet bytes.
 - Outcome: Android phone probe build passed after the oracle expansion.
 - Outcome: Static follow-up mapped `pack_ClntPkt`: the final native send shape repacks to `header + P2P id` or `header + P2P id + reverse address`, so the existing managed basic HLP2P packet builder shape is correct.
+
+## 2026-05-29 22:14:00 +02:00
+
+- Outcome: Continued Phase 44 as local-only development; no commit or push was performed.
+- Outcome: Added `A9Vue990ConnectByServerState` to preserve live DAS tokens, client id, VUID, local endpoint, and native structured P2P IDs in C#.
+- Outcome: Added focused unit coverage for current camera DAS state and native-shaped basic HLP2P opener packets; focused Vue990 tests passed `46/46`.
+- Outcome: Added Android `managed_lan_hole` autorun mode and Windows/ADB support for launching it.
+- Outcome: Android phone was connected to `@MC-0025644` as `192.168.168.100/24`; laptop Wi-Fi was not used.
+- Outcome: Ran the focused managed LAN-hole probe and saved the report in `.my/plan/m38-a9-camera/captures/phase-44-managed-lan-hole-local-2026-05-29-221252/`.
+- Outcome: Fixed UDP `65529` sent confirmed C# basic HLP2P packets and received only self-echo packets from `192.168.168.100`; the ephemeral socket received no responses.
+- Outcome: No non-self camera response was captured, so the next work must map the real `_se_lan_hole` session-engine packet instead of repeating the basic helper packet burst.
+
+## 2026-05-29 22:55:00 +02:00
+
+- Outcome: Continued local-only development; no commit or push was performed.
+- Outcome: Created Phase 45 for the native LAN-hole session-engine map so the next work does not loop back to broad probing.
+- Outcome: Static mapping showed `_clientSessionToSetup` sends a narrower setup subset: client-id `ListReq`, client-id `P2PReq4`, and `LanSearch`.
+- Outcome: Mapped native alive helpers as header-only packets `F1E00000` and `F1E10000`.
+- Outcome: Added C# builders/tests for the native setup subset and alive headers.
+- Outcome: Updated Android managed LAN-hole mode to send the native setup subset first and include decoded DAS relay hosts as candidate targets.
+
+## 2026-05-30 00:03:00 +02:00
+
+- Outcome: Managed C# compact HLP2P direct probe reached the camera LAN-hole response and ready packet on Android phone Wi-Fi.
+- Outcome: Fixed compact alive handling enough to receive the 830-byte post-hole command response from `192.168.168.1`.
+- Outcome: No image/video was saved in this attempt; the missing piece was the native-paced post-hole control order.
+
+## 2026-05-30 00:15:00 +02:00
+
+- Outcome: Replayed the native "ACK 830 then resend control[3]" step from C#.
+- Outcome: The camera ACKed the repeated control packet but still did not send the 62-byte response or media header.
+- Outcome: This confirmed the full pacing around control packets mattered, not only the 830 ACK.
+
+## 2026-05-30 00:18:00 +02:00
+
+- Outcome: Changed the C# direct replay to the native-paced order: control `0`, control `1`, wait, control `2`, control `3`, wait, repeat control `1`, ACK the 830-byte response, then repeat control `3`.
+- Outcome: Android C# received the missing 62-byte response, then the `55 AA 15 A8` media header and JPEG fragments.
+- Outcome: Saved C# runtime still image `managed-direct-still.jpg`, `640x480`, `9487` bytes, SHA-256 `9C124F13027538D726D2E72A83F06D5B03B08573FDD5A53B79DFD685B6A0A951`.
+- Outcome: Saved C# runtime MJPEG AVI `managed-direct-video-mjpeg.avi`, `12` frames, `640x480`, `113896` bytes, SHA-256 `F08D052541F4A902E1F278509A9D09E4D73F1E58DC01E902C575504EABD512FB`.
+- Outcome: Wrote Phase 47 for the Android C# capture success and documented the remaining caveat: post-hole control payloads are still native-observed encrypted vectors that need C# derivation.
+
+## 2026-05-30 00:40:00 +02:00
+
+- Outcome: Laptop Wi-Fi was connected directly to `@MC-0025644` as `192.168.168.101/24`; the camera gateway `192.168.168.1` was reachable and `get_status.cgi` returned `BK0025644WBPD`, `BKGD00000100FMQLN`, and `BK7252N`.
+- Outcome: Added the Windows `vue990-direct-capture` command and shared C# `A9Vue990DirectCaptureClient` for the Android-proven compact HLP2P/direct capture sequence.
+- Outcome: First Windows direct run reached LAN-hole, ready, post-hole packets, and saved about `1.8 MB` of raw channel bytes, but did not extract frames during the live receive loop.
+- Outcome: Added fallback extraction from `managed-hlp2p-direct-channel.bin`; the second Windows run saved a real still image and MJPEG AVI.
+- Outcome: Windows C# still image saved at `.my/plan/m38-a9-camera/captures/phase-48-windows-direct-2026-05-30-004023/managed-direct-still.jpg`, `640x480`, `9123` bytes, SHA-256 `52444D62CF8E3F2520F1436F57E02E26FCF3D26323C6FFD8739E5C6AE0E6CE30`.
+- Outcome: Windows C# video saved at `.my/plan/m38-a9-camera/captures/phase-48-windows-direct-2026-05-30-004023/managed-direct-video-mjpeg.avi`, `12` frames, `640x480`, `110204` bytes, SHA-256 `8C07FC2095F84209C52B06A16BE80A972E8C67CE8C00D566BDB63A684D74FC87`.
+- Outcome: Build passed for `tools/BodyCam.A9Probe`, and focused HLP2P direct tests passed `6/6`.
+- Outcome: Phase 48 now marks Windows C# image/video capture as succeeded; the remaining caveat is that the post-hole control payloads are still static native-observed encrypted vectors rather than generated in C#.
+
+## 2026-05-30 00:55:00 +02:00
+
+- Outcome: Created Phase 49, `Final C# Hardening`, to track the last work after Android and Windows C# capture success.
+- Outcome: Phase 49 owns control derivation or scoped-vector documentation, shared capture API cleanup, repeatability proof runs, and final report updates.
+
+## 2026-05-30 01:04:00 +02:00
+
+- Outcome: Added shared `A9Vue990PostHoleControlProvider` so the four static post-hole controls are named, scoped, defensive byte vectors instead of anonymous replay bytes.
+- Outcome: Wired Windows direct capture and the Android phone probe to the shared post-hole provider; normal reports now say `post-hole control` instead of `replay control`.
+- Outcome: Added focused post-hole provider tests; focused direct/post-hole tests passed `12/12`.
+- Outcome: `tools/BodyCam.A9Probe` build passed, and `tools/BodyCam.A9PhoneProbe` Android build passed.
+- Outcome: Fresh Phase 49 Windows proof run 1 saved `.my/plan/m38-a9-camera/captures/phase-49-final-windows-direct-2026-05-30-010401/managed-direct-still.jpg`, `640x480`, `8104` bytes, SHA-256 `F36EF09D8BBFA5A8330D9BE54F46158E9AAB4B2C37E13F9CB632F39B632A498D`.
+- Outcome: Fresh Phase 49 Windows proof run 1 saved `.my/plan/m38-a9-camera/captures/phase-49-final-windows-direct-2026-05-30-010401/managed-direct-video-mjpeg.avi`, `12` frames, `640x480`, `97868` bytes, SHA-256 `3E1EA8F16061840F039422C6C38C5F31F4F5179C020FC87BD5CAE97FFF83E80A`.
+- Outcome: Fresh Phase 49 Windows proof run 2 saved `.my/plan/m38-a9-camera/captures/phase-49-final-windows-direct-2026-05-30-010441/managed-direct-still.jpg`, `640x480`, `8152` bytes, SHA-256 `5DF8B1778937805BE84EAA86ED6CC9802CE64209908F1AC36AD9BDFD848F5516`.
+- Outcome: Fresh Phase 49 Windows proof run 2 saved `.my/plan/m38-a9-camera/captures/phase-49-final-windows-direct-2026-05-30-010441/managed-direct-video-mjpeg.avi`, `12` frames, `640x480`, `98312` bytes, SHA-256 `0D2825A46C5C8AA6D93FFBB60936A740A0D638C21C7E399D9B1C5435ED8D6BA2`.
+- Outcome: Phase 49 is complete for the current camera: Windows C# capture is repeatable, and the remaining control derivation is now a future broader-compatibility task rather than a blocker for `@MC-0025644`.
+
+## 2026-05-30 01:20:00 +02:00
+
+- Outcome: Added `.my/plan/m38-a9-camera/vue990-csharp-capture-solution.md` as the durable solution document for the working Windows C# capture path.
+- Outcome: Documented the run command, expected artifacts, solution flow, code map, regression tests, proof artifacts, troubleshooting, and future compatibility caveat.
+- Outcome: Linked the solution document from the current status report and the C#-only Vue990 roadmap.
+
+## 2026-05-30 01:30:00 +02:00
+
+- Outcome: Added `.my/plan/m38-a9-camera/vue990-capture-journey-report.md` as a factual companion to the story document.
+- Outcome: Captured the investigation ups and downs, failed paths, key turning points, Windows proof, current code surface, and remaining scoped-vector caveat.

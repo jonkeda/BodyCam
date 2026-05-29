@@ -18,15 +18,24 @@
   <ItemGroup>
     <AndroidJavaSource Include="Java\**\*.java" />
   </ItemGroup>
+  <ItemGroup Condition="'$(A9SocketHook)' == 'true'">
+    <AndroidNativeLibrary Include="..\..\.my\plan\m38-a9-camera\captures\phase-46-socket-hook\liba9sockhook.so">
+      <Abi>arm64-v8a</Abi>
+      <Link>liba9sockhook.so</Link>
+    </AndroidNativeLibrary>
+  </ItemGroup>
   <ItemGroup>
     <Compile Include="..\..\src\BodyCam\Services\Camera\A9\Vue990\A9Vue990PpcsPacket.cs" Link="Shared\A9Vue990PpcsPacket.cs" />
     <Compile Include="..\..\src\BodyCam\Services\Camera\A9\Vue990\A9Vue990Hlp2pPacketBuilder.cs" Link="Shared\A9Vue990Hlp2pPacketBuilder.cs" />
+    <Compile Include="..\..\src\BodyCam\Services\Camera\A9\Vue990\A9Vue990Hlp2pDirectPacket.cs" Link="Shared\A9Vue990Hlp2pDirectPacket.cs" />
+    <Compile Include="..\..\src\BodyCam\Services\Camera\A9\Vue990\A9Vue990PostHoleControlProvider.cs" Link="Shared\A9Vue990PostHoleControlProvider.cs" />
     <Compile Include="..\..\src\BodyCam\Services\Camera\A9\Vue990\A9Vue990PpcsControlCommandBuilder.cs" Link="Shared\A9Vue990PpcsControlCommandBuilder.cs" />
     <Compile Include="..\..\src\BodyCam\Services\Camera\A9\Vue990\A9Vue990CgiCommandBuilder.cs" Link="Shared\A9Vue990CgiCommandBuilder.cs" />
     <Compile Include="..\..\src\BodyCam\Services\Camera\A9\Vue990\A9Vue990P2pPacketBuilder.cs" Link="Shared\A9Vue990P2pPacketBuilder.cs" />
     <Compile Include="..\..\src\BodyCam\Services\Camera\A9\Vue990\A9Vue990TcpRelayPacketBuilder.cs" Link="Shared\A9Vue990TcpRelayPacketBuilder.cs" />
     <Compile Include="..\..\src\BodyCam\Services\Camera\A9\Vue990\A9Vue990StatusClient.cs" Link="Shared\A9Vue990StatusClient.cs" />
     <Compile Include="..\..\src\BodyCam\Services\Camera\A9\Vue990\A9Vue990DasServerParameter.cs" Link="Shared\A9Vue990DasServerParameter.cs" />
+    <Compile Include="..\..\src\BodyCam\Services\Camera\A9\Vue990\A9Vue990ConnectByServerState.cs" Link="Shared\A9Vue990ConnectByServerState.cs" />
     <Compile Include="..\..\src\BodyCam\Services\Camera\A9\Vue990\A9Vue990RelayHelloProbeClient.cs" Link="Shared\A9Vue990RelayHelloProbeClient.cs" />
   </ItemGroup>
 </Project>

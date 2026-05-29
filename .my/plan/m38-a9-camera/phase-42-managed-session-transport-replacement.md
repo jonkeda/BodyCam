@@ -1,6 +1,6 @@
 # Phase 42 - Managed Session Transport Replacement
 
-**Status:** In progress - native session carrier mapping
+**Status:** Superseded by Phase 47 Android success and Phase 48 Windows success
 
 ## Roadmap Gate
 
@@ -120,8 +120,61 @@ What changed in this run:
   but all timed out with `0` response bytes.
 
 Conclusion: Android Wi-Fi permission/routing is no longer the blocker for this
-managed-direct path. The blocker remains the exact HLP2P session-open handshake
-used by native `ConnectByServer_V4` / `_p2p_connect_check_svr`.
+managed-direct path. The blocker remains the exact HLP2P/session-engine
+LAN-hole handshake used by native `ConnectByServer_V4` /
+`_p2p_connect_check_svr`.
+
+## Phase 45 Refinement - 2026-05-29
+
+Phase 44 proved that the basic helper packets are byte-accurate in C# but not
+sufficient as an opener. Phase 45 now owns the sharper blocker:
+
+- Map the native `_se_lan_hole` session-engine packet and response parsers.
+- Keep `_clientSessionToSetup` evidence as a narrow setup subset:
+  client-id `ListReq`, client-id `P2PReq4`, and `LanSearch`.
+- Do not repeat the broad helper-packet burst unless new native packet bytes
+  require it.
+
+## Phase 47 Outcome - 2026-05-30
+
+Phase 47 reached this phase's Android acceptance target. The Android probe used
+managed C# runtime code to complete the compact HLP2P LAN-hole path, receive the
+direct `0D` media transport, extract JPEGs, and save a still plus MJPEG AVI.
+
+Successful run:
+
+- Directory:
+  `.my/plan/m38-a9-camera/captures/phase-47-managed-hlp2p-direct-paced-2026-05-30-001842/`
+- Camera endpoint: `192.168.168.1:10654`
+- Phone Wi-Fi: `@MC-0025644`, `192.168.168.100/24`
+- Still: `managed-direct-still.jpg`, `640x480`, `9487` bytes,
+  SHA-256 `9C124F13027538D726D2E72A83F06D5B03B08573FDD5A53B79DFD685B6A0A951`
+- Video: `managed-direct-video-mjpeg.avi`, `12` frames, `640x480`,
+  `113896` bytes, SHA-256
+  `F08D052541F4A902E1F278509A9D09E4D73F1E58DC01E902C575504EABD512FB`
+
+Important caveat: the runtime path is C# only, but the four post-hole control
+payloads are still native-observed encrypted vectors. The next phase should
+derive those controls in C#. Phase 48 has now ported the proven sequence to
+Windows and saved image/video artifacts.
+
+## Phase 48 Outcome - 2026-05-30
+
+Phase 48 reached the Windows acceptance target. The laptop connected directly
+to `@MC-0025644`, ran the shared managed direct capture sequence, received
+`55 AA 15 A8` media bytes, extracted JPEGs, and saved a still plus MJPEG AVI.
+
+Successful run:
+
+- Directory:
+  `.my/plan/m38-a9-camera/captures/phase-48-windows-direct-2026-05-30-004023/`
+- Laptop Wi-Fi: `@MC-0025644`, `192.168.168.101/24`
+- Camera endpoint: `192.168.168.1:2951`
+- Still: `managed-direct-still.jpg`, `640x480`, `9123` bytes,
+  SHA-256 `52444D62CF8E3F2520F1436F57E02E26FCF3D26323C6FFD8739E5C6AE0E6CE30`
+- Video: `managed-direct-video-mjpeg.avi`, `12` frames, `640x480`,
+  `110204` bytes, SHA-256
+  `8C07FC2095F84209C52B06A16BE80A972E8C67CE8C00D566BDB63A684D74FC87`
 
 ## Goal
 
@@ -170,8 +223,13 @@ P/Invoke session calls.
 - [x] Android Wi-Fi-local UDP permission issue fixed.
 - [x] Managed Android probe reaches UDP and relay session attempts without
   laptop Wi-Fi.
-- [ ] HLP2P connect/session handshake map recorded.
-- [ ] Managed transport receives first non-self session response.
-- [ ] Managed transport sends confirmed live-open command.
-- [ ] Managed transport receives media bytes.
-- [ ] C# saves image and video without native session calls.
+- [x] Basic HLP2P helper packet bytes mapped and tested.
+- [x] Native `_clientSessionToSetup` setup subset recorded.
+- [x] HLP2P connect/session handshake map recorded enough for Android direct
+      transport.
+- [x] Managed transport receives first non-self session response.
+- [x] Managed transport reaches the media channel without native session calls.
+- [x] Managed transport receives media bytes.
+- [x] C# saves image and video without native session calls.
+- [ ] C# derives encrypted post-hole controls instead of replaying observed
+      vectors.

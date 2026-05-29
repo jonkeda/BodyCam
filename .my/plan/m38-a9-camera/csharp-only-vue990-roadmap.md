@@ -1,22 +1,27 @@
 # C#-Only Vue990 Stream Roadmap
 
-**Status:** Active controlling roadmap
+**Status:** Current camera complete - Windows C# capture repeatability proved
+
+Solution document:
+`.my/plan/m38-a9-camera/vue990-csharp-capture-solution.md`
 
 ## Goal
 
 Retrieve a real still image and short video from `@MC-0025644` using C# protocol
-code that can run on Android first and Windows later.
+code that can run on Android and Windows.
 
-Android is the current proving ground because the phone is already on the
-camera Wi-Fi and Vue990 proves the camera can stream there. Android is not the
-target architecture and not a relay. It is where we remove uncertainty about
-the protocol before moving the same C# code to Windows.
+Android was the proving ground because the phone was already on the camera
+Wi-Fi and Vue990 proved the camera could stream there. Windows is now also
+proven for direct capture when the laptop is connected to the camera Wi-Fi.
 
 ## Current Truth
 
 - The vendor-backed Android path works and has produced real JPEG and MJPEG AVI
   artifacts.
-- That path still depends on `libOKSMARTPPCS.so` and `libOKSMARTPLAY.so`.
+- The first Android C#-only runtime path now saves a real still image and short
+  MJPEG AVI without calling the native Vue990/PPCS session APIs.
+- The first Windows C# direct path now saves a real still image and short MJPEG
+  AVI from the laptop while connected directly to `@MC-0025644`.
 - Windows and Android both reach camera HTTP status on `192.168.168.1:81`.
 - Direct HTTP/RTSP/MJPEG endpoints have not produced media.
 - Classic PPPP/HLP2P UDP discovery and broad local UDP matrices have not made
@@ -32,6 +37,18 @@ the protocol before moving the same C# code to Windows.
   an 8-byte command-channel header plus credentialed live-stream CGI body on
   channel `0`. That C# command started the stream and produced a real still plus
   MJPEG AVI while native connect/login/read still carried the session.
+- Phase 47 replaced the Android runtime session carrier with managed C# for the
+  local HLP2P direct path. It uses the compact LAN-hole handshake, C# direct
+  ACKs, and native-paced post-hole control ordering to receive `55 AA 15 A8`
+  media bytes and save image/video artifacts.
+- Phase 48 moved the same path to Windows C# and saved
+  `managed-direct-still.jpg` plus `managed-direct-video-mjpeg.avi`.
+- Phase 49 splits out the final hardening work: control derivation or scoped
+  vector documentation, shared capture API cleanup, and repeatable final proof
+  captures.
+- Phase 49 succeeded for the current camera: the post-hole controls are named
+  scoped vectors, Windows and Android share that provider, and two fresh Windows
+  proof runs saved still/video artifacts.
 
 ## Roadmap
 
@@ -52,8 +69,9 @@ Exit criteria:
 Status:
 
 - Done for the current evidence set. Phase 39 is closed as a negative result,
-  and Phase 40 produced a raw channel oracle plus extracted image/video
-  artifacts.
+  Phase 40 produced a raw channel oracle plus extracted image/video artifacts,
+  Phase 47 produced a C#-only Android runtime image/video capture, and Phase 48
+  produced a Windows C# direct image/video capture.
 
 ### 2. Build A Native Behavior Oracle
 
@@ -83,7 +101,8 @@ Result:
 - Phase 40 succeeded for channel bytes and media shape.
 - Phase 41 identified native `writeCgi` framing and replaced it with C#
   command bytes.
-- Native transport/session carrying still remains.
+- Phase 47 replaced native runtime carrying on Android, with the caveat that the
+  encrypted post-hole controls are still native-observed vectors.
 
 ### 3. Port The Session Opener To C#
 
@@ -105,13 +124,15 @@ Exit criteria:
 - Second gate: managed C# receives a valid control/channel payload after login.
 - Final gate: managed C# receives media bytes after the live CGI command.
 
-Do not proceed to Windows until at least the second gate is true on Android.
+Android status:
+
+- Done for the current camera. Phase 47 passed the final Android gate and saved
+  still/video artifacts from managed C# transport.
 
 Immediate next step:
 
-- Keep the confirmed live-open command fixed and replace the native session
-  carrier through the Phase 43/44 LAN-hole path: connect/login/read/write
-  transport.
+- Current-camera hardening is done in Phase 49. A future phase should only be
+  created if broader control derivation or multi-camera compatibility is needed.
 
 ### 4. Decode And Save Media In C#
 
@@ -132,6 +153,10 @@ Exit criteria:
 - A C#-only video artifact is saved on Android.
 - Hash, dimensions, byte count, and artifact path are written to the report.
 
+Status:
+
+- Done on Android in Phase 47 and on Windows in Phase 48.
+
 ### 5. Move The Working C# Path To Windows
 
 Purpose:
@@ -140,7 +165,6 @@ Purpose:
 
 Allowed experiments:
 
-- Windows firewall changes only after Android proves the C# protocol.
 - Prefer same packet sequence and credentials.
 - Only add Windows-specific socket binding/firewall work if packet evidence
   shows Windows is failing after sending the known-good sequence.
@@ -149,6 +173,15 @@ Exit criteria:
 
 - Windows C# saves a real JPEG and video from `@MC-0025644`.
 - The Android proving app is no longer required for normal capture.
+
+Status:
+
+- Done for the current camera in Phase 48. Windows saved
+  `managed-direct-still.jpg`, `640x480`, `9123` bytes, SHA-256
+  `52444D62CF8E3F2520F1436F57E02E26FCF3D26323C6FFD8739E5C6AE0E6CE30`.
+- Windows saved `managed-direct-video-mjpeg.avi`, `12` frames, `640x480`,
+  `110204` bytes, SHA-256
+  `8C07FC2095F84209C52B06A16BE80A972E8C67CE8C00D566BDB63A684D74FC87`.
 
 ## Do Not Repeat Without New Evidence
 
@@ -172,7 +205,14 @@ Create a new phase only when it moves one roadmap gate:
 - Phase 42: managed C# transport/read replacement on Android.
 - Phase 43: native HLP2P `ConnectByServer` / LAN-hole map.
 - Phase 44: managed C# LAN-hole opener on Android.
-- Future: Windows C# port of the proven Android path.
+- Phase 47: Android managed HLP2P direct capture saved image/video.
+- Phase 48: Windows managed HLP2P direct capture saved image/video and now
+  tracks encrypted control derivation.
+- Phase 49: final C# hardening after the stream goal succeeded. This phase is
+  for control derivation/scoping, API cleanup, and repeatability proof.
+- Future: create another phase only for a new gate, such as generated
+  post-hole controls proven across more than one camera/firmware or
+  multi-camera compatibility.
 
 If a task does not move one of those gates, record it in the realtests log
 instead of creating another phase.

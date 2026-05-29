@@ -1,6 +1,6 @@
 # Phase 44 - Managed LAN-Hole Session Opener
 
-**Status:** In progress - native HLP2P packet creator vectors captured
+**Status:** Superseded by Phase 47 compact direct opener
 
 ## Goal
 
@@ -112,6 +112,87 @@ shape matches the final send shape for these basic packets. The remaining
 missing piece is the higher-level LAN-hole/session-engine state, not the
 basic HLP2P packet helpers.
 
+## Managed Focused Opener Attempt - 2026-05-29 22:12
+
+Run:
+
+- Directory:
+  `.my/plan/m38-a9-camera/captures/phase-44-managed-lan-hole-local-2026-05-29-221252/`
+- Windows role: USB/ADB install and report collection only.
+- Phone network state: `wlan0: 192.168.168.100/24`.
+- The run did not use laptop Wi-Fi.
+- Android phone probe build passed before the run.
+- Focused Vue990 tests passed `46/46`.
+
+Managed C# added:
+
+- Added `A9Vue990ConnectByServerState`.
+- Preserves decoded DAS tokens, including binary opaque token bytes and selector
+  `9047F8F88`.
+- Builds native structured P2P IDs for both `BK0025644WBPD` and
+  `BKGD00000100FMQLN`.
+- Produces the confirmed basic HLP2P opener packet bytes for list, punch,
+  ready, and P2P request.
+- Added Android `managed_lan_hole` autorun mode and Windows/ADB orchestration
+  support.
+
+Live outcome:
+
+- The probe fetched status over camera Wi-Fi and built state from the live
+  `DAS-...` server value.
+- Fixed UDP `65529` sent the focused packet burst to camera unicast and
+  broadcast targets.
+- Fixed UDP `65529` received only self-echo packets from `192.168.168.100`.
+- Ephemeral UDP `58034` sent the same focused packet burst and received no
+  responses.
+- No non-self response from `192.168.168.1` was captured.
+
+Interpretation:
+
+- The basic HLP2P helper packet bytes are now a tested C# baseline.
+- The successful native `_se_lan_hole` path is not just the basic helper packet
+  burst. It likely uses a separate session-engine packet built from derived DAS
+  state and/or native session fields.
+- Do not repeat this exact focused basic-packet burst unless new packet bytes
+  or endpoint evidence are added.
+
+## Phase 45 Handoff - 2026-05-29
+
+This phase should not keep retrying the basic helper burst. The next active work
+has moved to
+[Phase 45 - Native LAN-Hole Session Engine Map](./phase-45-native-lan-hole-session-engine-map.md).
+
+Static follow-up added one useful refinement:
+
+- `_clientSessionToSetup` sends a narrower native setup subset:
+  client-id `ListReq`, client-id `P2PReq4`, and `LanSearch`.
+- `create_P2pAlive` / `create_P2pAliveAck` are header-only packets:
+  `F1E00000` and `F1E10000`.
+- The Android managed LAN-hole mode now sends that native setup subset first and
+  includes decoded DAS relay hosts as candidate targets.
+
+The remaining Phase 44 blocker is unchanged: until Phase 45 maps the exact
+`_se_lan_hole` request/ack bytes, this phase cannot honestly claim a C# session
+opener.
+
+## Phase 47 Update - 2026-05-30
+
+The first C# session opener did not come from the basic `F1xx` helper-packet
+burst in this phase. It came from the compact direct HLP2P path documented in
+Phase 47:
+
+- compact LAN-hole request `0x02`,
+- LAN-hole response `0x11`,
+- ready `0x15`,
+- direct transport `0x0D`,
+- C# ACK generation,
+- native-paced post-hole control ordering.
+
+Phase 47 succeeded on Android phone Wi-Fi and saved both
+`managed-direct-still.jpg` and `managed-direct-video-mjpeg.avi`. The remaining
+work is no longer "find any C# response"; it is "derive the encrypted post-hole
+controls and port the proven sequence to Windows."
+
 ## Work Plan
 
 1. Map native packet sources.
@@ -159,14 +240,15 @@ basic HLP2P packet helpers.
 
 ## Checklist
 
-- [ ] Map `_se_lan_hole` packet format.
+- [x] Map working compact direct LAN-hole packet format in Phase 47.
 - [x] Capture native `create_LstReq` / `create_P2pReq` helper vectors.
 - [x] Map `Send_Pkt_ListReq` / `Send_Pkt_P2PReq` send pointer and length.
-- [ ] Map `dev lan hole` and `dev lan hole ack` response formats.
-- [ ] Map alive packet format to `192.168.168.1:53674` or dynamic equivalent.
-- [ ] Add `A9Vue990ConnectByServerState`.
-- [ ] Add focused Android `managed_lan_hole` probe mode.
-- [ ] Receive first non-self camera response in C#.
-- [ ] Implement managed encrypted channel carrier.
-- [ ] Save C#-only still image.
-- [ ] Save C#-only MJPEG AVI.
+- [x] Map working compact LAN-hole response and ready formats in Phase 47.
+- [x] Map alive packet headers `F1E00000` / `F1E10000`.
+- [x] Add `A9Vue990ConnectByServerState`.
+- [x] Add focused Android `managed_lan_hole` probe mode.
+- [x] Receive first non-self camera response in C#.
+- [x] Implement managed direct `0D` carrier and ACKs.
+- [x] Save C#-only still image.
+- [x] Save C#-only MJPEG AVI.
+- [ ] Derive encrypted post-hole controls instead of replaying observed vectors.

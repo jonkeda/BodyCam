@@ -12,6 +12,8 @@ public static class A9Vue990Hlp2pPacketBuilder
     public const ushort PunchPacket = 0xf141;
     public const ushort P2pReady = 0xf142;
     public const ushort ListRequest = 0xf167;
+    public const ushort P2pAlive = 0xf1e0;
+    public const ushort P2pAliveAck = 0xf1e1;
 
     private const int P2pIdLength = 20;
     private const int P2pIdPrefixLength = 8;
@@ -52,6 +54,16 @@ public static class A9Vue990Hlp2pPacketBuilder
     public static byte[] BuildP2pReady(ReadOnlySpan<byte> p2pId)
     {
         return BuildP2pIdPacket(P2pReady, p2pId);
+    }
+
+    public static byte[] BuildP2pAlive()
+    {
+        return BuildHeader(P2pAlive);
+    }
+
+    public static byte[] BuildP2pAliveAck()
+    {
+        return BuildHeader(P2pAliveAck);
     }
 
     public static byte[] BuildP2pRequest4(ReadOnlySpan<byte> p2pId, IPAddress localAddress, ushort localPort)

@@ -58,6 +58,11 @@ if (!string.Equals(command, "probe", StringComparison.OrdinalIgnoreCase))
         return await RunVue990HttpMediaCommandAsync(args.Skip(1).ToArray());
     }
 
+    if (string.Equals(command, "vue990-direct-capture", StringComparison.OrdinalIgnoreCase))
+    {
+        return await RunVue990DirectCaptureCommandAsync(args.Skip(1).ToArray());
+    }
+
     if (string.Equals(command, "mjpeg-avi", StringComparison.OrdinalIgnoreCase))
     {
         return RunMjpegAviCommand(args.Skip(1).ToArray());
@@ -789,6 +794,140 @@ static async Task<int> RunVue990HttpMediaCommandAsync(string[] args)
     }
 
     return result.CapturedImage || result.CapturedVideo ? 0 : 1;
+}
+
+static async Task<int> RunVue990DirectCaptureCommandAsync(string[] args)
+{
+    var host = Environment.GetEnvironmentVariable("A9_CAMERA_IP") ?? "192.168.168.1";
+    var captureImage = true;
+    var captureVideo = true;
+    var streamSeconds = 18;
+    var maxFrames = 12;
+    var json = false;
+    string? outputPath = null;
+    string? outputDirectory = null;
+
+    for (var i = 0; i < args.Length; i++)
+    {
+        switch (args[i])
+        {
+            case "--host":
+                if (!TryReadValue(args, ref i, out host))
+                {
+                    Console.Error.WriteLine("--host requires a value.");
+                    return 2;
+                }
+                break;
+
+            case "--output-dir":
+                if (!TryReadValue(args, ref i, out outputDirectory))
+                {
+                    Console.Error.WriteLine("--output-dir requires a directory path.");
+                    return 2;
+                }
+                break;
+
+            case "--stream-seconds":
+            case "--timeout-seconds":
+                if (!TryReadValue(args, ref i, out var streamValue) ||
+                    !int.TryParse(streamValue, out streamSeconds) ||
+                    streamSeconds < 1)
+                {
+                    Console.Error.WriteLine("--stream-seconds requires an integer value >= 1.");
+                    return 2;
+                }
+                break;
+
+            case "--max-frames":
+                if (!TryReadValue(args, ref i, out var maxFramesValue) ||
+                    !int.TryParse(maxFramesValue, out maxFrames) ||
+                    maxFrames < 1)
+                {
+                    Console.Error.WriteLine("--max-frames requires an integer value >= 1.");
+                    return 2;
+                }
+                break;
+
+            case "--no-image":
+                captureImage = false;
+                break;
+
+            case "--no-video":
+                captureVideo = false;
+                break;
+
+            case "--json":
+                json = true;
+                break;
+
+            case "--output":
+                if (!TryReadValue(args, ref i, out outputPath))
+                {
+                    Console.Error.WriteLine("--output requires a file path.");
+                    return 2;
+                }
+                break;
+
+            default:
+                Console.Error.WriteLine($"Unknown vue990-direct-capture option: {args[i]}");
+                return 2;
+        }
+    }
+
+    outputDirectory ??= Path.Combine(
+        Environment.CurrentDirectory,
+        ".my",
+        "plan",
+        "m38-a9-camera",
+        "captures",
+        $"vue990-direct-capture-{DateTimeOffset.Now:yyyy-MM-dd-HHmmss}");
+
+    var topology = WindowsTopology.Capture();
+    var result = await new A9Vue990DirectCaptureClient().CaptureAsync(
+        new A9Vue990DirectCaptureOptions
+        {
+            Host = host,
+            OutputDirectory = outputDirectory,
+            CaptureImage = captureImage,
+            CaptureVideo = captureVideo,
+            StreamSeconds = streamSeconds,
+            MaxFrames = maxFrames,
+        },
+        Console.WriteLine);
+
+    Console.WriteLine();
+    Console.WriteLine(WindowsTopology.ToReadableString(topology));
+    Console.WriteLine(result.ToReadableString());
+
+    if (json || outputPath is not null)
+    {
+        var jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web)
+        {
+            WriteIndented = true,
+        };
+        jsonOptions.Converters.Add(new JsonStringEnumConverter());
+        var payload = JsonSerializer.Serialize(new
+        {
+            topology,
+            result,
+        }, jsonOptions);
+
+        if (outputPath is not null)
+        {
+            var directory = Path.GetDirectoryName(Path.GetFullPath(outputPath));
+            if (!string.IsNullOrWhiteSpace(directory))
+                Directory.CreateDirectory(directory);
+
+            await File.WriteAllTextAsync(outputPath, payload);
+            Console.WriteLine($"JSON written: {outputPath}");
+        }
+        else
+        {
+            Console.WriteLine(payload);
+        }
+    }
+
+    return result.Success ? 0 : 1;
 }
 
 static async Task<int> RunVue990PpcsTransportCommandAsync(string[] args)
@@ -1570,6 +1709,7 @@ static async Task<int> RunVue990AndroidManagedDirectCommandAsync(string[] args)
     var installApk = true;
     var captureImage = true;
     var captureVideo = true;
+    var managedLanHoleOnly = false;
     var requireSubnet = true;
     var adbTimeoutSeconds = 10;
     var reportTimeoutSeconds = 90;
@@ -1637,6 +1777,13 @@ static async Task<int> RunVue990AndroidManagedDirectCommandAsync(string[] args)
                 captureVideo = false;
                 break;
 
+            case "--managed-lan-hole":
+            case "--managed-lan-hole-only":
+                managedLanHoleOnly = true;
+                captureImage = false;
+                captureVideo = false;
+                break;
+
             case "--output-dir":
                 if (!TryReadValue(args, ref i, out outputDirectory))
                 {
@@ -1698,6 +1845,7 @@ static async Task<int> RunVue990AndroidManagedDirectCommandAsync(string[] args)
         InstallApk = installApk,
         CaptureImage = captureImage,
         CaptureVideo = captureVideo,
+        ManagedLanHoleOnly = managedLanHoleOnly,
         OutputDirectory = outputDirectory,
         AdbTimeout = TimeSpan.FromSeconds(adbTimeoutSeconds),
         ReportTimeout = TimeSpan.FromSeconds(reportTimeoutSeconds),
@@ -1963,6 +2111,7 @@ static void PrintUsage()
           dotnet run --project tools\BodyCam.A9Probe\BodyCam.A9Probe.csproj -- vue990-android-channel-oracle [options]
           dotnet run --project tools\BodyCam.A9Probe\BodyCam.A9Probe.csproj -- vue990-android-managed-direct [options]
           dotnet run --project tools\BodyCam.A9Probe\BodyCam.A9Probe.csproj -- vue990-http-media [options]
+          dotnet run --project tools\BodyCam.A9Probe\BodyCam.A9Probe.csproj -- vue990-direct-capture [options]
           dotnet run --project tools\BodyCam.A9Probe\BodyCam.A9Probe.csproj -- mjpeg-avi [options]
 
         Options:
@@ -2070,6 +2219,7 @@ static void PrintUsage()
           --allow-any-wifi          Do not enforce phone Wi-Fi subnet prefix.
           --no-image                Skip still-image artifact save.
           --no-video                Skip MJPEG AVI artifact save.
+          --managed-lan-hole        Run only the C# LAN-hole/session opener probe.
           --output-dir <path>       Directory for report, logcat, and pulled artifacts.
           --timeout-seconds <sec>   Wait for phone probe report. Default: 90.
           --json                   Print JSON after the readable summary.
@@ -2089,6 +2239,16 @@ static void PrintUsage()
           --output-dir <path>      Save JPEG/AVI artifacts when found.
           --json                   Print JSON after the readable summary.
           --output <path>          Write JSON to a file.
+
+        Vue990 direct C# capture options:
+          --host <ip-or-host>       Camera host. Default: A9_CAMERA_IP or 192.168.168.1.
+          --output-dir <path>       Save direct packets, JPEGs, AVI, and report artifacts.
+          --stream-seconds <sec>    Direct receive window. Default: 18.
+          --max-frames <n>          Stop after this many JPEG frames. Default: 12.
+          --no-image                Skip still-image artifact save.
+          --no-video                Skip MJPEG AVI artifact save.
+          --json                   Print JSON after the readable summary.
+          --output <path>          Write JSON result to a file.
 
         MJPEG AVI options:
           --input-dir <path>       Directory containing JPEG frame files.

@@ -2,13 +2,20 @@
 
 ## Short Answer
 
-We made real progress. We can now start the camera stream with C#-generated
-Vue990 command bytes and download a real still image plus a short MJPEG AVI
-from the live stream.
+Update on 2026-05-30: the Windows direct path now works in C#. The laptop
+connected to `@MC-0025644`, reached the camera at `192.168.168.1`, and saved
+both a real still image and a short MJPEG AVI.
 
-This is not fully pure C# yet. The live-open command, JPEG extraction, and video
-assembly are C#, but the remaining session carrier still uses native Vue990/PPCS
-calls for connect/login/raw read-write.
+The earlier Android runtime path also works in C# without native Vue990/PPCS
+session calls.
+
+Solution document:
+`.my/plan/m38-a9-camera/vue990-csharp-capture-solution.md`
+
+Important caveat: the current working C# path still replays four encrypted
+post-hole control payloads captured from the native app. So runtime execution is
+C# only on both Android and Windows, but the next hardening step is to derive
+those payloads in C# instead of using native-observed vectors.
 
 ## Current Result
 
@@ -43,6 +50,49 @@ Verification:
 - Focused Vue990 tests passed: `40/40`
 - Android probe build passed
 - Live camera run succeeded and pulled artifacts back to Windows
+
+Latest Phase 47 Android C#-only runtime success:
+
+- Laptop Wi-Fi was not used; Windows controlled the Android phone over USB/ADB.
+- Directory:
+  `.my/plan/m38-a9-camera/captures/phase-47-managed-hlp2p-direct-paced-2026-05-30-001842/`
+- Phone Wi-Fi: `@MC-0025644`, `192.168.168.100/24`
+- Camera endpoint after compact LAN-hole: `192.168.168.1:10654`
+- Runtime native Vue990/PPCS session calls used by this run: none
+- Still:
+  `managed-direct-still.jpg`, `640x480`, `9487` bytes, SHA-256
+  `9C124F13027538D726D2E72A83F06D5B03B08573FDD5A53B79DFD685B6A0A951`
+- Video:
+  `managed-direct-video-mjpeg.avi`, `12` frames, `640x480`, `113896` bytes,
+  SHA-256
+  `F08D052541F4A902E1F278509A9D09E4D73F1E58DC01E902C575504EABD512FB`
+- Raw managed channel dump:
+  `managed-hlp2p-direct-channel.bin`, `1554712` bytes, SHA-256
+  `F39B4242E5EC16E407317ED3AE1B68AC8D57D1E18078F2C924B668E2DC4533FD`
+- Focused direct-packet tests passed: `5/5`
+- Android phone probe build passed for `net10.0-android`
+
+Latest Phase 48 Windows C# direct capture success:
+
+- Laptop Wi-Fi was connected directly to `@MC-0025644` as
+  `192.168.168.101/24`.
+- Camera host: `192.168.168.1`; stream endpoint after compact LAN-hole:
+  `192.168.168.1:2951`.
+- Directory:
+  `.my/plan/m38-a9-camera/captures/phase-48-windows-direct-2026-05-30-004023/`
+- Runtime native Vue990/PPCS session calls used by this run: none.
+- Still:
+  `managed-direct-still.jpg`, `640x480`, `9123` bytes, SHA-256
+  `52444D62CF8E3F2520F1436F57E02E26FCF3D26323C6FFD8739E5C6AE0E6CE30`
+- Video:
+  `managed-direct-video-mjpeg.avi`, `12` frames, `640x480`, `110204` bytes,
+  SHA-256
+  `8C07FC2095F84209C52B06A16BE80A972E8C67CE8C00D566BDB63A684D74FC87`
+- Raw managed channel dump:
+  `managed-hlp2p-direct-channel.bin`, `1849872` bytes, SHA-256
+  `259A9CBB5AC0DDAA0D7AEC979E3E3EE1F40A90BFCD10D2A49A223E2A4117023C`
+- Focused HLP2P direct tests passed: `6/6`
+- `tools/BodyCam.A9Probe` build passed.
 
 Latest Phase 42 Android-only attempt:
 
@@ -81,6 +131,38 @@ Latest Phase 43 Android-only native-log oracle:
 - Added a managed C# DAS connect descriptor that preserves binary token bytes;
   focused Vue990 tests now pass `42/42`.
 - Android phone probe build passes for `net10.0-android`.
+
+Latest Phase 44 Android-only managed LAN-hole attempt:
+
+- Laptop Wi-Fi was still not used; Windows only controlled the phone over
+  USB/ADB.
+- Directory:
+  `.my/plan/m38-a9-camera/captures/phase-44-managed-lan-hole-local-2026-05-29-221252/`
+- Phone Wi-Fi: `@MC-0025644`, `192.168.168.100/24`
+- Added `A9Vue990ConnectByServerState` to preserve decoded DAS tokens, client
+  id, VUID, credentials, local endpoint, and native structured P2P IDs in C#.
+- Added Android `managed_lan_hole` autorun mode and Windows/ADB launch support.
+- Focused Vue990 tests passed `46/46`.
+- Android phone probe build passed for `net10.0-android`.
+- Fixed UDP `65529` sent the confirmed basic HLP2P list/punch/ready/P2P request
+  packet burst and received only self-echo packets from `192.168.168.100`.
+- Ephemeral UDP sent the same focused burst and received no responses.
+- No non-self camera response was captured.
+
+Latest Phase 45 local dev update:
+
+- Created
+  `.my/plan/m38-a9-camera/phase-45-native-lan-hole-session-engine-map.md`.
+- Static native mapping shows `_clientSessionToSetup` sends a narrower setup
+  subset: client-id `ListReq`, client-id `P2PReq4`, and `LanSearch`.
+- Native alive helpers are now mapped as header-only packets:
+  `F1E00000` and `F1E10000`.
+- C# now has builders/tests for that setup subset and alive packet headers.
+- Android managed LAN-hole mode now sends the native setup subset first and
+  includes decoded DAS relay hosts as candidate targets.
+- This is still not a C#-only image/video success; the exact `_se_lan_hole`
+  request and `dev lan hole` / `dev lan hole ack` response fields remain the
+  blocker.
 
 ## What We Learned
 
@@ -148,13 +230,13 @@ Important code areas:
 - `A9Vue990CgiCommandBuilder`
 - `A9Vue990ChannelMediaExtractor`
 - `A9MjpegAviWriter`
+- `A9Vue990ConnectByServerState`
 - `A9AndroidPhoneCaptureClient`
 - Android probe `Vue990PpcsSession`
 
 ## What Is Still Native
 
-The following pieces are still native and are the reason this is not yet a pure
-C# library:
+The Phase 47 runtime capture does not call these native session APIs anymore:
 
 - `JNIApi.create`
 - `JNIApi.clientSetVuid`
@@ -163,25 +245,27 @@ C# library:
 - `JNIApi.write` as the raw native session writer
 - native `client_read` as the channel reader
 
+For historical/native-backed paths, these APIs still exist in the repo. For the
+new C# path, the remaining non-clean-room piece is not a runtime native call; it
+is the hardcoded encrypted post-hole control vectors that were learned from the
+native socket hook.
+
 So the situation is:
 
-- C# knows the live-open command.
+- C# has a working Android runtime transport.
 - C# knows how to decode/save media once channel bytes exist.
-- C# does not yet fully own the session transport that creates and carries
-  those channel bytes.
+- C# does not yet derive every encrypted control payload itself.
 
 ## Windows Status
 
-Windows can orchestrate the successful Android run and download the image/video
-artifacts.
+Windows can now do the direct camera capture itself when the laptop is connected
+to the camera Wi-Fi. The successful Phase 48 run saved both `managed-direct-still.jpg`
+and `managed-direct-video-mjpeg.avi` from Windows C#.
 
-Windows-only direct camera capture is not working yet. That is expected right
-now because the protocol is not fully ported. Windows Firewall is not the
-current primary suspect; the same live-CGI failures happened on Android until
-we matched the native command framing.
-
-Windows should come after Android proves the managed session carrier. Moving to
-Windows before that would probably repeat old failed probes.
+Windows Firewall is not the current blocker. The laptop sent the known-good
+sequence, received camera packets, ACKed the media stream, and captured JPEG
+frames. The remaining blocker is protocol hardening: replacing static
+native-observed encrypted control vectors with C# generation.
 
 ## Phase Status
 
@@ -194,25 +278,53 @@ Important recent phases:
 - Phase 39: Android C# UDP/HLP2P opener closed as negative evidence.
 - Phase 40: Native channel oracle exposed JPEG-in-envelope media.
 - Phase 41: C# live-CGI command framing succeeded and produced image/video.
-- Phase 42: Planned next step, replace the remaining native session transport.
-  Current Phase 42 evidence shows Android Wi-Fi permission/routing is no
-  longer the managed-direct blocker; the exact native HLP2P session-open
-  handshake is still missing.
+- Phase 42: Older transport-replacement phase. Its evidence remains useful,
+  but Phase 47 and Phase 48 superseded its "missing session-open" blocker for
+  the current camera by proving the compact direct path.
 - Phase 43: Native HLP2P debug logs captured the real successful local
   LAN-hole path and C# now preserves the full DAS connect descriptor.
 - Phase 44: Next focused phase for a managed C# LAN-hole opener on Android
-  phone Wi-Fi.
+  phone Wi-Fi. It is now blocked by Phase 45 because the first focused C#
+  helper-burst attempt produced only self-echo/no-response.
   First Phase 44 oracle captured native HLP2P helper vectors for
   `create_LstReq`, `create_PunchPkt`, `create_P2pRdy`, and `create_P2pReq`.
-  Static follow-up mapped `pack_ClntPkt` and confirmed the final send shape is
-  the existing managed no-padding shape: `header + P2P id`, or
-  `header + P2P id + reverse address` for `P2pReq4`.
+- Phase 47: Android managed HLP2P direct C# runtime capture succeeded and saved
+  image/video. It proved the native-paced compact direct sequence.
+- Phase 48: Windows managed HLP2P direct C# runtime capture succeeded and saved
+  image/video. The Windows porting goal is done for the current camera; the
+  remaining Phase 48 task is control payload derivation.
+- Phase 49: Final C# hardening succeeded for the current camera. The post-hole
+  controls are centralized in a named scoped-vector provider, Windows and
+  Android share that provider, normal reports no longer call them replay
+  controls, and two fresh Windows captures saved image/video artifacts.
+- Phase 45: Native session-engine mapping remains historical evidence. Its
+  basic helper burst failure was bypassed by the later compact LAN-hole/direct
+  sequence.
 
-Phase 42 goal:
+Current Phase 49 goal:
 
-- Receive the same media bytes from managed C# transport on Android.
-- Save a still and MJPEG AVI without `JNIApi.writeCgi`, `JNIApi.write`, native
-  `client_read`, or `AppPlayerApi`.
+- Preserve the working Android and Windows C# capture sequence as a regression
+  path.
+- Keep the encrypted post-hole control payloads deliberately scoped to this
+  Vue990/BK7252N camera class until a later multi-camera derivation phase.
+- Keep image/video capture verified with paths, sizes, hashes, and dimensions.
+
+Latest Phase 49 proof artifacts:
+
+- Run 1:
+  `.my/plan/m38-a9-camera/captures/phase-49-final-windows-direct-2026-05-30-010401/`
+  saved `managed-direct-still.jpg`, `640x480`, `8104` bytes, SHA-256
+  `F36EF09D8BBFA5A8330D9BE54F46158E9AAB4B2C37E13F9CB632F39B632A498D`,
+  and `managed-direct-video-mjpeg.avi`, `12` frames, `640x480`, `97868`
+  bytes, SHA-256
+  `3E1EA8F16061840F039422C6C38C5F31F4F5179C020FC87BD5CAE97FFF83E80A`.
+- Run 2:
+  `.my/plan/m38-a9-camera/captures/phase-49-final-windows-direct-2026-05-30-010441/`
+  saved `managed-direct-still.jpg`, `640x480`, `8152` bytes, SHA-256
+  `5DF8B1778937805BE84EAA86ED6CC9802CE64209908F1AC36AD9BDFD848F5516`,
+  and `managed-direct-video-mjpeg.avi`, `12` frames, `640x480`, `98312`
+  bytes, SHA-256
+  `0D2825A46C5C8AA6D93FFBB60936A740A0D638C21C7E399D9B1C5435ED8D6BA2`.
 
 ## Do Not Repeat Yet
 
@@ -228,13 +340,12 @@ Do not spend time on these again unless new evidence changes the camera state:
 
 ## Recommended Next Work
 
-1. Keep the Phase 41 live-open command fixed.
-2. Map the native LAN-hole connect/login/session carrier.
-3. Replace native raw read/write with managed channel transport on Android.
-4. Save raw managed channel bytes.
-5. Feed those bytes into the existing C# extractor and MJPEG writer.
-6. Only after Android works without native session calls, port the same path to
-   Windows.
+1. Treat the current Vue990/BK7252N camera path as working for Windows C#
+   capture.
+2. Keep Phase 49 proof captures as the current regression evidence.
+3. Only start a new phase if we need broader compatibility, such as deriving
+   post-hole controls across another camera/firmware or supporting multiple
+   Vue990 variants.
 
 ## How You Can Help
 
@@ -248,6 +359,8 @@ Do not spend time on these again unless new evidence changes the camera state:
 
 ## Bottom Line
 
-We are past blind probing. The live media format and live-open command are now
-known and partially ported to C#. The remaining hard problem is the native
-Vue990/PPCS session transport. Phase 42 is the right next place to work.
+We are past blind probing, and the direct capture path now works from both
+Android C# and Windows C#. For this camera, the practical goal is done: C# can
+download still images and MJPEG video directly. The remaining work is optional
+broader compatibility: deriving the encrypted post-hole controls instead of
+using the now-documented scoped vectors.

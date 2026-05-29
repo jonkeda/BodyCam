@@ -18,6 +18,12 @@ internal sealed class ManagedDirectMediaProbe
     private static readonly int?[] PpcsLocalPorts = [null, 32108, 65529, 65531];
     private static readonly int[] PpcsRemotePorts = [32108, 32100, 20190, 65529, 65531];
 
+    private static readonly byte[][] Hlp2pDirectLegacyPreambles =
+    [
+        Convert.FromHexString("00E876667C78B84C64CB4B94C90D982713"),
+        Convert.FromHexString("009B2FA5823C60C29DC781071D1A12F134"),
+    ];
+
     private static readonly string[] HttpPaths =
     [
         "/get_status.cgi",
@@ -68,6 +74,32 @@ internal sealed class ManagedDirectMediaProbe
         new("VStarcam/XQP2P seed 65529", 65529, Convert.FromHexString("2CD46006")),
     ];
 
+    public async Task<string> RunLanHoleOnlyAsync(
+        string host,
+        string filesDir,
+        Action<string>? progress = null,
+        CancellationToken ct = default)
+    {
+        var lines = new ProgressLineCollection(progress);
+        lines.Add("Managed C# HLP2P LAN-hole probe:");
+        lines.Add($"- host: {host}");
+
+        var captureDir = Path.Combine(
+            string.IsNullOrWhiteSpace(filesDir) ? "/data/local/tmp" : filesDir,
+            "captures",
+            "phase-44-managed-lan-hole",
+            DateTimeOffset.Now.ToString("yyyy-MM-dd-HHmmss"));
+        Directory.CreateDirectory(captureDir);
+        lines.Add($"- captureDir: {captureDir}");
+
+        var localIps = GetLocalIpv4Addresses();
+        lines.Add($"- local IPv4: {string.Join(",", localIps)}");
+
+        await ProbeManagedLanHoleAsync(host, localIps, captureDir, lines, ct).ConfigureAwait(false);
+        lines.Add("- managed-lan-hole summary: complete");
+        return string.Join('\n', lines);
+    }
+
     public async Task<string> RunAsync(
         string host,
         string filesDir,
@@ -96,6 +128,8 @@ internal sealed class ManagedDirectMediaProbe
         var openPorts = await ProbeTcpPortsAsync(host, lines, ct).ConfigureAwait(false);
         var allFrames = await ProbeHttpAsync(host, captureDir, lines, ct).ConfigureAwait(false);
         await ProbeUdpAsync(host, localIps, captureDir, lines, ct).ConfigureAwait(false);
+        await ProbeManagedLanHoleAsync(host, localIps, captureDir, lines, ct).ConfigureAwait(false);
+        allFrames.AddRange(await ProbeHlp2pDirectScopedControlAsync(host, captureDir, localIps, lines, ct).ConfigureAwait(false));
         allFrames.AddRange(await ProbeClassicPpcsStreamAsync(host, captureDir, localIps, lines, ct).ConfigureAwait(false));
         if (allFrames.Count == 0)
             await ProbeRelaySessionAsync(host, captureDir, lines, ct).ConfigureAwait(false);
@@ -329,6 +363,438 @@ internal sealed class ManagedDirectMediaProbe
 
         if (responses == 0)
             lines.Add("    no UDP responses");
+    }
+
+    private static async Task ProbeManagedLanHoleAsync(
+        string host,
+        IReadOnlyCollection<string> localIps,
+        string captureDir,
+        ICollection<string> lines,
+        CancellationToken ct)
+    {
+        lines.Add("- Managed C# HLP2P LAN-hole opener:");
+        if (!IPAddress.TryParse(host, out var hostAddress) ||
+            hostAddress.AddressFamily != AddressFamily.InterNetwork)
+        {
+            lines.Add("  skipped: host is not an IPv4 address");
+            return;
+        }
+
+        var localAddress = SelectManagedLanHoleLocalAddress(localIps);
+        if (localAddress is null)
+        {
+            lines.Add("  skipped: no usable IPv4 phone Wi-Fi address found");
+            return;
+        }
+
+        var statusBody = await TryFetchStatusBodyAsync(host, lines, ct).ConfigureAwait(false);
+        if (string.IsNullOrWhiteSpace(statusBody))
+        {
+            lines.Add("  skipped: status body was empty, so DAS state is unavailable");
+            return;
+        }
+
+        var clientId = ExtractJavaScriptStringVar(statusBody, "deviceid") ?? DefaultClientId;
+        var vuid = ExtractJavaScriptStringVar(statusBody, "realdeviceid") ?? DefaultVuid;
+        var server = ExtractJavaScriptStringVar(statusBody, "server") ?? string.Empty;
+        lines.Add($"  status identity clientId={clientId} vuid={vuid} serverLen={server.Length}");
+
+        if (!A9Vue990DasServerParameter.TryParse(server, out var das, out var dasError) || das is null)
+        {
+            lines.Add($"  skipped: DAS parse failed: {dasError}");
+            return;
+        }
+
+        foreach (var requestedLocalPort in new int?[] { 65531, 65529, null })
+        {
+            using var udp = CreateUdpClient(requestedLocalPort);
+            var bound = udp.Client.LocalEndPoint as IPEndPoint;
+            if (bound is null)
+            {
+                lines.Add("  skipped socket: missing bound local endpoint");
+                continue;
+            }
+
+            var stateEndpoint = new IPEndPoint(localAddress, bound.Port);
+            if (!A9Vue990ConnectByServerState.TryCreate(
+                    das,
+                    clientId,
+                    vuid,
+                    stateEndpoint,
+                    out var state,
+                    out var stateError) ||
+                state is null)
+            {
+                lines.Add($"  skipped socket={bound}: state build failed: {stateError}");
+                continue;
+            }
+
+            var socketName = requestedLocalPort is null ? "ephemeral" : $"fixed:{requestedLocalPort.Value}";
+            lines.Add(
+                $"  socket={socketName} bound={bound} advertised={stateEndpoint} " +
+                $"selector={state.Selector} connectText={state.CandidateDasConnectText}");
+
+            var targets = BuildManagedLanHoleTargets(hostAddress, state.RelayHosts);
+            var packets = state.BuildNativeClientSessionSetupPackets().ToArray();
+            var alivePackets = state.BuildNativeAlivePackets();
+            foreach (var packet in packets)
+                lines.Add($"    tx-native-session-template {packet.Name} bytes={packet.Bytes.Length} hex={ToHex(packet.Bytes, 48)}");
+            foreach (var packet in alivePackets)
+                lines.Add($"    tx-native-alive-template {packet.Name} bytes={packet.Bytes.Length} hex={ToHex(packet.Bytes, 16)}");
+
+            var sends = 0;
+            foreach (var target in targets)
+            {
+                foreach (var packet in packets)
+                {
+                    try
+                    {
+                        await udp.SendAsync(packet.Bytes, target, ct).ConfigureAwait(false);
+                        sends++;
+                    }
+                    catch (Exception ex) when (ex is SocketException or ObjectDisposedException)
+                    {
+                        lines.Add($"    send failed {packet.Name} to {target}: {ex.GetType().Name}: {ex.Message}");
+                    }
+                }
+            }
+
+            lines.Add($"    sent native session-setup burst packets={sends} targets={targets.Count}");
+            await ReceiveManagedLanHoleResponsesAsync(udp, localIps, captureDir, lines, ct).ConfigureAwait(false);
+        }
+    }
+
+    private static async Task ReceiveManagedLanHoleResponsesAsync(
+        UdpClient udp,
+        IReadOnlyCollection<string> localIps,
+        string captureDir,
+        ICollection<string> lines,
+        CancellationToken ct)
+    {
+        var responses = 0;
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeout.CancelAfter(TimeSpan.FromSeconds(4));
+        while (!timeout.IsCancellationRequested)
+        {
+            try
+            {
+                var response = await udp.ReceiveAsync(timeout.Token).ConfigureAwait(false);
+                responses++;
+
+                var address = response.RemoteEndPoint.Address.ToString();
+                var origin = localIps.Contains(address) ? "self-echo" : "remote";
+                var savedRaw = origin == "remote"
+                    ? SaveRawPacket(captureDir, $"managed-lan-hole-rx-{responses:000}", response.RemoteEndPoint, response.Buffer)
+                    : null;
+                var header = TryReadHlp2pHeader(response.Buffer, out var command, out var payloadLength)
+                    ? $" hlp2p=0x{command:X4}/payload={payloadLength}"
+                    : string.Empty;
+
+                lines.Add(
+                    $"    response {origin} from {response.RemoteEndPoint} bytes={response.Buffer.Length} " +
+                    $"prefix={ToHex(response.Buffer, 64)}{header}" +
+                    (savedRaw is null ? string.Empty : $" savedRaw={savedRaw}"));
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+            catch (Exception ex) when (ex is SocketException or ObjectDisposedException)
+            {
+                lines.Add($"    receive failed: {ex.Message}");
+                break;
+            }
+        }
+
+        if (responses == 0)
+            lines.Add("    no focused LAN-hole responses");
+    }
+
+    private static async Task<List<CapturedJpegFrame>> ProbeHlp2pDirectScopedControlAsync(
+        string host,
+        string captureDir,
+        IReadOnlyCollection<string> localIps,
+        ICollection<string> lines,
+        CancellationToken ct)
+    {
+        var frames = new List<CapturedJpegFrame>();
+        lines.Add("- Managed C# compact HLP2P direct transport replay:");
+        lines.Add("  postHoleControlSource=phase-46 socket-hook scoped vectors; used until control payload derivation is implemented");
+
+        if (!IPAddress.TryParse(host, out var hostAddress) ||
+            hostAddress.AddressFamily != AddressFamily.InterNetwork)
+        {
+            lines.Add("  skipped: host is not an IPv4 address");
+            return frames;
+        }
+
+        using var udp = CreateUdpClient(null);
+        var bound = udp.Client.LocalEndPoint as IPEndPoint;
+        lines.Add($"  socket=ephemeral bound={bound?.ToString() ?? "<unknown>"}");
+
+        var targets = BuildHlp2pDirectLanHoleTargets(hostAddress);
+        A9Vue990Hlp2pLanHoleResponse? lanHoleResponse = null;
+        A9Vue990Hlp2pLanHoleSeed? activeSeed = null;
+        IPEndPoint? sessionRemote = null;
+        foreach (var attempt in BuildHlp2pDirectLanHoleAttempts())
+        {
+            await SendHlp2pDirectLegacyPreamblesAsync(hostAddress, attempt.Name, lines, ct).ConfigureAwait(false);
+
+            var probe = A9Vue990Hlp2pDirectPacket.BuildLanHoleProbe(attempt.Seed);
+            foreach (var target in targets)
+            {
+                try
+                {
+                    await udp.SendAsync(probe, target, ct).ConfigureAwait(false);
+                    await Task.Delay(35, ct).ConfigureAwait(false);
+                }
+                catch (Exception ex) when (ex is SocketException or ObjectDisposedException)
+                {
+                    lines.Add($"  lan-hole probe send failed attempt={attempt.Name} to {target}: {ex.GetType().Name}: {ex.Message}");
+                }
+            }
+
+            lines.Add(
+                $"  sent compact lan-hole attempt={attempt.Name} bytes={probe.Length} " +
+                $"token={ToHex(attempt.Seed.SessionToken, 4)} uid=0x{attempt.Seed.UidLittleEndian:X8} targets={targets.Count}");
+
+            using var responseTimeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            responseTimeout.CancelAfter(TimeSpan.FromSeconds(3));
+            while (!responseTimeout.IsCancellationRequested)
+            {
+                try
+                {
+                    var received = await udp.ReceiveAsync(responseTimeout.Token).ConfigureAwait(false);
+                    var address = received.RemoteEndPoint.Address.ToString();
+                    if (localIps.Contains(address))
+                        continue;
+
+                    var savedRaw = SaveRawPacket(captureDir, "hlp2p-direct-lanhole-rx", received.RemoteEndPoint, received.Buffer);
+                    lines.Add(
+                        $"  lan-hole rx attempt={attempt.Name} from {received.RemoteEndPoint} bytes={received.Buffer.Length} " +
+                        $"prefix={ToHex(received.Buffer, 32)} savedRaw={savedRaw}");
+
+                    if (!A9Vue990Hlp2pDirectPacket.TryParseLanHoleResponse(received.Buffer, out var parsed))
+                        continue;
+
+                    lanHoleResponse = parsed;
+                    activeSeed = attempt.Seed;
+                    sessionRemote = received.RemoteEndPoint;
+                    lines.Add(
+                        $"  parsed lan-hole response attempt={attempt.Name} aid=0x{parsed.AidLittleEndian:X8} " +
+                        $"status=0x{parsed.Status:X2}{parsed.StatusDetail:X2} token={ToHex(parsed.SessionToken, 4)}");
+                    break;
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                catch (Exception ex) when (ex is SocketException or ObjectDisposedException)
+                {
+                    lines.Add($"  lan-hole receive failed attempt={attempt.Name}: {ex.GetType().Name}: {ex.Message}");
+                    break;
+                }
+            }
+
+            if (lanHoleResponse is not null)
+                break;
+            else
+            {
+                lines.Add($"  no compact lan-hole response for attempt={attempt.Name}");
+            }
+        }
+
+        if (lanHoleResponse is null || activeSeed is null || sessionRemote is null)
+        {
+            lines.Add("  no compact lan-hole response; direct post-hole path cannot continue");
+            return frames;
+        }
+
+        var ack = A9Vue990Hlp2pDirectPacket.BuildLanHoleAck(lanHoleResponse, activeSeed.UidLittleEndian);
+        await udp.SendAsync(ack, sessionRemote, ct).ConfigureAwait(false);
+        lines.Add($"  sent lan-hole ack remote={sessionRemote} bytes={ack.Length} hex={ToHex(ack, ack.Length)}");
+
+        var ready = false;
+        using (var readyTimeout = CancellationTokenSource.CreateLinkedTokenSource(ct))
+        {
+            readyTimeout.CancelAfter(TimeSpan.FromSeconds(4));
+            while (!readyTimeout.IsCancellationRequested)
+            {
+                try
+                {
+                    var received = await udp.ReceiveAsync(readyTimeout.Token).ConfigureAwait(false);
+                    if (localIps.Contains(received.RemoteEndPoint.Address.ToString()))
+                        continue;
+
+                    var savedRaw = SaveRawPacket(captureDir, "hlp2p-direct-ready-rx", received.RemoteEndPoint, received.Buffer);
+                    lines.Add(
+                        $"  ready rx from {received.RemoteEndPoint} bytes={received.Buffer.Length} " +
+                        $"prefix={ToHex(received.Buffer, 32)} savedRaw={savedRaw}");
+
+                    if (A9Vue990Hlp2pDirectPacket.TryParseLanHoleReady(received.Buffer, out var parsedReady))
+                    {
+                        ready = true;
+                        sessionRemote = received.RemoteEndPoint;
+                        lines.Add($"  parsed lan-hole ready aid=0x{parsedReady.AidLittleEndian:X8}");
+                        break;
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                catch (Exception ex) when (ex is SocketException or ObjectDisposedException)
+                {
+                    lines.Add($"  ready receive failed: {ex.GetType().Name}: {ex.Message}");
+                    break;
+                }
+            }
+        }
+
+        if (!ready)
+        {
+            lines.Add("  no compact lan-hole ready packet; direct path stopped before 0x0D transport");
+            return frames;
+        }
+
+        await CompleteHlp2pDirectAliveHandshakeAsync(udp, sessionRemote, localIps, captureDir, lines, ct).ConfigureAwait(false);
+
+        lines.Add($"  post-hole control provider: {A9Vue990PostHoleControlProvider.Scope}");
+        await SendHlp2pDirectPostHoleControlAsync(udp, sessionRemote, A9Vue990PostHoleControlKind.InitialShortRequest, "native-paced initial", lines, ct)
+            .ConfigureAwait(false);
+        await SendHlp2pDirectPostHoleControlAsync(udp, sessionRemote, A9Vue990PostHoleControlKind.InitialLongRequest, "native-paced initial", lines, ct)
+            .ConfigureAwait(false);
+        await Task.Delay(260, ct).ConfigureAwait(false);
+        await SendHlp2pDirectPostHoleControlAsync(udp, sessionRemote, A9Vue990PostHoleControlKind.MediaShortRequest, "native-paced after first ack window", lines, ct)
+            .ConfigureAwait(false);
+        await SendHlp2pDirectPostHoleControlAsync(udp, sessionRemote, A9Vue990PostHoleControlKind.MediaLongRequest, "native-paced after first ack window", lines, ct)
+            .ConfigureAwait(false);
+        await Task.Delay(260, ct).ConfigureAwait(false);
+        await SendHlp2pDirectPostHoleControlAsync(udp, sessionRemote, A9Vue990PostHoleControlKind.InitialLongRequest, "native-paced repeat before large response", lines, ct)
+            .ConfigureAwait(false);
+        await Task.Delay(120, ct).ConfigureAwait(false);
+
+        var assembler = new A9Vue990VideoFrameAssembler();
+        using var channelBytes = new MemoryStream();
+        var remotePacketCount = 0;
+        var streamStarted = false;
+        var repeatedControl3AfterLargeResponse = false;
+        using var streamTimeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        streamTimeout.CancelAfter(TimeSpan.FromSeconds(15));
+        while (!streamTimeout.IsCancellationRequested && frames.Count < 12)
+        {
+            try
+            {
+                var received = await udp.ReceiveAsync(streamTimeout.Token).ConfigureAwait(false);
+                if (localIps.Contains(received.RemoteEndPoint.Address.ToString()))
+                    continue;
+
+                remotePacketCount++;
+                if (remotePacketCount <= 24)
+                {
+                    var savedRaw = SaveRawPacket(captureDir, $"hlp2p-direct-stream-rx-{remotePacketCount:000}", received.RemoteEndPoint, received.Buffer);
+                    lines.Add(
+                        $"  stream rx[{remotePacketCount}] from {received.RemoteEndPoint} bytes={received.Buffer.Length} " +
+                        $"prefix={ToHex(received.Buffer, 48)} savedRaw={savedRaw}");
+                }
+
+                if (A9Vue990Hlp2pDirectPacket.IsAliveProbe(received.Buffer))
+                {
+                    await udp.SendAsync(A9Vue990Hlp2pDirectPacket.AliveAck.ToArray(), sessionRemote, streamTimeout.Token)
+                        .ConfigureAwait(false);
+                    lines.Add("  sent compact alive ack 0C");
+                    continue;
+                }
+
+                if (A9Vue990Hlp2pDirectPacket.IsAliveAck(received.Buffer))
+                    continue;
+
+                if (!A9Vue990Hlp2pDirectPacket.TryParseDirectDataPacket(received.Buffer, out var packet))
+                    continue;
+
+                var ackSequence = unchecked((ushort)(packet.Sequence + 1));
+                await udp.SendAsync(
+                        A9Vue990Hlp2pDirectPacket.BuildDirectAck(ackSequence, packet),
+                        sessionRemote,
+                        streamTimeout.Token)
+                    .ConfigureAwait(false);
+                lines.Add(
+                    $"  sent direct ack seq=0x{ackSequence:X4} for rxSeq=0x{packet.Sequence:X4} " +
+                    $"message=0x{packet.MessageId:X4} ackLen=0x{Math.Max(0, packet.TailLength - 8):X4}");
+
+                if (!repeatedControl3AfterLargeResponse &&
+                    packet.Operation == A9Vue990Hlp2pDirectPacket.DirectCommandOperation &&
+                    packet.Sequence == 0 &&
+                    packet.TailLength == 0x0339)
+                {
+                    repeatedControl3AfterLargeResponse = true;
+                    await Task.Delay(220, streamTimeout.Token).ConfigureAwait(false);
+                    var repeat = A9Vue990PostHoleControlProvider.GetControl(A9Vue990PostHoleControlKind.MediaLongRequest);
+                    await udp.SendAsync(repeat.Bytes, sessionRemote, streamTimeout.Token).ConfigureAwait(false);
+                    lines.Add($"  resent post-hole control[{repeat.Index}] name={repeat.Name} after large response bytes={repeat.Length} prefix={ToHex(repeat.Bytes, 32)}");
+                }
+
+                if (packet.Operation != A9Vue990Hlp2pDirectPacket.DirectDataOperation)
+                    continue;
+
+                if (packet.Payload.AsSpan().StartsWith(A9Vue990VideoFrameAssembler.VideoChunkMarker))
+                    streamStarted = true;
+
+                if (!streamStarted)
+                    continue;
+
+                channelBytes.Write(packet.Payload, 0, packet.Payload.Length);
+                foreach (var rawFrame in assembler.AddVideoDrwChunk(packet.MessageId, packet.Payload))
+                {
+                    foreach (var frame in ExtractJpegFrames(rawFrame))
+                    {
+                        await SaveHlp2pDirectFrameAsync(captureDir, frames, frame, streamTimeout.Token).ConfigureAwait(false);
+                        lines.Add(
+                            $"  savedHlp2pDirectFrame[{frames.Count - 1}] path={frames[^1].LocalPath} " +
+                            $"bytes={frames[^1].Bytes.Length} dimensions={frames[^1].Width}x{frames[^1].Height} " +
+                            $"sha256={frames[^1].Sha256}");
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+            catch (Exception ex) when (ex is SocketException or ObjectDisposedException or IOException)
+            {
+                lines.Add($"  stream receive failed: {ex.GetType().Name}: {ex.Message}");
+                break;
+            }
+        }
+
+        if (channelBytes.Length > 0)
+        {
+            var channelPath = Path.Combine(captureDir, "managed-hlp2p-direct-channel.bin");
+            await File.WriteAllBytesAsync(channelPath, channelBytes.ToArray(), ct).ConfigureAwait(false);
+            lines.Add($"  savedDirectChannel path={channelPath} bytes={channelBytes.Length}");
+
+            if (frames.Count == 0)
+            {
+                foreach (var frame in ExtractJpegFrames(channelBytes.ToArray()))
+                {
+                    await SaveHlp2pDirectFrameAsync(captureDir, frames, frame, ct).ConfigureAwait(false);
+                    lines.Add(
+                        $"  savedHlp2pDirectFrame[{frames.Count - 1}] path={frames[^1].LocalPath} " +
+                        $"bytes={frames[^1].Bytes.Length} dimensions={frames[^1].Width}x{frames[^1].Height} " +
+                        $"sha256={frames[^1].Sha256}");
+                }
+            }
+        }
+
+        if (frames.Count == 0)
+        {
+            lines.Add(
+                remotePacketCount == 0
+                    ? "  no post-replay remote packets; likely 0x0D control data is session-bound"
+                    : "  no JPEG frames from managed compact replay");
+        }
+
+        return frames;
     }
 
     private static async Task<List<CapturedJpegFrame>> ProbeClassicPpcsStreamAsync(
@@ -749,6 +1215,263 @@ internal sealed class ManagedDirectMediaProbe
         ];
     }
 
+    private static IReadOnlyList<IPEndPoint> BuildManagedLanHoleTargets(
+        IPAddress hostAddress,
+        IReadOnlyCollection<string> relayHosts)
+    {
+        var addresses = new List<IPAddress>
+        {
+            hostAddress,
+            IPAddress.Parse("192.168.168.255"),
+            IPAddress.Broadcast,
+        };
+        foreach (var relayHost in relayHosts)
+        {
+            if (IPAddress.TryParse(relayHost, out var relayAddress) &&
+                relayAddress.AddressFamily == AddressFamily.InterNetwork)
+            {
+                addresses.Add(relayAddress);
+            }
+        }
+
+        int[] ports = [65531, 65529, 32108, 20190];
+
+        return addresses
+            .Distinct()
+            .SelectMany(address => ports.Select(port => new IPEndPoint(address, port)))
+            .ToArray();
+    }
+
+    private static IReadOnlyList<IPEndPoint> BuildHlp2pDirectLanHoleTargets(IPAddress hostAddress)
+    {
+        var addresses = new[]
+        {
+            IPAddress.Broadcast,
+            IPAddress.Parse("192.168.168.255"),
+            hostAddress,
+        };
+        int[] ports = [65530, 65531];
+
+        return addresses
+            .Distinct()
+            .SelectMany(address => ports.Select(port => new IPEndPoint(address, port)))
+            .ToArray();
+    }
+
+    private static async Task SendHlp2pDirectLegacyPreamblesAsync(
+        IPAddress hostAddress,
+        string attemptName,
+        ICollection<string> lines,
+        CancellationToken ct)
+    {
+        var targets = new[]
+        {
+            new IPEndPoint(IPAddress.Broadcast, 65529),
+            new IPEndPoint(IPAddress.Parse("192.168.168.255"), 65529),
+            new IPEndPoint(hostAddress, 65529),
+        };
+
+        try
+        {
+            using var udp = CreateUdpClient(65529);
+            var sends = 0;
+            foreach (var preamble in Hlp2pDirectLegacyPreambles)
+            {
+                foreach (var target in targets)
+                {
+                    await udp.SendAsync(preamble, target, ct).ConfigureAwait(false);
+                    sends++;
+                }
+            }
+
+            lines.Add($"  sent legacy 65529 preambles attempt={attemptName} sends={sends} local={udp.Client.LocalEndPoint}");
+        }
+        catch (Exception ex) when (ex is SocketException or ObjectDisposedException)
+        {
+            lines.Add($"  legacy 65529 preamble send failed attempt={attemptName}: {ex.GetType().Name}: {ex.Message}");
+        }
+    }
+
+    private static async Task SendHlp2pDirectPostHoleControlAsync(
+        UdpClient udp,
+        IPEndPoint sessionRemote,
+        A9Vue990PostHoleControlKind kind,
+        string reason,
+        ICollection<string> lines,
+        CancellationToken ct)
+    {
+        var control = A9Vue990PostHoleControlProvider.GetControl(kind);
+        var packet = control.Bytes;
+        await udp.SendAsync(packet, sessionRemote, ct).ConfigureAwait(false);
+        lines.Add($"  sent post-hole control[{control.Index}] name={control.Name} reason={reason} bytes={packet.Length} prefix={ToHex(packet, 32)}");
+        await Task.Delay(45, ct).ConfigureAwait(false);
+    }
+
+    private static async Task CompleteHlp2pDirectAliveHandshakeAsync(
+        UdpClient udp,
+        IPEndPoint sessionRemote,
+        IReadOnlyCollection<string> localIps,
+        string captureDir,
+        ICollection<string> lines,
+        CancellationToken ct)
+    {
+        await udp.SendAsync(A9Vue990Hlp2pDirectPacket.AliveProbe.ToArray(), sessionRemote, ct).ConfigureAwait(false);
+        lines.Add("  sent compact alive probe 0B0000");
+
+        var sawAliveProbe = false;
+        var sawAliveAck = false;
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeout.CancelAfter(TimeSpan.FromSeconds(2));
+        while (!timeout.IsCancellationRequested)
+        {
+            try
+            {
+                var received = await udp.ReceiveAsync(timeout.Token).ConfigureAwait(false);
+                if (localIps.Contains(received.RemoteEndPoint.Address.ToString()))
+                    continue;
+
+                var savedRaw = SaveRawPacket(captureDir, "hlp2p-direct-alive-rx", received.RemoteEndPoint, received.Buffer);
+                lines.Add(
+                    $"  alive rx from {received.RemoteEndPoint} bytes={received.Buffer.Length} " +
+                    $"prefix={ToHex(received.Buffer, 32)} savedRaw={savedRaw}");
+
+                if (A9Vue990Hlp2pDirectPacket.IsAliveProbe(received.Buffer))
+                {
+                    sawAliveProbe = true;
+                    await udp.SendAsync(A9Vue990Hlp2pDirectPacket.AliveAck.ToArray(), sessionRemote, timeout.Token)
+                        .ConfigureAwait(false);
+                    lines.Add("  sent compact alive ack 0C");
+                    continue;
+                }
+
+                if (A9Vue990Hlp2pDirectPacket.IsAliveAck(received.Buffer))
+                {
+                    sawAliveAck = true;
+                    break;
+                }
+
+                if (A9Vue990Hlp2pDirectPacket.TryParseLanHoleReady(received.Buffer, out _))
+                    continue;
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+            catch (Exception ex) when (ex is SocketException or ObjectDisposedException)
+            {
+                lines.Add($"  alive receive failed: {ex.GetType().Name}: {ex.Message}");
+                break;
+            }
+        }
+
+        lines.Add($"  alive summary sawProbe={sawAliveProbe} sawAck={sawAliveAck}");
+    }
+
+    private static IReadOnlyList<Hlp2pDirectLanHoleAttempt> BuildHlp2pDirectLanHoleAttempts()
+    {
+        return
+        [
+            new Hlp2pDirectLanHoleAttempt(
+                "observed-run2",
+                new A9Vue990Hlp2pLanHoleSeed(
+                    Convert.FromHexString("C1F3ECE4"),
+                    Convert.FromHexString("8AB8F6F4"),
+                    Convert.FromHexString("7A46F89D"),
+                    Convert.FromHexString("B85C64E8"),
+                    Convert.FromHexString("2EEA4A01"),
+                    0x29E669CB)),
+            new Hlp2pDirectLanHoleAttempt(
+                "observed-run1",
+                new A9Vue990Hlp2pLanHoleSeed(
+                    Convert.FromHexString("284A762B"),
+                    Convert.FromHexString("B4A2BB48"),
+                    Convert.FromHexString("707C9F63"),
+                    Convert.FromHexString("1B9D3AB9"),
+                    Convert.FromHexString("2DB65E01"),
+                    0x24F4C665)),
+            new Hlp2pDirectLanHoleAttempt(
+                "random-shape",
+                A9Vue990Hlp2pDirectPacket.CreateObservedShapeSeed()),
+        ];
+    }
+
+    private static IPAddress? SelectManagedLanHoleLocalAddress(IReadOnlyCollection<string> localIps)
+    {
+        var candidates = localIps
+            .Select(value => IPAddress.TryParse(value, out var address) ? address : null)
+            .Where(address => address is not null &&
+                              address.AddressFamily == AddressFamily.InterNetwork &&
+                              IsUsableLocalAddress(address))
+            .Cast<IPAddress>()
+            .ToArray();
+
+        return candidates.FirstOrDefault(address =>
+                   address.ToString().StartsWith("192.168.168.", StringComparison.Ordinal)) ??
+               candidates.FirstOrDefault();
+    }
+
+    private static async Task<string?> TryFetchStatusBodyAsync(
+        string host,
+        ICollection<string> lines,
+        CancellationToken ct)
+    {
+        using var http = new HttpClient
+        {
+            Timeout = TimeSpan.FromSeconds(6),
+        };
+        http.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("BodyCam-A9PhoneProbe", "1.0"));
+
+        var endpoint = BuildHttpEndpoint(host, 81, "/get_status.cgi?loginuse=admin&loginpas=888888");
+        try
+        {
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeout.CancelAfter(TimeSpan.FromSeconds(6));
+            using var response = await http.GetAsync(
+                    endpoint,
+                    HttpCompletionOption.ResponseHeadersRead,
+                    timeout.Token)
+                .ConfigureAwait(false);
+            var bytes = await ReadBoundedAsync(
+                    response.Content,
+                    maxBytes: 512 * 1024,
+                    readDuration: TimeSpan.FromSeconds(2),
+                    timeout.Token)
+                .ConfigureAwait(false);
+
+            lines.Add($"  status fetch {(int)response.StatusCode} bytes={bytes.Length}");
+            return Encoding.UTF8.GetString(bytes);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or OperationCanceledException or IOException)
+        {
+            lines.Add($"  status fetch failed: {ex.GetType().Name}: {ex.Message}");
+            return null;
+        }
+    }
+
+    private static string? ExtractJavaScriptStringVar(string body, string name)
+    {
+        var pattern = $"var {name}=\"";
+        var start = body.IndexOf(pattern, StringComparison.OrdinalIgnoreCase);
+        if (start < 0)
+            return null;
+
+        start += pattern.Length;
+        var end = body.IndexOf('"', start);
+        return end > start ? body[start..end] : null;
+    }
+
+    private static bool TryReadHlp2pHeader(byte[] bytes, out ushort command, out ushort payloadLength)
+    {
+        command = 0;
+        payloadLength = 0;
+        if (bytes.Length < 4)
+            return false;
+
+        command = (ushort)((bytes[0] << 8) | bytes[1]);
+        payloadLength = (ushort)((bytes[2] << 8) | bytes[3]);
+        return bytes[0] == 0xf1;
+    }
+
     private static async Task<ReceivedPpcsPacket?> TryReceivePpcsPacketAsync(
         UdpClient udp,
         IPEndPoint? expectedRemote,
@@ -930,6 +1653,17 @@ internal sealed class ManagedDirectMediaProbe
         lines.Add(
             $"  videoCapture={path} bytes={bytes.Length} frames={usable.Count()} " +
             $"dimensions={usable.Key.Width}x{usable.Key.Height} sha256={Convert.ToHexString(SHA256.HashData(bytes))}");
+    }
+
+    private static async Task SaveHlp2pDirectFrameAsync(
+        string captureDir,
+        List<CapturedJpegFrame> frames,
+        CapturedJpegFrame frame,
+        CancellationToken ct)
+    {
+        var local = Path.Combine(captureDir, $"managed-hlp2p-direct-frame-{frames.Count:000}.jpg");
+        await File.WriteAllBytesAsync(local, frame.Bytes, ct).ConfigureAwait(false);
+        frames.Add(frame with { LocalPath = local });
     }
 
     private static async Task<bool> CanConnectTcpAsync(
@@ -1223,6 +1957,10 @@ internal sealed class ManagedDirectMediaProbe
         A9Vue990PpcsEncryption Encryption,
         A9Vue990PpcsPacket Packet,
         string? SavedRawPath);
+
+    private sealed record Hlp2pDirectLanHoleAttempt(
+        string Name,
+        A9Vue990Hlp2pLanHoleSeed Seed);
 
     private sealed record CapturedJpegFrame(
         byte[] Bytes,

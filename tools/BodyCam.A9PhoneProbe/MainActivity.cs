@@ -81,6 +81,7 @@ public sealed class MainActivity : Activity
         var managedLiveCgi = intent?.GetBooleanExtra("managed_live_cgi", false) == true;
         var managedLiveCgiMode = intent?.GetStringExtra("managed_live_cgi_mode");
         var managedDirect = intent?.GetBooleanExtra("managed_direct", false) == true;
+        var managedLanHole = intent?.GetBooleanExtra("managed_lan_hole", false) == true;
         var fakeRelay = intent?.GetBooleanExtra("fake_relay", false) == true;
         var host = intent?.GetStringExtra("host");
         var serverOverride = intent?.GetStringExtra("server_override");
@@ -90,7 +91,7 @@ public sealed class MainActivity : Activity
             $"capture_video={captureVideo}; native_oracle={nativeOracle}; native_oracle_socket={nativeOracleSocket}; " +
             $"native_oracle_variants={nativeOracleVariants}; native_channel_oracle={nativeChannelOracle}; " +
             $"managed_live_cgi={managedLiveCgi}; managed_live_cgi_mode={managedLiveCgiMode ?? "<none>"}; " +
-            $"managed_direct={managedDirect}; " +
+            $"managed_direct={managedDirect}; managed_lan_hole={managedLanHole}; " +
             $"fake_relay={fakeRelay}; host={host ?? "<none>"}; " +
             $"server_override_len={serverOverride?.Length ?? 0}; native_oracle_variant_case={nativeOracleVariantCase ?? "<none>"}.");
 
@@ -102,6 +103,7 @@ public sealed class MainActivity : Activity
 
         var runTask = nativeOracle
             ? RunNativeOracleFromUiAsync(nativeOracleSocket, nativeOracleVariants, nativeOracleVariantCase)
+            : managedLanHole ? RunManagedLanHoleFromUiAsync()
             : managedDirect ? RunManagedDirectFromUiAsync(captureImage, captureVideo)
             : ppcsOnly ? RunPpcsFromUiAsync(captureImage, captureVideo, serverOverride, fakeRelay, nativeChannelOracle, managedLiveCgi, managedLiveCgiMode) : RunProbeFromUiAsync();
         _ = runTask.ContinueWith(task =>
@@ -374,6 +376,61 @@ public sealed class MainActivity : Activity
             Append($"Fatal: {ex.GetType().Name}: {ex.Message}");
             TraceLine($"RunManagedDirectFromUiAsync fatal: {ex}");
             SetStatus("Managed-direct C# probe failed.");
+        }
+        finally
+        {
+            SetButtonsEnabled(true);
+            SaveReport();
+        }
+    }
+
+    private async Task RunManagedLanHoleFromUiAsync()
+    {
+        try
+        {
+            TraceLine("RunManagedLanHoleFromUiAsync entered.");
+            HideKeyboard();
+
+            var host = _hostInput.Text?.Trim();
+            if (string.IsNullOrWhiteSpace(host))
+            {
+                Toast.MakeText(this, "Enter a camera host.", ToastLength.Short)?.Show();
+                TraceLine("RunManagedLanHoleFromUiAsync stopped: empty host.");
+                return;
+            }
+
+            SetButtonsEnabled(false);
+            _report.Clear();
+            _uiReport.Clear();
+            _reportText.Text = string.Empty;
+            PersistReportSnapshot();
+            SetStatus("Running managed LAN-hole C# probe...");
+
+            Append("A9 Vue990 Managed LAN-Hole C# Probe");
+            Append($"Timestamp: {DateTimeOffset.Now:O}");
+            Append($"Host: {host}");
+            Append("");
+            AppendNetworkState();
+            Append("");
+
+            using (AndroidWifiNetworkScope.Enter(this, Append))
+            {
+                Append("");
+                var filesDir = FilesDir?.AbsolutePath ?? CacheDir?.AbsolutePath ?? "/data/local/tmp";
+                _ = await new ManagedDirectMediaProbe().RunLanHoleOnlyAsync(
+                    host,
+                    filesDir,
+                    Append);
+            }
+
+            SetStatus("Managed LAN-hole C# probe complete.");
+            TraceLine("RunManagedLanHoleFromUiAsync completed.");
+        }
+        catch (Exception ex)
+        {
+            Append($"Fatal: {ex.GetType().Name}: {ex.Message}");
+            TraceLine($"RunManagedLanHoleFromUiAsync fatal: {ex}");
+            SetStatus("Managed LAN-hole C# probe failed.");
         }
         finally
         {

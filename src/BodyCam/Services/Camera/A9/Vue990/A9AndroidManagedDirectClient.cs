@@ -16,6 +16,7 @@ public sealed class A9AndroidManagedDirectClient
         var timestamp = DateTimeOffset.Now;
         var stamp = timestamp.ToString("yyyy-MM-dd-HHmmss");
         var outputDirectory = Path.GetFullPath(options.OutputDirectory);
+        var modeName = options.ManagedLanHoleOnly ? "managed-lan-hole" : "managed-direct";
         Directory.CreateDirectory(outputDirectory);
 
         var result = new A9AndroidManagedDirectResult
@@ -25,6 +26,7 @@ public sealed class A9AndroidManagedDirectClient
             PackageName = options.PackageName,
             CameraHost = options.CameraHost,
             OutputDirectory = outputDirectory,
+            ManagedLanHoleOnly = options.ManagedLanHoleOnly,
         };
 
         try
@@ -107,18 +109,21 @@ public sealed class A9AndroidManagedDirectClient
                 "autorun",
                 "true",
                 "--ez",
-                "managed_direct",
+                options.ManagedLanHoleOnly ? "managed_lan_hole" : "managed_direct",
                 "true",
-                "--ez",
-                "capture_image",
-                options.CaptureImage ? "true" : "false",
-                "--ez",
-                "capture_video",
-                options.CaptureVideo ? "true" : "false",
                 "--es",
                 "host",
                 options.CameraHost,
             };
+            if (!options.ManagedLanHoleOnly)
+            {
+                startArgs.Add("--ez");
+                startArgs.Add("capture_image");
+                startArgs.Add(options.CaptureImage ? "true" : "false");
+                startArgs.Add("--ez");
+                startArgs.Add("capture_video");
+                startArgs.Add(options.CaptureVideo ? "true" : "false");
+            }
 
             await RunAdbTextAsync(options.AdbPath, options.AdbTimeout, ct, startArgs.ToArray())
                 .ConfigureAwait(false);
@@ -133,13 +138,15 @@ public sealed class A9AndroidManagedDirectClient
                 .ConfigureAwait(false);
             result.FilteredLogcat = FilterLogcat(logcat.StdOut);
 
-            result.LocalReportPath = Path.Combine(outputDirectory, $"a9-android-managed-direct-{stamp}.txt");
-            result.LocalLogcatPath = Path.Combine(outputDirectory, $"a9-android-managed-direct-logcat-{stamp}.txt");
+            result.LocalReportPath = Path.Combine(outputDirectory, $"a9-android-{modeName}-{stamp}.txt");
+            result.LocalLogcatPath = Path.Combine(outputDirectory, $"a9-android-{modeName}-logcat-{stamp}.txt");
             await File.WriteAllTextAsync(result.LocalReportPath, result.Report, ct).ConfigureAwait(false);
             await File.WriteAllTextAsync(result.LocalLogcatPath, result.FilteredLogcat, ct).ConfigureAwait(false);
 
             var reportComplete = result.Report.Contains("Managed-direct C# probe complete", StringComparison.Ordinal) ||
-                                 result.Report.Contains("managed-direct summary:", StringComparison.Ordinal);
+                                 result.Report.Contains("managed-direct summary:", StringComparison.Ordinal) ||
+                                 result.Report.Contains("Managed LAN-hole C# probe complete", StringComparison.Ordinal) ||
+                                 result.Report.Contains("managed-lan-hole summary:", StringComparison.Ordinal);
             if (result.Report.Contains("Fatal:", StringComparison.Ordinal) ||
                 result.FilteredLogcat.Contains("FATAL EXCEPTION", StringComparison.Ordinal))
             {
@@ -154,7 +161,7 @@ public sealed class A9AndroidManagedDirectClient
             result.CapturedVideo = result.Artifacts.Any(artifact =>
                 artifact.LocalPath.EndsWith(".avi", StringComparison.OrdinalIgnoreCase));
             if (!reportComplete)
-                result.Error = "Timed out waiting for managed-direct completion report.";
+                result.Error = $"Timed out waiting for {modeName} completion report.";
 
             return result;
         }
@@ -254,6 +261,8 @@ public sealed class A9AndroidManagedDirectClient
                 report = result.StdOut;
                 if (report.Contains("Managed-direct C# probe complete", StringComparison.Ordinal) ||
                     report.Contains("managed-direct summary:", StringComparison.Ordinal) ||
+                    report.Contains("Managed LAN-hole C# probe complete", StringComparison.Ordinal) ||
+                    report.Contains("managed-lan-hole summary:", StringComparison.Ordinal) ||
                     report.Contains("Fatal:", StringComparison.Ordinal))
                 {
                     return report;
@@ -309,7 +318,7 @@ public sealed class A9AndroidManagedDirectClient
 
     private static string FilterLogcat(string value)
     {
-        var keep = new[] { "A9PhoneProbe", "Managed direct", "AndroidRuntime" };
+        var keep = new[] { "A9PhoneProbe", "Managed direct", "Managed LAN-hole", "AndroidRuntime" };
         var sb = new StringBuilder();
         foreach (var line in value.Split('\n'))
         {
@@ -473,6 +482,8 @@ public sealed class A9AndroidManagedDirectOptions
 
     public bool CaptureVideo { get; init; } = true;
 
+    public bool ManagedLanHoleOnly { get; init; }
+
     public string OutputDirectory { get; init; } =
         Path.Combine(Environment.CurrentDirectory, ".my", "plan", "m38-a9-camera", "captures", "phase-33-android-managed-direct");
 
@@ -492,6 +503,8 @@ public sealed class A9AndroidManagedDirectResult
     public required string CameraHost { get; init; }
 
     public required string OutputDirectory { get; init; }
+
+    public bool ManagedLanHoleOnly { get; init; }
 
     public bool Success { get; set; }
 
@@ -522,7 +535,9 @@ public sealed class A9AndroidManagedDirectResult
     public string ToReadableString()
     {
         var sb = new StringBuilder();
-        sb.AppendLine("A9 Android managed-direct C# probe");
+        sb.AppendLine(ManagedLanHoleOnly
+            ? "A9 Android managed LAN-hole C# probe"
+            : "A9 Android managed-direct C# probe");
         sb.AppendLine($"Timestamp: {Timestamp:O}");
         sb.AppendLine($"Success: {Success}");
         sb.AppendLine($"Captured image: {CapturedImage}");
