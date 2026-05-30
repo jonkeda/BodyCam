@@ -7,6 +7,20 @@ video from the camera.
 
 ## Executive Summary
 
+The work was a protocol reverse-engineering effort. The goal was to understand
+enough of the camera's private Vue990/BK7252N stream protocol that our own C#
+code could use the camera directly, instead of depending on the vendor Android
+or iOS app and its native libraries.
+
+In practical terms, that meant replacing these vendor-owned pieces with C#:
+
+- camera discovery and connection setup;
+- the local Vue990/HLP2P session transport;
+- the live-stream start command;
+- direct packet ACK handling;
+- media extraction;
+- still-image and video artifact writing.
+
 We started with a camera that exposed a locked Wi-Fi network, blinked a blue
 mode light, and did not respond to normal camera-stream assumptions. After a
 long sequence of probing, Android experiments, native behavior mapping, and C#
@@ -23,6 +37,26 @@ The main remaining caveat is compatibility breadth: four encrypted setup
 packets are stored as known-good scoped vectors captured from the vendor app.
 They work for this camera, but they are not yet dynamically generated for every
 possible Vue990/BK7252N variant.
+
+## Why Reverse Engineer It
+
+The camera does not behave like a regular standards-based IP camera. It did not
+expose a useful RTSP stream, a simple MJPEG URL, or a documented HTTP media API.
+The vendor Vue990 app could show live video, but that app reached the stream
+through native session code rather than a clean public protocol.
+
+The reverse-engineering goal was therefore not to modify the camera firmware or
+break into an unrelated system. The goal was to make our own client for a camera
+we had physically powered, joined by Wi-Fi, authenticated to, and observed
+working in the vendor app.
+
+The desired end state was:
+
+- no Android app required for normal capture;
+- no iOS app required;
+- no vendor native Vue990/PPCS session library required at runtime;
+- one C# implementation that can eventually run on Windows and Android;
+- deterministic image/video downloads that can be tested and documented.
 
 ## Final Proof
 

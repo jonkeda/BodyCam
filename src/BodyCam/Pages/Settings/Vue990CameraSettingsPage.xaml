@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:BodyCam.ViewModels.Settings"
+             x:Class="BodyCam.Pages.Settings.Vue990CameraSettingsPage"
+             x:DataType="vm:Vue990CameraSettingsViewModel"
+             AutomationId="Vue990CameraSettingsPage"
+             Shell.TabBarIsVisible="False"
+             Title="Vue990 Camera">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="12" MaximumWidthRequest="500">
+
+            <Frame Padding="12" CornerRadius="8"
+                   BackgroundColor="{AppThemeBinding Light={StaticResource CardSurface}, Dark={StaticResource CardSurfaceDark}}"
+                   BorderColor="{AppThemeBinding Light={StaticResource BorderDefault}, Dark={StaticResource BorderDefaultDark}}">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Host" Style="{StaticResource SettingsDeviceHeader}" />
+                    <Entry AutomationId="Vue990CameraHostEntry"
+                           Text="{Binding CameraHost}"
+                           Placeholder="192.168.168.1"
+                           Keyboard="Url" />
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8" Margin="0,8,0,0">
+                        <Button AutomationId="Vue990CameraTestConnectionButton"
+                                Text="Test Connection"
+                                Command="{Binding TestConnectionCommand}"
+                                IsEnabled="{Binding IsTesting, Converter={StaticResource InvertBoolConverter}}"
+                                Style="{StaticResource SettingsOutlineButton}" />
+                        <Button AutomationId="Vue990CameraSaveButton"
+                                Grid.Column="1"
+                                Text="Save"
+                                Command="{Binding SaveCommand}"
+                                Style="{StaticResource SettingsButton}" />
+                    </Grid>
+
+                    <HorizontalStackLayout Spacing="8"
+                                           IsVisible="{Binding IsTesting}">
+                        <ActivityIndicator IsRunning="{Binding IsTesting}"
+                                           WidthRequest="18"
+                                           HeightRequest="18"
+                                           VerticalOptions="Center" />
+                        <Label Text="Testing"
+                               Style="{StaticResource SettingsStatusText}"
+                               VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+
+                    <Label AutomationId="Vue990CameraStatusLabel"
+                           Text="{Binding Status}"
+                           Style="{StaticResource SettingsStatusText}" />
+                </VerticalStackLayout>
+            </Frame>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

@@ -6,7 +6,15 @@ using System.Text;
 
 namespace BodyCam.Services.Camera.A9.Vue990;
 
-public sealed class A9Vue990DirectCaptureClient
+public interface IA9Vue990DirectCaptureClient
+{
+    Task<A9Vue990DirectCaptureResult> CaptureAsync(
+        A9Vue990DirectCaptureOptions options,
+        Action<string>? progress = null,
+        CancellationToken ct = default);
+}
+
+public sealed class A9Vue990DirectCaptureClient : IA9Vue990DirectCaptureClient
 {
     private const int DefaultFramesPerSecond = 2;
 

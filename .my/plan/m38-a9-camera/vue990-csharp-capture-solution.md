@@ -52,6 +52,22 @@ Expected successful outputs in the output directory:
 - `hlp2p-direct-*.bin` diagnostic packet samples
 - `result.json` if `--json --output ...` was used
 
+## BodyCam App Provider
+
+Phase 50 adds the working path to the app as a standalone provider:
+
+- Provider class:
+  `src/BodyCam/Services/Camera/A9/Vue990/Vue990CameraProvider.cs`
+- Provider id: `vue990-camera`
+- Display name: `Vue990 Camera`
+- Settings page: `Vue990CameraSettingsPage`
+- Setting: `Vue990CameraIp`
+
+The classic `A9CameraProvider` remains unchanged for the older
+cam-reverse/iLnkP2P path. The Vue990 provider uses the direct capture client,
+saves diagnostic artifacts under the app cache directory, and returns
+`managed-direct-still.jpg` bytes from `CaptureFrameAsync`.
+
 ## Solution Flow
 
 The working path is implemented by `A9Vue990DirectCaptureClient`.

@@ -5,6 +5,7 @@ using BodyCam.Services.Audio;
 using BodyCam.Services.Audio.WebRtcApm;
 using BodyCam.Services.Camera;
 using BodyCam.Services.Camera.A9;
+using BodyCam.Services.Camera.A9.Vue990;
 using BodyCam.Services.Input;
 using BodyCam.Services.Barcode;
 using BodyCam.Services.QrCode;
@@ -156,6 +157,10 @@ public static class ServiceExtensions
 
 		services.AddSingleton<A9CameraProvider>();
 		services.AddSingleton<ICameraProvider>(sp => sp.GetRequiredService<A9CameraProvider>());
+
+		services.AddSingleton<IA9Vue990DirectCaptureClient, A9Vue990DirectCaptureClient>();
+		services.AddSingleton<Vue990CameraProvider>();
+		services.AddSingleton<ICameraProvider>(sp => sp.GetRequiredService<Vue990CameraProvider>());
 
 #if ANDROID
 		// Use HeyCyan-aware selector on Android; default selector elsewhere
@@ -390,6 +395,7 @@ public static class ServiceExtensions
 		services.AddTransient<ViewModels.Settings.DeviceViewModel>();
 		services.AddTransient<ViewModels.Settings.AddDevicesViewModel>();
 		services.AddTransient<ViewModels.Settings.A9CameraSettingsViewModel>();
+		services.AddTransient<ViewModels.Settings.Vue990CameraSettingsViewModel>();
 		services.AddTransient<ViewModels.Settings.AdvancedViewModel>();
 		services.AddTransient<ViewModels.Settings.GlassesCameraSectionViewModel>();
 		services.AddTransient<MediaGalleryViewModel>();
@@ -402,6 +408,7 @@ public static class ServiceExtensions
 		services.AddTransient<Pages.Settings.DeviceSettingsPage>();
 		services.AddTransient<Pages.Settings.AddDevicesPage>();
 		services.AddTransient<Pages.Settings.A9CameraSettingsPage>();
+		services.AddTransient<Pages.Settings.Vue990CameraSettingsPage>();
 		services.AddTransient<Pages.Settings.AdvancedSettingsPage>();
 		services.AddTransient<Pages.MediaGalleryPage>();
 		services.AddTransient<Pages.ImageViewerPage>();

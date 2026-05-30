@@ -62,6 +62,9 @@ public interface ISettingsService
     string? A9CameraUsername { get; set; }
     string? A9CameraPassword { get; set; }
 
+    // Vue990 Camera
+    string? Vue990CameraIp { get; set; }
+
     // Device Settings (JSON)
     DeviceSettings DeviceSettings { get; set; }
 

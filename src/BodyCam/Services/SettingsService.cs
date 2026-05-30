@@ -226,6 +226,13 @@ public class SettingsService : ISettingsService
         set { lock (_prefsLock) Preferences.Set(nameof(A9CameraPassword), value ?? string.Empty); }
     }
 
+    // Vue990 Camera
+    public string? Vue990CameraIp
+    {
+        get { var v = Preferences.Get(nameof(Vue990CameraIp), string.Empty); return v.Length == 0 ? null : v; }
+        set { lock (_prefsLock) Preferences.Set(nameof(Vue990CameraIp), value ?? string.Empty); }
+    }
+
     // Device Settings (JSON)
     public DeviceSettings DeviceSettings
     {

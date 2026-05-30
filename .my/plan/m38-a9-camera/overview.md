@@ -204,6 +204,11 @@ Detailed phase docs:
 - [Phase 42 - Managed Session Transport Replacement](./phase-42-managed-session-transport-replacement.md)
 - [Phase 43 - Native HLP2P Connect-By-Server Map](./phase-43-native-hlp2p-connect-map.md)
 - [Phase 44 - Managed LAN-Hole Session Opener](./phase-44-managed-lan-hole-session-opener.md)
+- [Phase 45 - Native LAN-Hole Session Engine Map](./phase-45-native-lan-hole-session-engine-map.md)
+- [Phase 47 - Managed HLP2P Direct C# Capture](./phase-47-managed-hlp2p-direct-csharp-capture.md)
+- [Phase 48 - Control Derivation And Windows Port](./phase-48-control-derivation-and-windows-port.md)
+- [Phase 49 - Final C# Hardening](./phase-49-final-csharp-hardening.md)
+- [Phase 50 - Vue990 BodyCam Camera Provider](./phase-50-vue990-bodycam-provider.md)
 
 ### Phase 0 - A9 Hardware Probe CLI And RealTests
 

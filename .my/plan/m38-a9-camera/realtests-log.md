@@ -580,3 +580,17 @@
 
 - Outcome: Added `.my/plan/m38-a9-camera/vue990-capture-journey-report.md` as a factual companion to the story document.
 - Outcome: Captured the investigation ups and downs, failed paths, key turning points, Windows proof, current code surface, and remaining scoped-vector caveat.
+
+## 2026-05-30 01:50:00 +02:00
+
+- Outcome: Created Phase 50, `.my/plan/m38-a9-camera/phase-50-vue990-bodycam-provider.md`, for the final BodyCam app provider hookup.
+- Outcome: Added standalone `Vue990CameraProvider` with provider id `vue990-camera`, leaving the classic iLnkP2P `A9CameraProvider` unchanged.
+- Outcome: Added separate `Vue990CameraIp` settings, a Vue990 settings page/view model, DI registration, route registration, and an Add Devices card for `Add Vue990 Camera`.
+- Outcome: Added focused provider/settings/AddDevices tests; `dotnet test src\BodyCam.Tests\BodyCam.Tests.csproj --filter "Vue990CameraProvider|Vue990CameraSettings|AddDevices"` passed `18/18`.
+- Outcome: `dotnet build src\BodyCam\BodyCam.csproj -f net10.0-windows10.0.19041.0` passed, and `dotnet build tools\BodyCam.A9Probe\BodyCam.A9Probe.csproj` passed.
+- Outcome: `dotnet build src\BodyCam.RealTests\BodyCam.RealTests.csproj` could not run because restore hit an existing target-framework mismatch: RealTests requested `net10.0-ios26.2` while `BodyCam` supports `net10.0-ios26.5`.
+
+## 2026-05-30 02:00:00 +02:00
+
+- Outcome: Updated `.my/plan/m38-a9-camera/vue990-capture-story.md` to describe the probe building, installed test tools, native-code reverse parsing, and division of labor between hardware handling and protocol reconstruction.
+- Outcome: Added `.my/plan/m38-a9-camera/vue990-capture-story-30-lines.md` as a compact 30-line version of the story.

@@ -38,6 +38,18 @@ public class AddDevicesViewModelTests
     }
 
     [Fact]
+    public void DeviceOptions_IncludesAddVue990Camera()
+    {
+        var vm = new AddDevicesViewModel();
+
+        vm.DeviceOptions.Should().ContainSingle(option =>
+            option.Title == "Add Vue990 Camera"
+            && option.Description.Contains("managed C#")
+            && option.AutomationId == "AddVue990CameraButton"
+            && option.Command == vm.AddVue990CameraCommand);
+    }
+
+    [Fact]
     public async Task AddCyanGlassesAsync_NavigatesToGlassesRoute()
     {
         var routes = new List<string>();
@@ -65,5 +77,20 @@ public class AddDevicesViewModelTests
         await vm.AddA9CameraAsync();
 
         routes.Should().Equal(AddDevicesViewModel.A9CameraRoute);
+    }
+
+    [Fact]
+    public async Task AddVue990CameraAsync_NavigatesToVue990CameraSettingsRoute()
+    {
+        var routes = new List<string>();
+        var vm = new AddDevicesViewModel(route =>
+        {
+            routes.Add(route);
+            return Task.CompletedTask;
+        });
+
+        await vm.AddVue990CameraAsync();
+
+        routes.Should().Equal(AddDevicesViewModel.Vue990CameraRoute);
     }
 }

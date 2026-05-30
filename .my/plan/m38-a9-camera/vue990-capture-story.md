@@ -37,11 +37,19 @@ not "GET /video.jpg" like a civilized device from a better timeline.
 The next phase was less like ordinary programming and more like protocol
 archaeology with a solderless keyboard.
 
-We installed probes. They crashed. We fixed permissions. Android said UDP was
-not allowed until it was. The phone said it was connected to the camera Wi-Fi.
-Windows said it could see different things depending on whether it was on the
-right network, the wrong network, wired, wireless, or just being Windows with a
-clipboard.
+This is where the division of labor became wonderfully practical. You did the
+physical-world debugging: turning the camera on, watching the blue light,
+connecting the phone, switching Wi-Fi networks, plugging in USB, and telling me
+when the vendor app could see a real picture. I did the code-world digging:
+building probes, installing test APKs, reading logs, reverse-parsing native
+behavior, comparing packet captures, adding C# harnesses, and turning each clue
+into the next experiment.
+
+We installed tools. We built probes. They crashed. We fixed permissions.
+Android said UDP was not allowed until it was. The phone said it was connected
+to the camera Wi-Fi. Windows said it could see different things depending on
+whether it was on the right network, the wrong network, wired, wireless, or
+just being Windows with a clipboard.
 
 For a while, the investigation had the structure of a detective board, except
 all the string was hex.
@@ -50,6 +58,12 @@ The vendor app used native libraries. The native libraries used Vue990/PPCS
 session machinery. The session machinery used something called HLP2P. HLP2P
 used compact LAN-hole packets. The compact LAN-hole packets seemed to involve
 tiny UDP messages with names that sounded cheerful until they did nothing.
+
+So I treated the vendor stack as an oracle. I reverse-parsed the code paths
+around `JNIApi`, `ConnectByServer`, DAS parameters, HLP2P helpers, socket
+traffic, channel reads, and command writes. Each time the camera refused to
+answer, I wrote another narrower probe instead of guessing wider. Eventually
+the noisy pile of failed attempts turned into a map.
 
 We tried broad UDP discovery. We tried relay candidates. We decoded DAS server
 parameters. We poked at TCP `65527`. We sent packet shapes that looked right

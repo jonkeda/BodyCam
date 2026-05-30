@@ -67,6 +67,9 @@ public sealed class FakeSettingsService : ISettingsService
     public string? A9CameraUsername { get; set; }
     public string? A9CameraPassword { get; set; }
 
+    // Vue990 Camera
+    public string? Vue990CameraIp { get; set; }
+
     // Device Settings (JSON)
     public DeviceSettings DeviceSettings { get; set; } = new();
 

@@ -189,6 +189,7 @@ public class AudioInputManagerChannelTests
         public string? A9CameraUid { get; set; }
         public string? A9CameraUsername { get; set; }
         public string? A9CameraPassword { get; set; }
+        public string? Vue990CameraIp { get; set; }
         public DeviceSettings DeviceSettings { get; set; } = new();
         public bool SetupCompleted { get; set; }
     }

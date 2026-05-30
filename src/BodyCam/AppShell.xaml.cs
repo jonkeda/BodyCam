@@ -17,6 +17,7 @@ public partial class AppShell : Shell
 		Routing.RegisterRoute(nameof(Pages.Settings.DeviceSettingsPage), typeof(Pages.Settings.DeviceSettingsPage));
 		Routing.RegisterRoute(nameof(Pages.Settings.AddDevicesPage), typeof(Pages.Settings.AddDevicesPage));
 		Routing.RegisterRoute(nameof(Pages.Settings.A9CameraSettingsPage), typeof(Pages.Settings.A9CameraSettingsPage));
+		Routing.RegisterRoute(nameof(Pages.Settings.Vue990CameraSettingsPage), typeof(Pages.Settings.Vue990CameraSettingsPage));
 		Routing.RegisterRoute(nameof(Pages.Settings.AdvancedSettingsPage), typeof(Pages.Settings.AdvancedSettingsPage));
 
 		var buildNumber = typeof(AppShell).Assembly
