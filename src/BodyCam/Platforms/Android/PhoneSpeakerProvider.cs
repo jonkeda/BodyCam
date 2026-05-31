@@ -35,6 +35,12 @@ public sealed class PhoneSpeakerProvider : IAudioOutputProvider, IDisposable
             return bufferMs + 25; // Buffer + typical speaker/DAC delay
         }
     }
+    public AudioOutputCapabilities OutputCapabilities => new(
+        EchoPathKind.DirectDeviceSpeaker,
+        NeedsEchoCancellation: true,
+        IsAcousticallyIsolated: false,
+        SupportsRenderReference: true,
+        EstimatedOutputLatencyMs);
 
     public event EventHandler? Disconnected;
     public event EventHandler? OutputRouteChanged;

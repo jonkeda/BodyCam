@@ -17,8 +17,8 @@ public class DebugOverlayTests
     }
 
     [Fact]
-    public void ClearButton_Click_DoesNotThrow()
+    public void ActionsDrawerButton_Click_DoesNotThrow()
     {
-        Page.ClearButton.Click();
+        Page.ActionsDrawerButton.Click();
     }
 }

@@ -1,5 +1,5 @@
 using System.ComponentModel;
-using BodyCam.Services.QrCode;
+using BodyCam.Services.Camera.Commands;
 
 namespace BodyCam.Tools;
 
@@ -11,9 +11,7 @@ public class ScanQrCodeArgs
 
 public class ScanQrCodeTool : ToolBase<ScanQrCodeArgs>
 {
-    private readonly IQrCodeScanner _scanner;
-    private readonly QrCodeService _history;
-    private readonly QrContentResolver _contentResolver;
+    private readonly ICameraCommandService _commands;
 
     public override string Name => "scan_qr_code";
     public override string Description =>
@@ -27,37 +25,24 @@ public class ScanQrCodeTool : ToolBase<ScanQrCodeArgs>
         InitialPrompt = "Scan for QR codes in front of me and tell me what you find."
     };
 
-    public ScanQrCodeTool(IQrCodeScanner scanner, QrCodeService history, QrContentResolver contentResolver)
+    public ScanQrCodeTool(ICameraCommandService commands)
     {
-        _scanner = scanner;
-        _history = history;
-        _contentResolver = contentResolver;
+        _commands = commands;
     }
 
     protected override async Task<ToolResult> ExecuteAsync(
         ScanQrCodeArgs args, ToolContext context, CancellationToken ct)
     {
-        var frame = await context.CaptureFrame(ct);
-        if (frame is null)
-            return ToolResult.Fail("Camera not available.");
+        var request = new CameraCommandRequest(
+            "scan",
+            Mode: null,
+            Origin: context.CommandOrigin ?? CommandTriggerOrigin.LlmToolCall,
+            Options: new ScanCommandOptions(args.Query),
+            Query: args.Query);
 
-        var result = await _scanner.ScanAsync(frame, ct);
-        if (result is null)
-            return ToolResult.Success(new { found = false, message = "No QR code or barcode detected in the image." });
-
-        _history.Add(result);
-
-        var handler = _contentResolver.Resolve(result.Content);
-        var parsed = handler.Parse(result.Content);
-
-        return ToolResult.Success(new Dictionary<string, object>
-        {
-            ["found"] = true,
-            ["content"] = result.Content,
-            ["format"] = result.Format.ToString(),
-            ["content_type"] = handler.ContentType,
-            ["suggested_actions"] = handler.SuggestedActions,
-            ["details"] = parsed
-        });
+        var result = await _commands.ExecuteAsync(request, ct);
+        return result.Success
+            ? ToolResult.Success(result.Data ?? new { message = result.TranscriptText })
+            : ToolResult.Fail(result.Error ?? result.TranscriptText);
     }
 }

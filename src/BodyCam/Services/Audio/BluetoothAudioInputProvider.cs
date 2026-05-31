@@ -17,6 +17,8 @@ public sealed class BluetoothAudioInputProvider : IBluetoothAudioInputProvider
 
     public string DisplayName => _selectedProvider?.DisplayName ?? "Bluetooth (no device selected)";
     public string ProviderId => "bluetooth-generic";
+    public AudioInputCapabilities InputCapabilities =>
+        _selectedProvider?.InputCapabilities ?? AudioInputCapabilities.Default;
     public bool IsAvailable => _selectedProvider?.IsAvailable ?? false;
     public bool IsCapturing => _selectedProvider?.IsCapturing ?? false;
 

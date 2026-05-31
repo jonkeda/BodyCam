@@ -124,14 +124,51 @@ public class JitterBufferTests
         buffer.Dispose();
     }
 
+    [Fact]
+    public async Task DrainToProviderAsync_InvokesBeforePlayChunkCallbackBeforeProviderPlayback()
+    {
+        var buffer = new JitterBuffer(NullLogger<JitterBuffer>.Instance);
+        var order = new List<string>();
+        var mockProvider = new MockAudioOutputProvider(onPlay: () =>
+        {
+            lock (order) order.Add("provider");
+        });
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+        var drainTask = Task.Run(() => buffer.DrainToProviderAsync(
+            mockProvider,
+            48000,
+            _ =>
+            {
+                lock (order) order.Add("aec");
+            },
+            cts.Token));
+
+        await buffer.EnqueueAsync(new byte[4800], cts.Token);
+        await mockProvider.WaitForPlaybackAsync(TimeSpan.FromSeconds(1));
+
+        cts.Cancel();
+        try { await drainTask; } catch (OperationCanceledException) { }
+
+        lock (order)
+        {
+            order.Take(2).Should().Equal("aec", "provider");
+        }
+
+        buffer.Dispose();
+    }
+
     private class MockAudioOutputProvider : IAudioOutputProvider
     {
         private readonly bool _simulateSlowPlayback;
+        private readonly Action? _onPlay;
+        private readonly TaskCompletionSource _playbackObserved = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public int PlayedChunks { get; private set; }
 
-        public MockAudioOutputProvider(bool simulateSlowPlayback = false)
+        public MockAudioOutputProvider(bool simulateSlowPlayback = false, Action? onPlay = null)
         {
             _simulateSlowPlayback = simulateSlowPlayback;
+            _onPlay = onPlay;
         }
 
         public string DisplayName => "Mock";
@@ -156,9 +193,16 @@ public class JitterBufferTests
 
         public async Task PlayChunkAsync(byte[] pcmData, CancellationToken ct = default)
         {
+            _onPlay?.Invoke();
             PlayedChunks++;
+            _playbackObserved.TrySetResult();
             if (_simulateSlowPlayback)
                 await Task.Delay(30, ct); // Slower than realtime
+        }
+
+        public Task WaitForPlaybackAsync(TimeSpan timeout)
+        {
+            return _playbackObserved.Task.WaitAsync(timeout);
         }
 
         public void ClearBuffer() { }

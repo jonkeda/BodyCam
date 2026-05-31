@@ -84,18 +84,7 @@ public sealed class AudioInputManager : IAudioInputService, IAsyncDisposable
     /// </summary>
     public bool IsPlatformAecActive
     {
-        get
-        {
-#if IOS
-            if (_active is BodyCam.Platforms.iOS.PlatformMicProvider iosMic)
-                return iosMic.HasPlatformAec;
-#elif ANDROID
-            // Android PlatformMicProvider always has hardware AEC when available
-            if (_active?.ProviderId == "platform")
-                return true;
-#endif
-            return false;
-        }
+        get => _active?.InputCapabilities.PlatformEchoCancellationActive ?? false;
     }
 
     // IAudioInputService implementation

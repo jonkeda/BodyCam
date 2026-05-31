@@ -5,56 +5,126 @@
              x:Class="BodyCam.Pages.Main.Views.StatusBarView"
              x:DataType="vm:MainViewModel">
 
-    <Grid ColumnDefinitions="Auto,Auto,*,Auto" Padding="12,8"
+    <Grid Padding="12,8"
+          ColumnDefinitions="Auto,Auto,*,Auto,Auto"
+          ColumnSpacing="8"
           BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
 
         <Border StrokeShape="RoundRectangle 16"
                 Stroke="{AppThemeBinding Light={StaticResource BorderDefault}, Dark={StaticResource BorderDefaultDark}}"
                 Padding="2"
                 HorizontalOptions="Start"
-                HeightRequest="36">
+                MinimumHeightRequest="44"
+                SemanticProperties.Description="Mode">
             <Grid ColumnDefinitions="Auto,Auto,Auto" ColumnSpacing="0">
                 <Button AutomationId="OffButton"
+                        Text="Sleep"
                         Command="{Binding SetStateCommand}"
-                        CommandParameter="Off"
+                        CommandParameter="Sleep"
                         BackgroundColor="{Binding OffSegmentColor}"
-                        ImageSource="{Binding OffIcon}"
+                        TextColor="{Binding OffSegmentTextColor}"
                         CornerRadius="14"
-                        HeightRequest="32" MinimumWidthRequest="44"
-                        Padding="6,0" />
+                        HeightRequest="44" MinimumWidthRequest="56"
+                        Padding="10,0"
+                        SemanticProperties.Description="{Binding SleepChipText}"
+                        SemanticProperties.Hint="Sets BodyCam to sleep mode" />
                 <Button Grid.Column="1" AutomationId="OnButton"
+                        Text="Listen"
                         Command="{Binding SetStateCommand}"
-                        CommandParameter="On"
+                        CommandParameter="Listen"
                         BackgroundColor="{Binding OnSegmentColor}"
-                        ImageSource="{Binding OnIcon}"
+                        TextColor="{Binding OnSegmentTextColor}"
                         CornerRadius="14"
-                        HeightRequest="32" MinimumWidthRequest="44"
-                        Padding="6,0" />
+                        HeightRequest="44" MinimumWidthRequest="56"
+                        Padding="10,0"
+                        SemanticProperties.Description="{Binding ListenChipText}"
+                        SemanticProperties.Hint="Listens for the wake word" />
                 <Button Grid.Column="2" AutomationId="ListeningButton"
+                        Text="Active"
                         Command="{Binding SetStateCommand}"
-                        CommandParameter="Listening"
+                        CommandParameter="Active"
                         BackgroundColor="{Binding ListeningSegmentColor}"
-                        ImageSource="{Binding ListeningIcon}"
+                        TextColor="{Binding ListeningSegmentTextColor}"
                         CornerRadius="14"
-                        HeightRequest="32" MinimumWidthRequest="44"
-                        Padding="6,0" />
+                        HeightRequest="44" MinimumWidthRequest="56"
+                        Padding="10,0"
+                        SemanticProperties.Description="{Binding ActiveChipText}"
+                        SemanticProperties.Hint="Starts the active session" />
             </Grid>
         </Border>
 
-        <Label Grid.Column="1" AutomationId="StateLabel"
-               Text="{Binding SelectedStateText}"
-               FontSize="13" FontAttributes="Bold"
-               VerticalOptions="Center" Margin="8,0,0,0"
-               TextColor="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource TextPrimaryDark}}" />
+        <Border Grid.Column="1"
+                StrokeShape="RoundRectangle 16"
+                Stroke="{AppThemeBinding Light={StaticResource BorderDefault}, Dark={StaticResource BorderDefaultDark}}"
+                Padding="2"
+                HorizontalOptions="Start"
+                MinimumHeightRequest="44"
+                SemanticProperties.Description="Output mode">
+            <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="0">
+                <Button AutomationId="SpeakButton"
+                        Text="Speak"
+                        Command="{Binding SetOutputModeCommand}"
+                        CommandParameter="Speak"
+                        BackgroundColor="{Binding SpeakSegmentColor}"
+                        TextColor="{Binding SpeakSegmentTextColor}"
+                        CornerRadius="14"
+                        HeightRequest="44" MinimumWidthRequest="56"
+                        Padding="10,0"
+                        SemanticProperties.Description="{Binding SpeakChipText}"
+                        SemanticProperties.Hint="Plays responses aloud and shows them in the transcript" />
+                <Button Grid.Column="1"
+                        AutomationId="SilentButton"
+                        Text="Silent"
+                        Command="{Binding SetOutputModeCommand}"
+                        CommandParameter="Silent"
+                        BackgroundColor="{Binding SilentSegmentColor}"
+                        TextColor="{Binding SilentSegmentTextColor}"
+                        CornerRadius="14"
+                        HeightRequest="44" MinimumWidthRequest="56"
+                        Padding="10,0"
+                        SemanticProperties.Description="{Binding SilentChipText}"
+                        SemanticProperties.Hint="Shows responses only in the transcript" />
+            </Grid>
+        </Border>
 
-        <Button Grid.Column="3" AutomationId="ClearButton"
-                Command="{Binding ClearCommand}"
-                WidthRequest="40" HeightRequest="32"
+        <Border Grid.Column="3"
+                IsVisible="{Binding GlassesConnected}"
+                StrokeShape="RoundRectangle 14"
+                Stroke="{AppThemeBinding Light={StaticResource BorderDefault}, Dark={StaticResource BorderDefaultDark}}"
+                BackgroundColor="{AppThemeBinding Light={StaticResource MutedSurface}, Dark={StaticResource CardSurfaceDark}}"
+                Padding="10,0"
+                MinimumHeightRequest="44"
+                VerticalOptions="Center"
+                SemanticProperties.Description="Glasses status">
+            <HorizontalStackLayout Spacing="4"
+                                   VerticalOptions="Center">
+                <Label Text="{Binding GlassesBatteryPct, StringFormat='Glasses {0}%'}"
+                       FontSize="12"
+                       VerticalTextAlignment="Center"
+                       TextColor="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource TextPrimaryDark}}" />
+                <Label Text="Charging"
+                       FontSize="12"
+                       VerticalTextAlignment="Center"
+                       IsVisible="{Binding GlassesCharging}"
+                       TextColor="{AppThemeBinding Light={StaticResource TextMuted}, Dark={StaticResource TextMutedDark}}" />
+            </HorizontalStackLayout>
+            <Border.GestureRecognizers>
+                <TapGestureRecognizer Command="{Binding NavigateToGlassesCommand}" />
+            </Border.GestureRecognizers>
+        </Border>
+
+        <Button Grid.Column="4"
+                AutomationId="SettingsButton"
+                Text="&#x2699;"
+                Command="{Binding NavigateToSettingsCommand}"
+                HeightRequest="44"
+                WidthRequest="44"
                 Padding="0"
-                BackgroundColor="Transparent">
-            <Button.ImageSource>
-                <FileImageSource File="trash.png" />
-            </Button.ImageSource>
-        </Button>
+                FontSize="22"
+                CornerRadius="22"
+                BackgroundColor="Transparent"
+                TextColor="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource TextPrimaryDark}}"
+                SemanticProperties.Description="Settings"
+                SemanticProperties.Hint="Opens settings" />
     </Grid>
 </ContentView>

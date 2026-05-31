@@ -1,4 +1,5 @@
 using BodyCam.Models;
+using BodyCam.Services.Camera.Commands;
 
 namespace BodyCam.Services;
 
@@ -14,6 +15,7 @@ public interface ISettingsService
     string Voice { get; set; }
     string TurnDetection { get; set; }
     string NoiseReduction { get; set; }
+    string OutputMode { get; set; }
 
     // Provider
     OpenAiProvider Provider { get; set; }
@@ -33,6 +35,10 @@ public interface ISettingsService
 
     // Camera
     string? ActiveCameraProvider { get; set; }
+    CameraCommandMode DefaultTouchCommandMode { get; set; }
+    LookDetailLevel DefaultLookDetailLevel { get; set; }
+    ReadDetailLevel DefaultReadDetailLevel { get; set; }
+    bool ConfirmExternalScanActions { get; set; }
 
     // Audio Input
     string? ActiveAudioInputProvider { get; set; }
@@ -64,6 +70,9 @@ public interface ISettingsService
 
     // Vue990 Camera
     string? Vue990CameraIp { get; set; }
+
+    // USB Camera
+    string? UsbCameraDeviceMatch { get; set; }
 
     // Device Settings (JSON)
     DeviceSettings DeviceSettings { get; set; }

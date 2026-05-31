@@ -21,6 +21,7 @@ public sealed class AndroidBluetoothAudioProvider : IAudioInputProvider, IDispos
 
     public string DisplayName { get; }
     public string ProviderId { get; }
+    public AudioInputCapabilities InputCapabilities => AudioInputCapabilities.Default;
     public bool IsAvailable { get; private set; } = true;
     public bool IsCapturing { get; private set; }
 

@@ -29,6 +29,12 @@ public sealed class HeyCyanAudioOutputProvider : IAudioOutputProvider, IAsyncDis
 
     public bool IsPlaying => _bt.IsPlaying;
     public int EstimatedOutputLatencyMs => _bt.EstimatedOutputLatencyMs;
+    public AudioOutputCapabilities OutputCapabilities => new(
+        EchoPathKind.GlassesOrWearable,
+        NeedsEchoCancellation: false,
+        IsAcousticallyIsolated: true,
+        SupportsRenderReference: false,
+        EstimatedOutputLatencyMs);
 
     public event EventHandler? Disconnected;
     public event EventHandler? OutputRouteChanged;

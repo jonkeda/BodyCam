@@ -14,6 +14,7 @@ public class QuickActionTests
     {
         _fixture = fixture;
         _fixture.NavigateToHome();
+        Page.EnsureActionsExpanded();
     }
 
     [Fact]
@@ -29,45 +30,41 @@ public class QuickActionTests
     }
 
     [Fact]
-    public void FindButton_Exists()
+    public void ScanButton_Exists()
     {
-        Page.FindButton.AssertExists();
+        Page.ScanButton.AssertExists();
     }
 
     [Fact]
-    public void AskButton_Exists()
+    public void ActionsDrawerButton_Exists()
     {
-        Page.AskButton.AssertExists();
+        Page.ActionsDrawerButton.AssertExists();
     }
 
     [Fact]
-    public void PhotoButton_Exists()
+    public void ActionsDrawerButton_CollapsesActions()
     {
-        Page.PhotoButton.AssertExists();
+        Page.ActionsDrawerButton.Click();
+
+        Assert.True(Page.LookButton.WaitExists(false, 5000),
+            "Look should be hidden when the actions drawer is collapsed.");
     }
 
     [Fact]
-    public void AskButton_IsAlwaysEnabled()
+    public void LookButton_IsEnabled()
     {
-        // Ask button has no CanAct binding, should always be enabled
-        Page.AskButton.AssertEnabled(true);
+        Page.LookButton.AssertEnabled(true);
     }
 
     [Fact]
-    public void LookButton_Click_DoesNotThrow()
+    public void ReadButton_IsEnabled()
     {
-        Page.LookButton.Click();
+        Page.ReadButton.AssertEnabled(true);
     }
 
     [Fact]
-    public void ReadButton_Click_DoesNotThrow()
+    public void ScanButton_IsEnabled()
     {
-        Page.ReadButton.Click();
-    }
-
-    [Fact]
-    public void PhotoButton_Click_DoesNotThrow()
-    {
-        Page.PhotoButton.Click();
+        Page.ScanButton.AssertEnabled(true);
     }
 }

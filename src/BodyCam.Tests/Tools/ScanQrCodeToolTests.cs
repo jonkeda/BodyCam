@@ -1,6 +1,5 @@
 using BodyCam.Models;
-using BodyCam.Services.QrCode;
-using BodyCam.Services.QrCode.Handlers;
+using BodyCam.Services.Camera.Commands;
 using BodyCam.Tools;
 using FluentAssertions;
 using NSubstitute;
@@ -9,106 +8,85 @@ namespace BodyCam.Tests.Tools;
 
 public class ScanQrCodeToolTests
 {
-    private static (ScanQrCodeTool tool, IQrCodeScanner scanner) CreateTool()
+    private static ToolContext CreateContext() => new()
     {
-        var scanner = Substitute.For<IQrCodeScanner>();
-        var history = new QrCodeService();
-        IQrContentHandler[] handlers =
-        [
-            new UrlContentHandler(),
-            new WifiContentHandler(),
-            new PlainTextContentHandler(),
-        ];
-        var resolver = new QrContentResolver(handlers);
-        return (new ScanQrCodeTool(scanner, history, resolver), scanner);
-    }
-
-    private static ToolContext CreateContext(byte[]? frame = null) => new()
-    {
-        CaptureFrame = _ => Task.FromResult(frame),
+        CaptureFrame = _ => Task.FromResult<byte[]?>(null),
         Session = new SessionContext(),
         Log = _ => { },
     };
 
     [Fact]
-    public async Task Execute_WithQrFrame_ReturnsContent()
+    public async Task ExecuteAsync_DelegatesToScanCommand()
     {
-        var (tool, scanner) = CreateTool();
-        scanner.ScanAsync(Arg.Any<byte[]>(), Arg.Any<CancellationToken>())
-            .Returns(new QrScanResult("https://example.com", QrCodeFormat.QrCode, DateTimeOffset.UtcNow));
+        var commands = Substitute.For<ICameraCommandService>();
+        commands.ExecuteAsync(Arg.Any<CameraCommandRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new CameraCommandResult(
+                "scan",
+                true,
+                "Website: example.com",
+                new Dictionary<string, object?>
+                {
+                    ["found"] = true,
+                    ["content"] = "https://example.com",
+                    ["content_type"] = "url",
+                },
+                null));
 
-        var ctx = CreateContext(new byte[] { 0xFF, 0xD8 });
-        var result = await tool.ExecuteAsync(null, ctx, CancellationToken.None);
+        var tool = new ScanQrCodeTool(commands);
+        var result = await tool.ExecuteAsync(null, CreateContext(), CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
         result.Json.Should().Contain("\"found\":true");
         result.Json.Should().Contain("https://example.com");
-        result.Json.Should().Contain("\"content_type\":\"url\"");
-        result.Json.Should().Contain("suggested_actions");
+        await commands.Received(1).ExecuteAsync(
+            Arg.Is<CameraCommandRequest>(r =>
+                r.CommandId == "scan"
+                && r.Origin == CommandTriggerOrigin.LlmToolCall),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task Execute_NoQrCode_ReturnsNotFound()
+    public async Task ExecuteAsync_NoCode_ReturnsNotFoundPayload()
     {
-        var (tool, scanner) = CreateTool();
-        scanner.ScanAsync(Arg.Any<byte[]>(), Arg.Any<CancellationToken>())
-            .Returns((QrScanResult?)null);
+        var commands = Substitute.For<ICameraCommandService>();
+        commands.ExecuteAsync(Arg.Any<CameraCommandRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new CameraCommandResult(
+                "scan",
+                true,
+                "No QR code or barcode detected.",
+                new Dictionary<string, object?>
+                {
+                    ["found"] = false,
+                    ["message"] = "No QR code or barcode detected in the image.",
+                },
+                null));
 
-        var ctx = CreateContext(new byte[] { 0xFF, 0xD8 });
-        var result = await tool.ExecuteAsync(null, ctx, CancellationToken.None);
+        var tool = new ScanQrCodeTool(commands);
+        var result = await tool.ExecuteAsync(null, CreateContext(), CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
         result.Json.Should().Contain("\"found\":false");
     }
 
     [Fact]
-    public async Task Execute_CameraUnavailable_ReturnsError()
+    public async Task ExecuteAsync_CommandFailure_ReturnsFail()
     {
-        var (tool, _) = CreateTool();
-        var ctx = CreateContext(frame: null);
-        var result = await tool.ExecuteAsync(null, ctx, CancellationToken.None);
+        var commands = Substitute.For<ICameraCommandService>();
+        commands.ExecuteAsync(Arg.Any<CameraCommandRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new CameraCommandResult("scan", false, "Camera not available.", null, "Camera not available."));
+
+        var tool = new ScanQrCodeTool(commands);
+        var result = await tool.ExecuteAsync(null, CreateContext(), CancellationToken.None);
 
         result.IsSuccess.Should().BeFalse();
         result.Json.Should().Contain("Camera not available");
     }
 
     [Fact]
-    public async Task Execute_WifiQr_IncludesDetails()
-    {
-        var (tool, scanner) = CreateTool();
-        scanner.ScanAsync(Arg.Any<byte[]>(), Arg.Any<CancellationToken>())
-            .Returns(new QrScanResult("WIFI:S:TestNet;T:WPA;P:pass123;;", QrCodeFormat.QrCode, DateTimeOffset.UtcNow));
-
-        var ctx = CreateContext(new byte[] { 0xFF, 0xD8 });
-        var result = await tool.ExecuteAsync(null, ctx, CancellationToken.None);
-
-        result.IsSuccess.Should().BeTrue();
-        result.Json.Should().Contain("\"content_type\":\"wifi\"");
-        result.Json.Should().Contain("TestNet");
-    }
-
-    [Fact]
     public void Name_IsScanQrCode()
     {
-        var (tool, _) = CreateTool();
+        var tool = new ScanQrCodeTool(Substitute.For<ICameraCommandService>());
+
         tool.Name.Should().Be("scan_qr_code");
-    }
-
-    [Fact]
-    public async Task Execute_AddsToHistory()
-    {
-        var scanner = Substitute.For<IQrCodeScanner>();
-        var history = new QrCodeService();
-        var resolver = new QrContentResolver([new PlainTextContentHandler()]);
-        var tool = new ScanQrCodeTool(scanner, history, resolver);
-
-        scanner.ScanAsync(Arg.Any<byte[]>(), Arg.Any<CancellationToken>())
-            .Returns(new QrScanResult("test content", QrCodeFormat.QrCode, DateTimeOffset.UtcNow));
-
-        var ctx = CreateContext(new byte[] { 0xFF, 0xD8 });
-        await tool.ExecuteAsync(null, ctx, CancellationToken.None);
-
-        history.LastResult.Should().NotBeNull();
-        history.LastResult!.Content.Should().Be("test content");
     }
 }

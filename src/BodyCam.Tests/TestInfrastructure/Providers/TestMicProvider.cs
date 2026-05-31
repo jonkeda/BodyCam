@@ -7,10 +7,12 @@ public class TestMicProvider : IAudioInputProvider
     private readonly byte[] _pcmData;
     private readonly int _chunkSize;
     private readonly int _chunkIntervalMs;
+    private readonly AudioInputCapabilities _inputCapabilities;
     private CancellationTokenSource? _cts;
 
     public string DisplayName => "Test Microphone";
     public string ProviderId => "test-mic";
+    public AudioInputCapabilities InputCapabilities => _inputCapabilities;
     public bool IsAvailable => true;
     public bool IsCapturing { get; private set; }
 
@@ -20,18 +22,28 @@ public class TestMicProvider : IAudioInputProvider
     public int ChunksEmitted { get; private set; }
     public bool FinishedPlaying { get; private set; }
 
-    public TestMicProvider(byte[] pcmData, int chunkSize = 3200, int chunkIntervalMs = 100)
+    public TestMicProvider(
+        byte[] pcmData,
+        int chunkSize = 3200,
+        int chunkIntervalMs = 100,
+        AudioInputCapabilities? inputCapabilities = null)
     {
         _pcmData = pcmData;
         _chunkSize = chunkSize;
         _chunkIntervalMs = chunkIntervalMs;
+        _inputCapabilities = inputCapabilities ?? AudioInputCapabilities.Default;
     }
 
-    public TestMicProvider(string pcmFilePath, int chunkSize = 3200, int chunkIntervalMs = 100)
+    public TestMicProvider(
+        string pcmFilePath,
+        int chunkSize = 3200,
+        int chunkIntervalMs = 100,
+        AudioInputCapabilities? inputCapabilities = null)
     {
         _pcmData = File.ReadAllBytes(pcmFilePath);
         _chunkSize = chunkSize;
         _chunkIntervalMs = chunkIntervalMs;
+        _inputCapabilities = inputCapabilities ?? AudioInputCapabilities.Default;
     }
 
     public Task StartAsync(CancellationToken ct = default)

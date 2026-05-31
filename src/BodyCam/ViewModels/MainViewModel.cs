@@ -4,10 +4,13 @@ using BodyCam.Models;
 using BodyCam.Mvvm;
 using BodyCam.Orchestration;
 using BodyCam.Services;
+using BodyCam.Services.Audio;
 using BodyCam.Services.Audio.WebRtcApm;
 using BodyCam.Services.Camera;
+using BodyCam.Services.Camera.Commands;
 using BodyCam.Services.Glasses;
 using BodyCam.Services.Glasses.HeyCyan;
+using BodyCam.Services.Input;
 using BodyCam.Services.QrCode;
 using CommunityToolkit.Maui.Views;
 using Microsoft.Extensions.Logging;
@@ -21,6 +24,15 @@ public enum ListeningLayer
     ActiveSession
 }
 
+public static class OutputModes
+{
+    public const string Speak = "Speak";
+    public const string Silent = "Silent";
+
+    public static string Normalize(string? value) =>
+        string.Equals(value, Silent, StringComparison.OrdinalIgnoreCase) ? Silent : Speak;
+}
+
 public class MainViewModel : ViewModelBase
 {
     private readonly AgentOrchestrator _orchestrator;
@@ -30,11 +42,16 @@ public class MainViewModel : ViewModelBase
     private readonly IQrCodeScanner _qrScanner;
     private readonly QrCodeService _qrCodeService;
     private readonly QrContentResolver _contentResolver;
+    private readonly ICameraCommandService? _cameraCommands;
+    private readonly IManualCameraCaptureCoordinator? _manualCapture;
     private readonly HeyCyanGlassesDeviceManager _glasses;
     private readonly ILogger<MainViewModel> _logger;
     private readonly IAecProcessor? _aec;
+    private readonly IAudioRoutePolicyService? _audioPolicy;
     private string _debugLog = string.Empty;
     private string _aecDebugText = string.Empty;
+    private string _audioPolicyDebugText = string.Empty;
+    private string _aecMetricsDebugText = string.Empty;
     private string _toggleButtonText = "Start";
     private string _statusText = "Ready";
     private bool _isRunning;
@@ -47,6 +64,10 @@ public class MainViewModel : ViewModelBase
 
     private ListeningLayer _currentLayer = ListeningLayer.Sleep;
     private bool _showTranscriptTab = true;
+    private bool _showInlineCameraPreview;
+    private bool _isActionsDrawerExpanded;
+    private string _messageText = string.Empty;
+    private string _outputMode = OutputModes.Speak;
     private ImageSource? _snapshotImage;
     private string? _snapshotCaption;
     private bool _showSnapshot;
@@ -60,7 +81,7 @@ public class MainViewModel : ViewModelBase
     private Dictionary<string, object>? _lastScanParsed;
     private string? _lastScanRawContent;
 
-    public MainViewModel(AgentOrchestrator orchestrator, IApiKeyService apiKeyService, ISettingsService settingsService, CameraManager cameraManager, IQrCodeScanner qrScanner, QrCodeService qrCodeService, QrContentResolver contentResolver, HeyCyanGlassesDeviceManager glasses, ILogger<MainViewModel> logger, IAecProcessor? aec = null)
+    public MainViewModel(AgentOrchestrator orchestrator, IApiKeyService apiKeyService, ISettingsService settingsService, CameraManager cameraManager, IQrCodeScanner qrScanner, QrCodeService qrCodeService, QrContentResolver contentResolver, HeyCyanGlassesDeviceManager glasses, ILogger<MainViewModel> logger, IAecProcessor? aec = null, IAudioRoutePolicyService? audioPolicy = null, ICameraCommandService? cameraCommands = null, IManualCameraCaptureCoordinator? manualCapture = null)
     {
         _orchestrator = orchestrator;
         _apiKeyService = apiKeyService;
@@ -69,12 +90,16 @@ public class MainViewModel : ViewModelBase
         _qrScanner = qrScanner;
         _qrCodeService = qrCodeService;
         _contentResolver = contentResolver;
+        _cameraCommands = cameraCommands;
+        _manualCapture = manualCapture;
         _glasses = glasses;
         _logger = logger;
         _aec = aec;
+        _audioPolicy = audioPolicy;
         Title = "BodyCam";
 
         _debugVisible = _settingsService.DebugMode;
+        _outputMode = OutputModes.Normalize(_settingsService.OutputMode);
 
         // Wire AEC statistics (Phase 6.1)
         if (_aec is AecProcessor aecProc)
@@ -82,11 +107,24 @@ public class MainViewModel : ViewModelBase
             aecProc.StatisticsUpdated += OnAecStatisticsUpdated;
         }
 
+        if (_audioPolicy is not null)
+        {
+            _audioPolicy.PolicyChanged += OnAudioRoutePolicyChanged;
+            UpdateAudioPolicyDebugText(_audioPolicy.Current);
+        }
+
+        if (_manualCapture is not null)
+        {
+            _manualCapture.CaptureRequested += (_, _) =>
+                MainThread.BeginInvokeOnMainThread(async () => await RevealInlineCameraPreviewAsync());
+        }
+
         // Subscribe to glasses events for shell widget
         _glasses.StateChanged += (_, _) => RefreshGlasses();
         _glasses.StatusChanged += (_, _) => RefreshGlasses();
 
         NavigateToGlassesCommand = new AsyncRelayCommand(async () => await Shell.Current.GoToAsync("//glasses"));
+        NavigateToSettingsCommand = new AsyncRelayCommand(async () => await Shell.Current.GoToAsync(nameof(BodyCam.Pages.Settings.SettingsPage)));
 
         ToggleCommand = new AsyncRelayCommand(ToggleAsync);
         ClearCommand = new RelayCommand(() =>
@@ -100,10 +138,16 @@ public class MainViewModel : ViewModelBase
             if (param is not string segment) return;
             await SetLayerAsync(segment);
         });
+        SetOutputModeCommand = new AsyncRelayCommand(async (object? param) =>
+        {
+            if (param is not string outputMode) return;
+            await SetOutputModeAsync(outputMode);
+        });
 
         SwitchToTranscriptCommand = new RelayCommand(() =>
         {
             ShowTranscriptTab = true;
+            ShowInlineCameraPreview = false;
             // Stop camera preview when switching away to save resources
             if (CurrentLayer != ListeningLayer.ActiveSession)
                 _cameraView?.StopCameraPreview();
@@ -111,10 +155,16 @@ public class MainViewModel : ViewModelBase
         SwitchToCameraCommand = new AsyncRelayCommand(async () =>
         {
             ShowTranscriptTab = false;
+            ShowInlineCameraPreview = true;
             // Start camera preview so the native control gets non-zero size
             if (_cameraView is not null)
                 await _cameraView.StartCameraPreview(CancellationToken.None);
         });
+        ToggleActionsDrawerCommand = new RelayCommand(() =>
+        {
+            IsActionsDrawerExpanded = !IsActionsDrawerExpanded;
+        });
+        SendMessageCommand = new AsyncRelayCommand(SendMessageAsync);
         ToggleDebugCommand = new RelayCommand(() =>
         {
             DebugVisible = !DebugVisible;
@@ -124,9 +174,14 @@ public class MainViewModel : ViewModelBase
 
         LookCommand = new AsyncRelayCommand(async () =>
         {
-            await SendVisionCommandAsync("Describe what you see in front of me.");
+            IsActionsDrawerExpanded = false;
+            await ExecuteCameraCommandAsync("look", CommandTriggerOrigin.ActionsDrawer);
         });
-        ReadCommand = new AsyncRelayCommand(ReadTextAsync);
+        ReadCommand = new AsyncRelayCommand(async () =>
+        {
+            IsActionsDrawerExpanded = false;
+            await ExecuteCameraCommandAsync("read", CommandTriggerOrigin.ActionsDrawer);
+        });
         FindCommand = new AsyncRelayCommand(async () =>
         {
             await SendVisionCommandAsync("Look around and tell me what objects you can find.");
@@ -137,9 +192,17 @@ public class MainViewModel : ViewModelBase
         });
         PhotoCommand = new AsyncRelayCommand(async () =>
         {
+            if (_manualCapture is not null && await _manualCapture.CompletePendingCaptureAsync())
+                return;
+
+            await RevealInlineCameraPreviewAsync();
             await SendVisionCommandAsync("Take a photo of what you see.");
         });
-        ScanCommand = new AsyncRelayCommand(ScanAsync);
+        ScanCommand = new AsyncRelayCommand(async () =>
+        {
+            IsActionsDrawerExpanded = false;
+            await ExecuteCameraCommandAsync("scan", CommandTriggerOrigin.ActionsDrawer);
+        });
 
         _orchestrator.TranscriptDelta += (_, delta) =>
         {
@@ -211,13 +274,27 @@ public class MainViewModel : ViewModelBase
     public string DebugLog
     {
         get => _debugLog;
-        set => SetProperty(ref _debugLog, value);
+        set
+        {
+            if (SetProperty(ref _debugLog, value))
+            {
+                OnPropertyChanged(nameof(HasDebugLog));
+                OnPropertyChanged(nameof(ShowDebugOverlay));
+            }
+        }
     }
 
     public string AecDebugText
     {
         get => _aecDebugText;
-        set => SetProperty(ref _aecDebugText, value);
+        set
+        {
+            if (SetProperty(ref _aecDebugText, value))
+            {
+                OnPropertyChanged(nameof(HasAecDebugText));
+                OnPropertyChanged(nameof(ShowDebugOverlay));
+            }
+        }
     }
 
     public string ToggleButtonText
@@ -241,8 +318,16 @@ public class MainViewModel : ViewModelBase
     public bool DebugVisible
     {
         get => _debugVisible;
-        set => SetProperty(ref _debugVisible, value);
+        set
+        {
+            if (SetProperty(ref _debugVisible, value))
+                OnPropertyChanged(nameof(ShowDebugOverlay));
+        }
     }
+
+    public bool HasDebugLog => !string.IsNullOrWhiteSpace(DebugLog);
+    public bool HasAecDebugText => !string.IsNullOrWhiteSpace(AecDebugText);
+    public bool ShowDebugOverlay => DebugVisible && (HasDebugLog || HasAecDebugText);
 
     public string? VisionStatus
     {
@@ -253,8 +338,11 @@ public class MainViewModel : ViewModelBase
     public ICommand ToggleCommand { get; }
     public ICommand ClearCommand { get; }
     public ICommand SetStateCommand { get; }
+    public ICommand SetOutputModeCommand { get; }
     public ICommand SwitchToTranscriptCommand { get; }
     public ICommand SwitchToCameraCommand { get; }
+    public ICommand ToggleActionsDrawerCommand { get; }
+    public ICommand SendMessageCommand { get; }
     public ICommand ToggleDebugCommand { get; }
     public ICommand DismissSnapshotCommand { get; }
     public ICommand LookCommand { get; }
@@ -280,6 +368,9 @@ public class MainViewModel : ViewModelBase
                 OnPropertyChanged(nameof(StatusText));
                 OnPropertyChanged(nameof(CanAct));
                 OnPropertyChanged(nameof(SelectedStateText));
+                OnPropertyChanged(nameof(SleepChipText));
+                OnPropertyChanged(nameof(ListenChipText));
+                OnPropertyChanged(nameof(ActiveChipText));
                 OnPropertyChanged(nameof(OffSegmentColor));
                 OnPropertyChanged(nameof(OffSegmentTextColor));
                 OnPropertyChanged(nameof(OnSegmentColor));
@@ -311,6 +402,53 @@ public class MainViewModel : ViewModelBase
         }
     }
     public bool ShowCameraTab => !ShowTranscriptTab;
+
+    public bool ShowInlineCameraPreview
+    {
+        get => _showInlineCameraPreview;
+        set => SetProperty(ref _showInlineCameraPreview, value);
+    }
+
+    public bool IsActionsDrawerExpanded
+    {
+        get => _isActionsDrawerExpanded;
+        set
+        {
+            if (SetProperty(ref _isActionsDrawerExpanded, value))
+            {
+                OnPropertyChanged(nameof(ActionsDrawerButtonText));
+                OnPropertyChanged(nameof(ActionsDrawerSemanticDescription));
+            }
+        }
+    }
+
+    public string ActionsDrawerButtonText => IsActionsDrawerExpanded ? "Actions open" : "Actions";
+
+    public string ActionsDrawerSemanticDescription =>
+        IsActionsDrawerExpanded ? "Actions menu expanded" : "Actions menu collapsed";
+
+    public string MessageText
+    {
+        get => _messageText;
+        set => SetProperty(ref _messageText, value);
+    }
+
+    public string OutputMode
+    {
+        get => _outputMode;
+        private set
+        {
+            if (SetProperty(ref _outputMode, value))
+            {
+                OnPropertyChanged(nameof(SpeakChipText));
+                OnPropertyChanged(nameof(SilentChipText));
+                OnPropertyChanged(nameof(SpeakSegmentColor));
+                OnPropertyChanged(nameof(SpeakSegmentTextColor));
+                OnPropertyChanged(nameof(SilentSegmentColor));
+                OnPropertyChanged(nameof(SilentSegmentTextColor));
+            }
+        }
+    }
 
     private static readonly Color TabActiveBg = Color.FromArgb("#1976D2");
     private static readonly Color TabActiveTxt = Colors.White;
@@ -370,6 +508,7 @@ public class MainViewModel : ViewModelBase
             : Colors.White;
 
     public AsyncRelayCommand NavigateToGlassesCommand { get; }
+    public AsyncRelayCommand NavigateToSettingsCommand { get; }
 
     private void RefreshGlasses()
     {
@@ -400,11 +539,31 @@ public class MainViewModel : ViewModelBase
 
     public string SelectedStateText => CurrentLayer switch
     {
-        ListeningLayer.Sleep => "Off",
-        ListeningLayer.WakeWord => "On",
-        ListeningLayer.ActiveSession => "Listening",
-        _ => "Off"
+        ListeningLayer.Sleep => "Sleep",
+        ListeningLayer.WakeWord => "Listen",
+        ListeningLayer.ActiveSession => "Active",
+        _ => "Sleep"
     };
+
+    public string SleepChipText =>
+        CurrentLayer == ListeningLayer.Sleep ? "Sleep selected" : "Sleep";
+
+    public string ListenChipText =>
+        CurrentLayer == ListeningLayer.WakeWord ? "Listen selected" : "Listen";
+
+    public string ActiveChipText =>
+        CurrentLayer == ListeningLayer.ActiveSession ? "Active selected" : "Active";
+
+    public string SpeakChipText =>
+        OutputMode == OutputModes.Speak ? "Speak selected" : "Speak";
+
+    public string SilentChipText =>
+        OutputMode == OutputModes.Silent ? "Silent selected" : "Silent";
+
+    public Color SpeakSegmentColor => OutputMode == OutputModes.Speak ? ActiveBg : InactiveBg;
+    public Color SilentSegmentColor => OutputMode == OutputModes.Silent ? ActiveBg : InactiveBg;
+    public Color SpeakSegmentTextColor => OutputMode == OutputModes.Speak ? ActiveTextColor : InactiveTextColor;
+    public Color SilentSegmentTextColor => OutputMode == OutputModes.Silent ? ActiveTextColor : InactiveTextColor;
 
     private async Task ToggleAsync()
     {
@@ -438,6 +597,12 @@ public class MainViewModel : ViewModelBase
                 "Active" => ListeningLayer.ActiveSession,
                 _ => CurrentLayer
             };
+
+            if (target == ListeningLayer.Sleep)
+            {
+                ShowInlineCameraPreview = false;
+                _cameraView?.StopCameraPreview();
+            }
 
             if (target == CurrentLayer) return;
 
@@ -504,6 +669,171 @@ public class MainViewModel : ViewModelBase
             };
         }
         finally { _isTransitioning = false; }
+    }
+
+    private async Task SetOutputModeAsync(string outputMode)
+    {
+        var normalized = OutputModes.Normalize(outputMode);
+        if (OutputMode == normalized)
+            return;
+
+        OutputMode = normalized;
+        _settingsService.OutputMode = normalized;
+        _audioPolicy?.Recompute();
+
+        if (normalized == OutputModes.Silent)
+            await _orchestrator.StopSpeakingAsync();
+    }
+
+    private async Task RevealInlineCameraPreviewAsync()
+    {
+        ShowInlineCameraPreview = true;
+
+        if (_cameraView is null)
+            return;
+
+        try
+        {
+            await _cameraView.StartCameraPreview(CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Unable to start inline camera preview");
+        }
+    }
+
+    public async Task HandleButtonActionAsync(ButtonActionEvent action)
+    {
+        switch (action.Action)
+        {
+            case ButtonAction.Look:
+                await ExecuteCameraCommandAsync("look", CommandTriggerOrigin.PhysicalButton);
+                break;
+            case ButtonAction.Read:
+                await ExecuteCameraCommandAsync("read", CommandTriggerOrigin.PhysicalButton);
+                break;
+            case ButtonAction.Photo:
+                if (_manualCapture is not null && await _manualCapture.CompletePendingCaptureAsync())
+                    return;
+
+                await SendVisionCommandAsync("Take a photo of what you see.");
+                break;
+            case ButtonAction.ToggleSession:
+            case ButtonAction.ToggleConversation:
+            case ButtonAction.ToggleSleepActive:
+                await ToggleAsync();
+                break;
+            case ButtonAction.EndSession:
+                await SetLayerAsync("Off");
+                break;
+        }
+    }
+
+    private async Task ExecuteCameraCommandAsync(
+        string commandId,
+        CommandTriggerOrigin origin,
+        object? options = null,
+        string? query = null,
+        CameraCommandMode? mode = null)
+    {
+        if (_cameraCommands is null)
+        {
+            await ExecuteLegacyCameraCommandAsync(commandId);
+            return;
+        }
+
+        ShowTranscriptTab = true;
+        var aiEntry = new TranscriptEntry { Role = "AI", IsThinking = true };
+        Entries.Add(aiEntry);
+
+        try
+        {
+            var result = await _cameraCommands.ExecuteAsync(
+                new CameraCommandRequest(commandId, mode, origin, options, query));
+
+            aiEntry.IsThinking = false;
+            aiEntry.Text = result.TranscriptText;
+
+            TryShowScanResult(result);
+
+            if (WasManualAim(result))
+            {
+                ShowInlineCameraPreview = false;
+                _cameraView?.StopCameraPreview();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            aiEntry.IsThinking = false;
+            aiEntry.Text = "Command canceled.";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Camera command {CommandId} error", commandId);
+            aiEntry.IsThinking = false;
+            aiEntry.Text = $"Command error: {ex.Message}";
+        }
+    }
+
+    private async Task ExecuteLegacyCameraCommandAsync(string commandId)
+    {
+        switch (commandId)
+        {
+            case "read":
+                await ReadTextAsync();
+                break;
+            case "scan":
+                await ScanAsync();
+                break;
+            default:
+                await SendVisionCommandAsync("Describe what you see in front of me.");
+                break;
+        }
+    }
+
+    private void TryShowScanResult(CameraCommandResult result)
+    {
+        if (!string.Equals(result.CommandId, "scan", StringComparison.OrdinalIgnoreCase)
+            || result.Data is not IReadOnlyDictionary<string, object?> data
+            || !TryGetBool(data, "found"))
+        {
+            return;
+        }
+
+        if (!TryGetString(data, "content", out var content))
+            return;
+
+        var handler = _contentResolver.Resolve(content);
+        var parsed = handler.Parse(content);
+        ShowScanResultCard(handler, parsed, content);
+    }
+
+    private static bool WasManualAim(CameraCommandResult result) =>
+        result.Data is IReadOnlyDictionary<string, object?> data
+        && TryGetString(data, "mode", out var mode)
+        && string.Equals(mode, CameraCommandMode.ManualAim.ToString(), StringComparison.OrdinalIgnoreCase);
+
+    private static bool TryGetBool(IReadOnlyDictionary<string, object?> data, string key)
+    {
+        return data.TryGetValue(key, out var value) && value switch
+        {
+            bool b => b,
+            string s => bool.TryParse(s, out var parsed) && parsed,
+            _ => false,
+        };
+    }
+
+    private static bool TryGetString(
+        IReadOnlyDictionary<string, object?> data,
+        string key,
+        out string value)
+    {
+        value = string.Empty;
+        if (!data.TryGetValue(key, out var raw) || raw is null)
+            return false;
+
+        value = raw.ToString() ?? string.Empty;
+        return !string.IsNullOrWhiteSpace(value);
     }
 
     private async Task ScanAsync()
@@ -646,6 +976,45 @@ public class MainViewModel : ViewModelBase
             _logger.LogError(ex, "Vision API error");
             aiEntry.IsThinking = false;
             aiEntry.Text = $"Vision error: {ex.Message}";
+        }
+    }
+
+    private async Task SendMessageAsync()
+    {
+        var message = MessageText.Trim();
+        if (string.IsNullOrWhiteSpace(message))
+            return;
+
+        MessageText = string.Empty;
+        ShowTranscriptTab = true;
+        Entries.Add(new TranscriptEntry { Role = "You", Text = message });
+
+        if (!IsRunning)
+        {
+            Entries.Add(new TranscriptEntry
+            {
+                Role = "AI",
+                Text = "Switch to Active mode to send a live message."
+            });
+            return;
+        }
+
+        _currentAiEntry = new TranscriptEntry { Role = "AI", IsThinking = true };
+        Entries.Add(_currentAiEntry);
+
+        try
+        {
+            await _orchestrator.SendTextInputAsync(message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Typed message send failed");
+            if (_currentAiEntry is not null)
+            {
+                _currentAiEntry.IsThinking = false;
+                _currentAiEntry.Text = $"Send error: {ex.Message}";
+                _currentAiEntry = null;
+            }
         }
     }
 
@@ -823,7 +1192,27 @@ public class MainViewModel : ViewModelBase
     {
         MainThread.BeginInvokeOnMainThread(() =>
         {
-            AecDebugText = $"ERLE {stats.EchoReturnLossEnhancementDb:F1} dB · res {stats.ResidualEchoLikelihood:F2} · delay {stats.DelayMs} ms · div {stats.DivergentFilterFraction:F2}";
+            _aecMetricsDebugText = $"ERLE {stats.EchoReturnLossEnhancementDb:F1} dB · res {stats.ResidualEchoLikelihood:F2} · delay {stats.DelayMs} ms · div {stats.DivergentFilterFraction:F2}";
+            RefreshAecDebugText();
         });
+    }
+
+    private void OnAudioRoutePolicyChanged(object? sender, AudioRoutePolicy policy)
+    {
+        MainThread.BeginInvokeOnMainThread(() => UpdateAudioPolicyDebugText(policy));
+    }
+
+    private void UpdateAudioPolicyDebugText(AudioRoutePolicy policy)
+    {
+        _audioPolicyDebugText =
+            $"Audio: {policy.OutputCapabilities.EchoPathKind} | AEC {policy.AecMode} | cleanup {policy.VoiceCleanupMode} | {policy.EstimatedRoundTripLatencyMs}ms";
+        RefreshAecDebugText();
+    }
+
+    private void RefreshAecDebugText()
+    {
+        var parts = new[] { _audioPolicyDebugText, _aecMetricsDebugText }
+            .Where(part => !string.IsNullOrWhiteSpace(part));
+        AecDebugText = string.Join(Environment.NewLine, parts);
     }
 }

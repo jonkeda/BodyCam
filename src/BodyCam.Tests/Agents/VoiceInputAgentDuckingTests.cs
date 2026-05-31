@@ -8,12 +8,12 @@ using NSubstitute;
 namespace BodyCam.Tests.Agents;
 
 /// <summary>
-/// Phase 5.3: Tests for optional mic ducking during playback.
+/// Tests that playback never gates microphone chunks, preserving barge-in.
 /// </summary>
-public class VoiceInputAgentDuckingTests
+public class VoiceInputAgentBargeInTests
 {
     [Fact]
-    public async Task OnAudioChunk_WhenDuckingDisabled_AlwaysSendsChunks()
+    public async Task OnAudioChunk_WhenLegacyPauseMicSettingDisabled_SendsChunksDuringPlayback()
     {
         var audioInput = Substitute.For<IAudioInputService>();
         var tracker = new AudioPlaybackTracker { SampleRate = 48000, BytesPlayed = 48000 }; // 1s at 48kHz
@@ -26,7 +26,11 @@ public class VoiceInputAgentDuckingTests
             tracker,
             settings);
 
-        agent.SetAudioSink(async (data, ct) => received = data);
+        agent.SetAudioSink((data, ct) =>
+        {
+            received = data;
+            return Task.CompletedTask;
+        });
         agent.SetConnected(true);
         await agent.StartAsync();
 
@@ -40,7 +44,7 @@ public class VoiceInputAgentDuckingTests
     }
 
     [Fact]
-    public async Task OnAudioChunk_WhenDuckingEnabled_BlocksChunksDuringPlayback()
+    public async Task OnAudioChunk_WhenLegacyPauseMicSettingEnabled_StillSendsChunksDuringPlayback()
     {
         var audioInput = Substitute.For<IAudioInputService>();
         var tracker = new AudioPlaybackTracker { SampleRate = 48000, BytesPlayed = 48000 }; // 1s at 48kHz
@@ -53,7 +57,11 @@ public class VoiceInputAgentDuckingTests
             tracker,
             settings);
 
-        agent.SetAudioSink(async (data, ct) => received = data);
+        agent.SetAudioSink((data, ct) =>
+        {
+            received = data;
+            return Task.CompletedTask;
+        });
         agent.SetConnected(true);
         await agent.StartAsync();
 
@@ -63,11 +71,11 @@ public class VoiceInputAgentDuckingTests
 
         await Task.Delay(100);
 
-        received.Should().BeNull("audio should be blocked when playback is active");
+        received.Should().NotBeNull("barge-in requires mic audio to keep flowing during playback");
     }
 
     [Fact]
-    public async Task OnAudioChunk_WhenDuckingEnabled_AllowsChunksWhenNotPlaying()
+    public async Task OnAudioChunk_WhenLegacyPauseMicSettingEnabled_SendsChunksWhenNotPlaying()
     {
         var audioInput = Substitute.For<IAudioInputService>();
         var tracker = new AudioPlaybackTracker { SampleRate = 48000, BytesPlayed = 0 }; // No playback
@@ -80,7 +88,11 @@ public class VoiceInputAgentDuckingTests
             tracker,
             settings);
 
-        agent.SetAudioSink(async (data, ct) => received = data);
+        agent.SetAudioSink((data, ct) =>
+        {
+            received = data;
+            return Task.CompletedTask;
+        });
         agent.SetConnected(true);
         await agent.StartAsync();
 
@@ -94,12 +106,12 @@ public class VoiceInputAgentDuckingTests
     }
 
     [Fact]
-    public async Task OnAudioChunk_WhenDuckingEnabled_AllowsChunksAfterReset()
+    public async Task OnAudioChunk_WhenPlaybackTrackerResets_MicKeepsSendingChunks()
     {
         var audioInput = Substitute.For<IAudioInputService>();
         var tracker = new AudioPlaybackTracker { SampleRate = 48000, BytesPlayed = 48000 }; // 1s at 48kHz
         var settings = new AppSettings { PauseMicWhilePlaying = true };
-        byte[]? received = null;
+        var receivedCount = 0;
 
         var agent = new VoiceInputAgent(
             audioInput,
@@ -107,27 +119,31 @@ public class VoiceInputAgentDuckingTests
             tracker,
             settings);
 
-        agent.SetAudioSink(async (data, ct) => received = data);
+        agent.SetAudioSink((data, ct) =>
+        {
+            receivedCount++;
+            return Task.CompletedTask;
+        });
         agent.SetConnected(true);
         await agent.StartAsync();
 
-        // First chunk: blocked
+        // First chunk: playback is active, but mic audio still flows.
         var chunk = GenerateChunk48k(50);
         audioInput.AudioChunkAvailable += Raise.Event<EventHandler<byte[]>>(audioInput, chunk);
         await Task.Delay(100);
-        received.Should().BeNull();
+        receivedCount.Should().Be(1);
 
         // Reset tracker (playback finished)
         tracker.Reset();
 
-        // Second chunk: allowed
+        // Second chunk: still flows after playback reset.
         audioInput.AudioChunkAvailable += Raise.Event<EventHandler<byte[]>>(audioInput, chunk);
         await Task.Delay(100);
-        received.Should().NotBeNull("audio should flow after tracker reset");
+        receivedCount.Should().Be(2);
     }
 
     [Fact]
-    public async Task OnAudioChunk_WithNullTracker_NeverDucks()
+    public async Task OnAudioChunk_WithNullTracker_StillSendsChunks()
     {
         var audioInput = Substitute.For<IAudioInputService>();
         var settings = new AppSettings { PauseMicWhilePlaying = true };
@@ -139,7 +155,11 @@ public class VoiceInputAgentDuckingTests
             playbackTracker: null, // No tracker
             settings);
 
-        agent.SetAudioSink(async (data, ct) => received = data);
+        agent.SetAudioSink((data, ct) =>
+        {
+            received = data;
+            return Task.CompletedTask;
+        });
         agent.SetConnected(true);
         await agent.StartAsync();
 

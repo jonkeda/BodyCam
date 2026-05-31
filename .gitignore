@@ -32,6 +32,7 @@ Thumbs.db
 # Local camera/protocol investigation artifacts
 .my/plan/m38-a9-camera/captures/
 .my/plan/m38-a9-camera/image/
+.my/plan/m41-usb-camera/captures/
 .my/tools/
 /captures/
 *.pcap

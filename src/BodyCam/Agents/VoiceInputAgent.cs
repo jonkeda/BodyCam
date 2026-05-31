@@ -14,8 +14,6 @@ public class VoiceInputAgent
 {
     private readonly IAudioInputService _audioInput;
     private readonly ILogger<VoiceInputAgent> _logger;
-    private readonly AudioPlaybackTracker? _playbackTracker;
-    private readonly AppSettings? _settings;
     private readonly PolyphaseFirResampler _resampler48to24 = new(48000, 24000);
 
     private Func<byte[], CancellationToken, Task>? _audioSink;
@@ -30,8 +28,6 @@ public class VoiceInputAgent
     {
         _audioInput = audioInput;
         _logger = logger;
-        _playbackTracker = playbackTracker;
-        _settings = settings;
     }
 
     public void SetAudioSink(Func<byte[], CancellationToken, Task>? sink) => _audioSink = sink;
@@ -63,12 +59,8 @@ public class VoiceInputAgent
         {
             if (_isConnected && _audioSink is not null)
             {
-                // Phase 5.3: Optional mic ducking during playback
-                if (_settings?.PauseMicWhilePlaying == true && _playbackTracker?.PlayedMs > 0)
-                    return; // Mic is gated while AI is speaking
-
                 // Chunk is at 48 kHz from AudioInputManager (post-AEC)
-                // Resample 48k → 24k for API
+                // Resample 48k -> 24k for API
                 byte[] processed24k = Resample48to24(chunk);
                 
                 await _audioSink(processed24k, CancellationToken.None);

@@ -30,12 +30,12 @@ public class AppSettings
         - If vision context is available, reference what you see
         - You can be asked to remember things for later
         - Be conversational and natural
-        - When the user asks to look at something, see something, or asks "what's that?"
-          or "scan that", use the look tool. It automatically checks for QR codes, reads
-          text, and describes the scene — returning the first useful result.
+        - When the user asks to look at something, see something, or asks "what's that?",
+          use the look tool. It captures immediately and describes the visible scene,
+          object, hazard, or target.
         - When the user asks to describe or analyze the overall scene ("describe the scene",
           "what's going on here?"), use describe_scene for a comprehensive structured analysis.
-        - Use scan_qr_code only when the user explicitly asks to scan a barcode.
+        - Use scan_qr_code only when the user explicitly asks to scan a QR code or barcode.
         - Use read_text only when the user explicitly asks to read specific text.
         - When the user scans a product barcode or asks about a product, use
           the lookup_barcode tool to find product information.
@@ -61,6 +61,9 @@ public class AppSettings
     public bool EnableJitterBuffer { get; set; } = true;
     public bool IosUsePlatformAecOnly { get; set; } = true; // Use iOS VoiceProcessingIO instead of WebRTC APM
     public bool WindowsUseVoiceCaptureDmo { get; set; } = false; // Opt-in fallback to Windows DMO AEC
+    public float RealtimeServerVadThreshold { get; set; } = 0.75f;
+    public int RealtimeServerVadPrefixPaddingMs { get; set; } = 250;
+    public int RealtimeServerVadSilenceDurationMs { get; set; } = 650;
 
     // AGC tuning (Phase 5.1)
     public int AgcTargetLevelDbfs { get; set; } = -9;   // Target level in dB below full scale (-9 prevents clipping)
@@ -69,8 +72,8 @@ public class AppSettings
     // Noise suppression (Phase 5.2)
     public int NoiseSuppressionLevel { get; set; } = 1; // 0=Off, 1=Moderate, 2=High, 3=VeryHigh (1 avoids musical noise)
 
-    // Mic ducking (Phase 5.3)
-    public bool PauseMicWhilePlaying { get; set; } = false; // When true, mute mic during AI speech (kills barge-in)
+    // Legacy setting kept for settings compatibility; mic input remains live for barge-in.
+    public bool PauseMicWhilePlaying { get; set; } = false;
 
     // Observability (Phase 6)
     public bool DisableAec { get; set; } = false; // When true, bypass AEC entirely (for A/B testing)

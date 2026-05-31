@@ -5,20 +5,22 @@
              x:Class="BodyCam.Pages.Main.Views.DebugOverlayView"
              x:DataType="vm:MainViewModel">
 
-    <Grid IsVisible="{Binding DebugVisible}"
+    <Grid IsVisible="{Binding ShowDebugOverlay}"
           VerticalOptions="End"
           MaximumHeightRequest="250"
           BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceTranslucent}, Dark={StaticResource SurfaceTranslucentDark}}">
         <VerticalStackLayout Spacing="4" Padding="8">
             <!-- Phase 6.1: AEC metrics overlay -->
             <Label x:Name="AecDebugLabel"
+                   AutomationId="AudioPolicyDebugLabel"
                    Text="{Binding AecDebugText}"
                    FontFamily="Consolas" FontSize="10"
                    BackgroundColor="{StaticResource Overlay}" TextColor="Lime"
                    Padding="6,2"
-                   IsVisible="{Binding DebugVisible}" />
+                   IsVisible="{Binding HasAecDebugText}" />
 
-            <Frame Padding="8" CornerRadius="8">
+            <Frame Padding="8" CornerRadius="8"
+                   IsVisible="{Binding HasDebugLog}">
                 <ScrollView AutomationId="DebugScroll">
                     <Label AutomationId="DebugLabel"
                            Text="{Binding DebugLog}"

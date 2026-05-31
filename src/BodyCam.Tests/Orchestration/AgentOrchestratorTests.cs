@@ -1,4 +1,5 @@
 using BodyCam.Tests.TestInfrastructure;
+using System.Reflection;
 using BodyCam.Agents;
 using BodyCam.Models;
 using BodyCam.Orchestration;
@@ -80,6 +81,25 @@ public class AgentOrchestratorTests
         orchestrator.IsRunning.Should().BeTrue();
 
         await orchestrator.StopAsync();
+    }
+
+    [Fact]
+    public void BuildSessionOptions_ConfiguresRealtimeVadWithoutMicGating()
+    {
+        var orchestrator = CreateOrchestrator(out _, out _);
+        var method = typeof(AgentOrchestrator).GetMethod("BuildSessionOptions", BindingFlags.Instance | BindingFlags.NonPublic);
+
+        var options = (Microsoft.Extensions.AI.RealtimeSessionOptions)method!.Invoke(orchestrator, null)!;
+        var rawOptions = options.RawRepresentationFactory!().Should().BeOfType<RealtimeConversationSessionOptions>().Subject;
+        var turnDetection = rawOptions.AudioOptions.InputAudioOptions.TurnDetection
+            .Should().BeOfType<RealtimeServerVadTurnDetection>().Subject;
+
+        options.VoiceActivityDetection!.Enabled.Should().BeTrue();
+        options.VoiceActivityDetection.AllowInterruption.Should().BeTrue();
+        turnDetection.DetectionThreshold.Should().Be(0.75f);
+        turnDetection.CreateResponseEnabled.Should().BeTrue();
+        turnDetection.InterruptResponseEnabled.Should().BeTrue();
+        rawOptions.AudioOptions.InputAudioOptions.NoiseReduction.Kind.Should().Be(RealtimeNoiseReductionKind.NearField);
     }
 
     [Fact]

@@ -23,6 +23,12 @@ public class DeviceSettingsPage : PageObjectBase<DeviceSettingsPage>
     // Camera
     public Picker<DeviceSettingsPage> CameraSourcePicker => Picker("CameraSourcePicker");
 
+    public Button<DeviceSettingsPage> TakePictureButton => Button("TakePictureButton");
+
+    public Label<DeviceSettingsPage> TakePictureStatusLabel => Label("TakePictureStatusLabel");
+
+    public Image<DeviceSettingsPage> LastPictureImage => Image("LastPictureImage");
+
     // Audio Input
     public Picker<DeviceSettingsPage> AudioInputPicker => Picker("AudioInputPicker");
 

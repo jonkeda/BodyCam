@@ -14,6 +14,7 @@ public class BodyCamFixture : MauiTestFixtureBase
     private readonly DeviceSettingsPage _deviceSettingsPage;
     private readonly AddDevicesPage _addDevicesPage;
     private readonly A9CameraSettingsPage _a9CameraSettingsPage;
+    private readonly UsbCameraSettingsPage _usbCameraSettingsPage;
     private readonly AdvancedSettingsPage _advancedSettingsPage;
 
     public BodyCamFixture()
@@ -26,6 +27,7 @@ public class BodyCamFixture : MauiTestFixtureBase
         _deviceSettingsPage = new DeviceSettingsPage(Context);
         _addDevicesPage = new AddDevicesPage(Context);
         _a9CameraSettingsPage = new A9CameraSettingsPage(Context);
+        _usbCameraSettingsPage = new UsbCameraSettingsPage(Context);
         _advancedSettingsPage = new AdvancedSettingsPage(Context);
         DismissSetupIfShown();
     }
@@ -38,6 +40,7 @@ public class BodyCamFixture : MauiTestFixtureBase
     public DeviceSettingsPage DeviceSettingsPage => _deviceSettingsPage;
     public AddDevicesPage AddDevicesPage => _addDevicesPage;
     public A9CameraSettingsPage A9CameraSettingsPage => _a9CameraSettingsPage;
+    public UsbCameraSettingsPage UsbCameraSettingsPage => _usbCameraSettingsPage;
     public AdvancedSettingsPage AdvancedSettingsPage => _advancedSettingsPage;
 
     protected override string GetDefaultAppPath(string platform)
@@ -49,27 +52,33 @@ public class BodyCamFixture : MauiTestFixtureBase
 
     public void NavigateToHome()
     {
-        if (_mainPage.IsLoaded(2000)) return;
+        if (IsHomeRootLoaded(1000)) return;
 
-        // On a pushed page — use Shell back button to return
-        for (int i = 0; i < 3; i++)
+        // On a pushed page, main-page controls can still exist in the UI tree.
+        // The first-page settings button is only visible at the root, so use it
+        // as the stronger home sentinel.
+        for (int i = 0; i < 5; i++)
         {
-            if (_mainPage.IsLoaded(1000)) return;
             Context.NavigateBack();
+            if (IsHomeRootLoaded(1500)) return;
         }
 
-        _mainPage.IsLoaded(5000);
+        if (!IsHomeRootLoaded(5000))
+            throw new InvalidOperationException("Could not navigate back to the BodyCam home root.");
     }
 
     public void NavigateToSettings()
     {
         if (_settingsPage.IsLoaded(2000)) return;
 
-        // Ensure we're on MainPage first (⚙ button only visible there)
+        // Ensure we're on MainPage first (settings button only visible there)
         NavigateToHome();
         _mainPage.NavIcon.Click();
         _settingsPage.WaitReady(5000);
     }
+
+    private bool IsHomeRootLoaded(int timeoutMs)
+        => _mainPage.IsLoaded(timeoutMs) && _mainPage.NavIcon.WaitExists(true, timeoutMs);
 
     public void NavigateToSettingsSubPage(Action clickCard, IPageObject subPage)
     {

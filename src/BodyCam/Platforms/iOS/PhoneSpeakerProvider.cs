@@ -36,6 +36,12 @@ public sealed class PhoneSpeakerProvider : IAudioOutputProvider, IDisposable
             return (int)(latency * 1000) + 10; // Add 10ms for safety margin
         }
     }
+    public AudioOutputCapabilities OutputCapabilities => new(
+        EchoPathKind.DirectDeviceSpeaker,
+        NeedsEchoCancellation: true,
+        IsAcousticallyIsolated: false,
+        SupportsRenderReference: true,
+        EstimatedOutputLatencyMs);
 
     public event EventHandler? Disconnected;
     public event EventHandler? OutputRouteChanged;

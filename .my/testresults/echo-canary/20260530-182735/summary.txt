@@ -1,0 +1,5 @@
+Prompt: For an echo canary test, speak exactly two uncommon words of your choice, then stop. Do not include any explanation or question.
+Assistant canary: Zephyr, Limerence
+Canary tokens: zephyr, limerence
+User transcripts after canary: Oh | You | if you have any other requests. | Let me know. | What? | You | Something else | about how I can assist you. | Sure. | I'm here to help. | What would you like to do next?
+Assistant responses after canary: Understood! I've said "zephyr" and "limerence." If you'd like to proceed or have any other requests, let me know. | If you'd like to try something else or explore further, just let me know how I can assist you. | Of course! Feel free to | Sure, I'm here to help. What would you like to do next? | Take your time. | That's perfectly fine. Whenever you're ready or if you'd like to explore something new, just let me know how I can assist. | Great! | You can let me know

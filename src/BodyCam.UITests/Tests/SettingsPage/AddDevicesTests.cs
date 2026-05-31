@@ -42,4 +42,16 @@ public class AddDevicesTests
     {
         _fixture.AddDevicesPage.AddA9CameraButton.AssertExists();
     }
+
+    [Fact]
+    public void AddVue990CameraButton_Exists()
+    {
+        _fixture.AddDevicesPage.AddVue990CameraButton.AssertExists();
+    }
+
+    [Fact]
+    public void AddUsbCameraButton_Exists()
+    {
+        _fixture.AddDevicesPage.AddUsbCameraButton.AssertExists();
+    }
 }

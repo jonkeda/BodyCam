@@ -6,6 +6,8 @@ using BodyCam.Services.Audio.WebRtcApm;
 using BodyCam.Services.Camera;
 using BodyCam.Services.Camera.A9;
 using BodyCam.Services.Camera.A9.Vue990;
+using BodyCam.Services.Camera.Commands;
+using BodyCam.Services.Camera.Usb;
 using BodyCam.Services.Input;
 using BodyCam.Services.Barcode;
 using BodyCam.Services.QrCode;
@@ -106,26 +108,17 @@ public static class ServiceExtensions
 			}
 			else
 			{
-				var apmLogger = loggerFactory.CreateLogger<AecProcessor>();
-				var drift = sp.GetRequiredService<Services.Audio.ClockDriftMonitor>();
-				var apm = new AecProcessor(apmLogger, settings, drift);
-				apm.Initialize(mobileMode: false);
-				return apm;
+				return CreateWebRtcAecProcessor(sp, mobileMode: false);
 			}
 		});
 #else
 		services.AddSingleton<IAecProcessor>(sp =>
 		{
-			var logger = sp.GetRequiredService<ILogger<AecProcessor>>();
-			var settings = sp.GetRequiredService<AppSettings>();
-			var drift = sp.GetRequiredService<Services.Audio.ClockDriftMonitor>();
-			var apm = new AecProcessor(logger, settings, drift);
 #if ANDROID || IOS
-			apm.Initialize(mobileMode: true);
+			return CreateWebRtcAecProcessor(sp, mobileMode: true);
 #else
-			apm.Initialize(mobileMode: false);
+			return CreateWebRtcAecProcessor(sp, mobileMode: false);
 #endif
-			return apm;
 		});
 #endif
 
@@ -137,6 +130,7 @@ public static class ServiceExtensions
 #elif IOS
 		services.AddSingleton<BodyCam.Services.Audio.IRouteMonitor, BodyCam.Platforms.iOS.IosRouteMonitor>();
 #endif
+		services.AddSingleton<BodyCam.Services.Audio.IAudioRoutePolicyService, BodyCam.Services.Audio.AudioRoutePolicyService>();
 		services.AddSingleton<BodyCam.Services.Audio.AecBypassManager>();
 
 		return services;
@@ -162,6 +156,12 @@ public static class ServiceExtensions
 		services.AddSingleton<Vue990CameraProvider>();
 		services.AddSingleton<ICameraProvider>(sp => sp.GetRequiredService<Vue990CameraProvider>());
 
+#if WINDOWS
+		services.AddSingleton<IUsbCameraClient, WindowsUsbCameraClient>();
+		services.AddSingleton<UsbCameraProvider>();
+		services.AddSingleton<ICameraProvider>(sp => sp.GetRequiredService<UsbCameraProvider>());
+#endif
+
 #if ANDROID
 		// Use HeyCyan-aware selector on Android; default selector elsewhere
 		services.AddSingleton<ICameraProviderSelector, HeyCyanCameraSelector>();
@@ -170,6 +170,12 @@ public static class ServiceExtensions
 #endif
 
 		services.AddSingleton<CameraManager>();
+		services.AddSingleton<IManualCameraCaptureCoordinator, ManualCameraCaptureCoordinator>();
+		services.AddSingleton<ICameraCommand, LookCommand>();
+		services.AddSingleton<ICameraCommand, ReadCommand>();
+		services.AddSingleton<ICameraCommand, ScanCommand>();
+		services.AddSingleton<ICameraCommandRegistry, CameraCommandRegistry>();
+		services.AddSingleton<ICameraCommandService, CameraCommandService>();
 
 		return services;
 	}
@@ -387,7 +393,9 @@ public static class ServiceExtensions
 	}
 
 	public static IServiceCollection AddViewModels(this IServiceCollection services)
-	{		services.AddSingleton<AppShell>();		services.AddTransient<SetupViewModel>();
+	{
+		services.AddSingleton<AppShell>();
+		services.AddTransient<SetupViewModel>();
 		services.AddTransient<MainViewModel>();
 		services.AddTransient<SettingsViewModel>();
 		services.AddTransient<ViewModels.Settings.ConnectionViewModel>();
@@ -396,6 +404,9 @@ public static class ServiceExtensions
 		services.AddTransient<ViewModels.Settings.AddDevicesViewModel>();
 		services.AddTransient<ViewModels.Settings.A9CameraSettingsViewModel>();
 		services.AddTransient<ViewModels.Settings.Vue990CameraSettingsViewModel>();
+#if WINDOWS
+		services.AddTransient<ViewModels.Settings.UsbCameraSettingsViewModel>();
+#endif
 		services.AddTransient<ViewModels.Settings.AdvancedViewModel>();
 		services.AddTransient<ViewModels.Settings.GlassesCameraSectionViewModel>();
 		services.AddTransient<MediaGalleryViewModel>();
@@ -409,6 +420,9 @@ public static class ServiceExtensions
 		services.AddTransient<Pages.Settings.AddDevicesPage>();
 		services.AddTransient<Pages.Settings.A9CameraSettingsPage>();
 		services.AddTransient<Pages.Settings.Vue990CameraSettingsPage>();
+#if WINDOWS
+		services.AddTransient<Pages.Settings.UsbCameraSettingsPage>();
+#endif
 		services.AddTransient<Pages.Settings.AdvancedSettingsPage>();
 		services.AddTransient<Pages.MediaGalleryPage>();
 		services.AddTransient<Pages.ImageViewerPage>();
@@ -421,5 +435,26 @@ public static class ServiceExtensions
 		Routing.RegisterRoute("glasses", typeof(Pages.GlassesPage));
 
 		return services;
+	}
+
+	private static IAecProcessor CreateWebRtcAecProcessor(IServiceProvider sp, bool mobileMode)
+	{
+		var logger = sp.GetRequiredService<ILogger<AecProcessor>>();
+		var settings = sp.GetRequiredService<AppSettings>();
+		var drift = sp.GetRequiredService<Services.Audio.ClockDriftMonitor>();
+		var apm = new AecProcessor(logger, settings, drift);
+
+		try
+		{
+			apm.Initialize(mobileMode);
+			return apm;
+		}
+		catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException or BadImageFormatException or InvalidOperationException)
+		{
+			apm.Dispose();
+			var fallbackLogger = sp.GetRequiredService<ILogger<NullAecProcessor>>();
+			fallbackLogger.LogWarning(ex, "WebRTC APM native processor unavailable; falling back to pass-through audio");
+			return new NullAecProcessor(fallbackLogger, "WebRTC APM native processor unavailable");
+		}
 	}
 }

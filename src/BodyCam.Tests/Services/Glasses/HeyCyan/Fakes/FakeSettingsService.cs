@@ -1,5 +1,6 @@
 using BodyCam.Models;
 using BodyCam.Services;
+using BodyCam.Services.Camera.Commands;
 
 namespace BodyCam.Tests.Services.Glasses.HeyCyan.Fakes;
 
@@ -19,6 +20,7 @@ public sealed class FakeSettingsService : ISettingsService
     public string Voice { get; set; } = "marin";
     public string TurnDetection { get; set; } = "semantic_vad";
     public string NoiseReduction { get; set; } = "near_field";
+    public string OutputMode { get; set; } = "Speak";
 
     // Provider
     public OpenAiProvider Provider { get; set; } = OpenAiProvider.OpenAi;
@@ -38,6 +40,10 @@ public sealed class FakeSettingsService : ISettingsService
 
     // Camera
     public string? ActiveCameraProvider { get; set; }
+    public CameraCommandMode DefaultTouchCommandMode { get; set; } = CameraCommandMode.ManualAim;
+    public LookDetailLevel DefaultLookDetailLevel { get; set; } = LookDetailLevel.Summary;
+    public ReadDetailLevel DefaultReadDetailLevel { get; set; } = ReadDetailLevel.Full;
+    public bool ConfirmExternalScanActions { get; set; } = true;
 
     // Audio Input
     public string? ActiveAudioInputProvider { get; set; }
@@ -69,6 +75,9 @@ public sealed class FakeSettingsService : ISettingsService
 
     // Vue990 Camera
     public string? Vue990CameraIp { get; set; }
+
+    // USB Camera
+    public string? UsbCameraDeviceMatch { get; set; }
 
     // Device Settings (JSON)
     public DeviceSettings DeviceSettings { get; set; } = new();

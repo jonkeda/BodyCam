@@ -12,7 +12,7 @@ public class VoiceOutputAgent
 {
     private readonly IAudioOutputService _audioOutput;
     private readonly IAecProcessor? _aec;
-    private readonly AudioPlaybackTracker _tracker = new();
+    private readonly AudioPlaybackTracker _tracker = new() { SampleRate = 48000 };
     private readonly PolyphaseFirResampler _resampler24to48 = new(24000, 48000);
 
     public AudioPlaybackTracker Tracker => _tracker;
@@ -36,10 +36,9 @@ public class VoiceOutputAgent
 
     public async Task PlayAudioDeltaAsync(byte[] pcm24k, CancellationToken ct = default)
     {
-        // Resample 24k → 48k for speaker + AEC
+        // Resample 24k -> 48k for the local speaker path.
         byte[] pcm48k = Resample24to48(pcm24k);
         
-        _aec?.FeedRenderReference(pcm48k);
         await _audioOutput.PlayChunkAsync(pcm48k, ct);
         _tracker.BytesPlayed += pcm48k.Length; // Track at 48k rate
     }

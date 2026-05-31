@@ -17,6 +17,7 @@ public sealed class WindowsBluetoothAudioProvider : IAudioInputProvider, IDispos
 
     public string DisplayName { get; }
     public string ProviderId { get; }
+    public AudioInputCapabilities InputCapabilities => AudioInputCapabilities.Default;
     public bool IsAvailable
     {
         get

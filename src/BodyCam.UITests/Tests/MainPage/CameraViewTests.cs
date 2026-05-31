@@ -3,9 +3,7 @@ using BodyCam.UITests.Pages;
 namespace BodyCam.UITests.Tests.MainPage;
 
 /// <summary>
-/// Tests for the Camera tab view visibility.
-/// Uses CameraPlaceholder label as a sentinel since MAUI Grid/CameraView
-/// don't create UIA automation peers that FlaUI can discover.
+/// Tests for the inline camera preview visibility.
 /// </summary>
 [Collection("BodyCam")]
 [Trait("Category", "UITest")]
@@ -19,45 +17,26 @@ public class CameraViewTests
     {
         _fixture = fixture;
         _fixture.NavigateToHome();
-        // Ensure we start on transcript tab
-        Page.TranscriptTabButton.Click();
+        Page.OffButton.Click();
+        Page.EnsureActionsExpanded();
     }
 
     [Fact]
-    public void Default_CameraContentNotVisible()
+    public void Default_CameraPreviewNotVisible()
     {
-        // Camera placeholder should not be in UIA tree when camera tab is hidden
-        Assert.False(Page.CameraPlaceholder.IsExists(),
-            "Camera content should not be visible in default transcript view");
+        Assert.False(Page.CameraPreviewPanel.IsExists(),
+            "Camera preview should not be visible until a camera action starts.");
     }
 
     [Fact]
-    public void ClickCameraTab_CameraContentAppears()
+    public void SleepButton_HidesCameraPreview()
     {
-        Page.CameraTabButton.Click();
+        Page.LookButton.Click();
+        Page.CameraPreviewPanel.WaitExists(true, 5000);
 
-        Assert.True(Page.CameraPlaceholder.WaitExists(true, 5000),
-            "Camera content should appear after clicking Camera tab");
-    }
+        Page.OffButton.Click();
 
-    [Fact]
-    public void ClickCameraTab_TranscriptContentDisappears()
-    {
-        Page.CameraTabButton.Click();
-
-        // TranscriptList (CollectionView) should be removed from UIA tree
-        Page.CameraPlaceholder.WaitExists(true, 5000);
-    }
-
-    [Fact]
-    public void SwitchBackToTranscript_CameraContentHides()
-    {
-        Page.CameraTabButton.Click();
-        Page.CameraPlaceholder.WaitExists(true, 5000);
-
-        Page.TranscriptTabButton.Click();
-
-        Assert.True(Page.CameraPlaceholder.WaitExists(false, 5000),
-            "Camera content should hide after switching back to transcript");
+        Assert.True(Page.CameraPreviewPanel.WaitExists(false, 5000),
+            "Camera preview should hide after switching to Sleep.");
     }
 }

@@ -39,6 +39,14 @@ public class TranscriptEntry : ObservableObject
 
     public string DisplayText => $"{Role}: {Text}";
 
+    public string AutomationId => Role switch
+    {
+        "You" => "TranscriptYouEntryLabel",
+        "AI" => "TranscriptAiEntryLabel",
+        "Scan" => "TranscriptScanEntryLabel",
+        _ => "TranscriptEntryLabel"
+    };
+
     public string AccessibleText => IsThinking
         ? $"{Role} is thinking"
         : string.IsNullOrEmpty(Text)

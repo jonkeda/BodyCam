@@ -20,6 +20,10 @@ public sealed class PlatformMicProvider : IAudioInputProvider, IDisposable
 
     public string DisplayName => "iPhone Microphone";
     public string ProviderId => "platform";
+    public AudioInputCapabilities InputCapabilities => new(
+        HasPlatformEchoCancellation: _settings.IosUsePlatformAecOnly,
+        PlatformEchoCancellationActive: _settings.IosUsePlatformAecOnly,
+        EstimatedInputLatencyMs: 0);
     public bool IsAvailable => true;
     public bool IsCapturing { get; private set; }
 

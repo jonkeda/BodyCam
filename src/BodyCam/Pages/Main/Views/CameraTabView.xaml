@@ -6,12 +6,40 @@
              x:Class="BodyCam.Pages.Main.Views.CameraTabView"
              x:DataType="vm:MainViewModel">
 
-    <Grid IsVisible="{Binding ShowCameraTab}">
-        <Label AutomationId="CameraPlaceholder"
-               Text="Camera initializing..."
-               HorizontalOptions="Center" VerticalOptions="Center"
-               TextColor="Gray" />
-        <toolkit:CameraView x:Name="CameraPreview" AutomationId="CameraPreview" />
+    <Grid x:Name="CameraPreviewPanel"
+          AutomationId="CameraPreviewPanel"
+          IsVisible="{Binding ShowInlineCameraPreview}"
+          Padding="8,0,8,8"
+          SemanticProperties.Description="Camera preview">
+        <Border StrokeShape="RoundRectangle 8"
+                Stroke="{AppThemeBinding Light={StaticResource BorderDefault}, Dark={StaticResource BorderDefaultDark}}"
+                BackgroundColor="{AppThemeBinding Light={StaticResource CardSurface}, Dark={StaticResource CardSurfaceDark}}"
+                Padding="8">
+            <Grid RowDefinitions="220,Auto"
+                  RowSpacing="8">
+                <toolkit:CameraView x:Name="CameraPreview"
+                                    AutomationId="CameraPreview"
+                                    HeightRequest="220"
+                                    HorizontalOptions="Fill"
+                                    VerticalOptions="Fill"
+                                    SemanticProperties.Description="Camera preview" />
+
+                <Button Grid.Row="1"
+                        AutomationId="CaptureFrameButton"
+                        Text="●"
+                        Command="{Binding PhotoCommand}"
+                        WidthRequest="56"
+                        HeightRequest="56"
+                        CornerRadius="28"
+                        FontSize="28"
+                        Padding="0"
+                        HorizontalOptions="Center"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}"
+                        TextColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource PrimaryDarkText}}"
+                        SemanticProperties.Description="Capture frame"
+                        SemanticProperties.Hint="Captures a camera frame and adds it to the transcript" />
+            </Grid>
+        </Border>
 
         <!-- Snapshot overlay -->
         <Grid IsVisible="{Binding ShowSnapshot}"

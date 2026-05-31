@@ -5,43 +5,17 @@
              x:Class="BodyCam.Pages.Main.Views.QuickActionsView"
              x:DataType="vm:MainViewModel">
 
-    <ContentView.Resources>
-        <Style x:Key="ActionButton" TargetType="Button">
-            <Setter Property="HeightRequest" Value="48" />
-            <Setter Property="FontSize" Value="14" />
-            <Setter Property="CornerRadius" Value="8" />
-            <Setter Property="BackgroundColor"
-                    Value="{AppThemeBinding Light={StaticResource MutedSurface}, Dark={StaticResource CardSurfaceDark}}" />
-            <Setter Property="TextColor"
-                    Value="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource TextPrimaryDark}}" />
-        </Style>
-    </ContentView.Resources>
-
-    <Grid ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto"
-          ColumnSpacing="8" RowSpacing="8" Padding="12">
-        <Button AutomationId="LookButton"
-                Text="👁 Look"
-                Command="{Binding LookCommand}"
-                Style="{StaticResource ActionButton}" />
-        <Button Grid.Column="1" AutomationId="ReadButton"
-                Text="📖 Read"
-                Command="{Binding ReadCommand}"
-                Style="{StaticResource ActionButton}" />
-        <Button Grid.Column="2" AutomationId="FindButton"
-                Text="🔍 Find"
-                Command="{Binding FindCommand}"
-                Style="{StaticResource ActionButton}" />
-        <Button Grid.Row="1" AutomationId="AskButton"
-                Text="💬 Ask"
-                Command="{Binding AskCommand}"
-                Style="{StaticResource ActionButton}" />
-        <Button Grid.Row="1" Grid.Column="1" AutomationId="PhotoButton"
-                Text="📸 Photo"
-                Command="{Binding PhotoCommand}"
-                Style="{StaticResource ActionButton}" />
-        <Button Grid.Row="1" Grid.Column="2" AutomationId="ScanButton"
-                Text="📷 Scan"
-                Command="{Binding ScanCommand}"
-                Style="{StaticResource ActionButton}" />
-    </Grid>
+    <VerticalStackLayout Padding="12"
+                         BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
+        <Button AutomationId="ActionsDrawerButton"
+                Text="{Binding ActionsDrawerButtonText}"
+                Command="{Binding ToggleActionsDrawerCommand}"
+                HeightRequest="44"
+                HorizontalOptions="Fill"
+                CornerRadius="8"
+                BackgroundColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}"
+                TextColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource PrimaryDarkText}}"
+                SemanticProperties.Description="{Binding ActionsDrawerSemanticDescription}"
+                SemanticProperties.Hint="Shows or hides available actions" />
+    </VerticalStackLayout>
 </ContentView>

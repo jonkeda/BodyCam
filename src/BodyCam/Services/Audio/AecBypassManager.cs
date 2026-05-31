@@ -4,42 +4,51 @@ using Microsoft.Extensions.Logging;
 namespace BodyCam.Services.Audio;
 
 /// <summary>
-/// Automatically disables AEC when headphones are connected (no acoustic echo path).
-/// Enables AEC when speaker is active.
+/// Applies the current audio route policy to the AEC processor.
 /// </summary>
 public sealed class AecBypassManager : IAsyncDisposable
 {
-    private readonly IRouteMonitor _monitor;
+    private readonly IAudioRoutePolicyService _policy;
     private readonly IAecProcessor _aec;
     private readonly ILogger<AecBypassManager> _logger;
 
-    public AecBypassManager(IRouteMonitor monitor, IAecProcessor aec, ILogger<AecBypassManager> logger)
+    public AecBypassManager(
+        IAudioRoutePolicyService policy,
+        IAecProcessor aec,
+        ILogger<AecBypassManager> logger)
     {
-        _monitor = monitor;
+        _policy = policy;
         _aec = aec;
         _logger = logger;
 
-        _monitor.RouteChanged += OnRouteChanged;
-        UpdateAecState(); // Initial state
+        _policy.PolicyChanged += OnPolicyChanged;
+        ApplyPolicy(_policy.Recompute());
     }
 
-    private void OnRouteChanged(object? sender, EventArgs e)
+    private void OnPolicyChanged(object? sender, AudioRoutePolicy policy)
     {
-        UpdateAecState();
+        ApplyPolicy(policy);
     }
 
-    private void UpdateAecState()
+    private void ApplyPolicy(AudioRoutePolicy policy)
     {
-        // Disable AEC when headphones are connected (no acoustic echo)
-        bool isolated = _monitor.IsHeadphonesConnected;
-        _aec.IsEnabled = !isolated;
-        _logger.LogInformation("Audio route changed; AEC IsEnabled={Enabled} (headphones={Headphones})",
-            !isolated, isolated);
+        var enabled = policy.AecMode is AecMode.WebRtcApm or AecMode.WindowsDmoFallback;
+        _aec.IsEnabled = enabled;
+
+        if (enabled)
+            _aec.UpdateStreamDelay(policy.EstimatedRoundTripLatencyMs);
+
+        _logger.LogInformation(
+            "Applied audio route policy; AEC IsEnabled={Enabled}, mode={Mode}, cleanup={Cleanup}, reason={Reason}",
+            enabled,
+            policy.AecMode,
+            policy.VoiceCleanupMode,
+            policy.Explanation);
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
-        _monitor.RouteChanged -= OnRouteChanged;
-        await _monitor.DisposeAsync();
+        _policy.PolicyChanged -= OnPolicyChanged;
+        return ValueTask.CompletedTask;
     }
 }

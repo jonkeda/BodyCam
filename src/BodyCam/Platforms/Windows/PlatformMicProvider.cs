@@ -14,6 +14,7 @@ public sealed class PlatformMicProvider : IAudioInputProvider, IDisposable
 
     public string DisplayName => "System Microphone";
     public string ProviderId => "platform";
+    public AudioInputCapabilities InputCapabilities => AudioInputCapabilities.Default;
     public bool IsAvailable => true;
     public bool IsCapturing { get; private set; }
 

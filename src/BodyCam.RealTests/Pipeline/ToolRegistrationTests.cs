@@ -1,12 +1,16 @@
 using System.Text.Json;
 using BodyCam.Agents;
+using BodyCam.RealTests.Fixtures;
 using BodyCam.Services;
+using BodyCam.Services.Camera;
+using BodyCam.Services.Camera.Commands;
 using BodyCam.Services.QrCode;
 using BodyCam.Services.QrCode.Handlers;
 using BodyCam.Services.Vision;
 using BodyCam.Tools;
 using FluentAssertions;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -47,16 +51,29 @@ public class ToolRegistrationTests
         };
         var contentResolver = new QrContentResolver(contentHandlers);
 
-        var qrScanStage = new QrScanStage(qrScanner, qrHistory, contentResolver);
-        var textDetectionStage = new TextDetectionStage(vision);
-        var sceneDescriptionStage = new SceneDescriptionStage(vision);
-        var visionPipeline = new VisionPipeline([qrScanStage, textDetectionStage, sceneDescriptionStage]);
+        var settingsService = new InMemorySettingsService();
+        var cameraManager = new CameraManager(
+            [],
+            settingsService,
+            new DefaultCameraSelector(),
+            NullLogger<CameraManager>.Instance);
+        var commandRegistry = new CameraCommandRegistry([
+            new LookCommand(vision),
+            new ReadCommand(vision),
+            new ScanCommand(qrScanner, qrHistory, contentResolver),
+        ]);
+        var commandService = new CameraCommandService(
+            commandRegistry,
+            cameraManager,
+            settingsService,
+            new ManualCameraCaptureCoordinator(),
+            NullLogger<CameraCommandService>.Instance);
 
         var tools = new ITool[]
         {
             new DescribeSceneTool(vision),
             new DeepAnalysisTool(conversation),
-            new ReadTextTool(vision),
+            new ReadTextTool(commandService),
             new TakePhotoTool(),
             new SaveMemoryTool(memoryStore),
             new RecallMemoryTool(memoryStore),
@@ -67,9 +84,9 @@ public class ToolRegistrationTests
             new FindObjectTool(vision),
             new NavigateToTool(),
             new StartSceneWatchTool(vision),
-            new ScanQrCodeTool(qrScanner, qrHistory, contentResolver),
+            new ScanQrCodeTool(commandService),
             new RecallLastScanTool(qrHistory, contentResolver),
-            new LookTool(visionPipeline),
+            new LookTool(commandService),
         };
 
         _dispatcher = new ToolDispatcher(tools);

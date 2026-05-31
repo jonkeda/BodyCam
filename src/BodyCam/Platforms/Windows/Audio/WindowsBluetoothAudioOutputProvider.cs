@@ -32,6 +32,8 @@ public class WindowsBluetoothAudioOutputProvider : IAudioOutputProvider, IDispos
     }
     public bool IsPlaying { get; private set; }
     public int EstimatedOutputLatencyMs => 200; // Typical BT latency
+    public AudioOutputCapabilities OutputCapabilities =>
+        AudioCapabilityHeuristics.BluetoothOutput(DisplayName, EstimatedOutputLatencyMs);
 
     public event EventHandler? Disconnected;
     public event EventHandler? OutputRouteChanged;

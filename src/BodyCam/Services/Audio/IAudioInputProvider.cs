@@ -12,6 +12,12 @@ public interface IAudioInputProvider : IAsyncDisposable
     /// <summary>Unique identifier for this provider type (e.g. "platform", "usb", "bluetooth").</summary>
     string ProviderId { get; }
 
+    /// <summary>
+    /// Audio behavior metadata. Provider IDs identify a source, but policy
+    /// decisions should use these capabilities instead of parsing IDs.
+    /// </summary>
+    AudioInputCapabilities InputCapabilities => AudioInputCapabilities.Default;
+
     /// <summary>Whether the audio hardware is currently connected and ready.</summary>
     bool IsAvailable { get; }
 

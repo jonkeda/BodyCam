@@ -44,9 +44,10 @@ public class IosRouteMonitor : IRouteMonitor
 
         IsHeadphonesConnected = outputs.Any(o =>
             o.PortType == AVAudioSession.PortHeadphones ||
-            o.PortType == AVAudioSession.PortBluetoothA2DP ||
             o.PortType == AVAudioSession.PortBluetoothHfp ||
-            o.PortType == AVAudioSession.PortBluetoothLE);
+            o.PortType == AVAudioSession.PortBluetoothLE ||
+            (o.PortType == AVAudioSession.PortBluetoothA2DP &&
+                AudioCapabilityHeuristics.IsLikelyHeadsetName(o.PortName)));
 
         IsBluetoothAudioConnected = outputs.Any(o =>
             o.PortType == AVAudioSession.PortBluetoothA2DP ||

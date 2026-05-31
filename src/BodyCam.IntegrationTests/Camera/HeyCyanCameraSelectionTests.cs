@@ -1,5 +1,6 @@
 using BodyCam.Services;
 using BodyCam.Services.Camera;
+using BodyCam.Services.Camera.Commands;
 using BodyCam.Services.Glasses.HeyCyan;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -210,6 +211,7 @@ public class HeyCyanCameraSelectionTests
         public string DisplayName { get; }
         public string ProviderId { get; }
         public bool IsAvailable { get; }
+        public bool SupportsVideoRecording => false;
 
         public event EventHandler? Disconnected
         {
@@ -244,6 +246,7 @@ public class HeyCyanCameraSelectionTests
         public string DisplayName { get; }
         public string ProviderId { get; }
         public bool IsAvailable { get; }
+        public bool SupportsVideoRecording => false;
 
         public event EventHandler? Disconnected
         {
@@ -279,6 +282,10 @@ public class HeyCyanCameraSelectionTests
     private sealed class FakeSettingsService : ISettingsService
     {
         public string? ActiveCameraProvider { get; set; }
+        public CameraCommandMode DefaultTouchCommandMode { get; set; } = CameraCommandMode.ManualAim;
+        public LookDetailLevel DefaultLookDetailLevel { get; set; } = LookDetailLevel.Summary;
+        public ReadDetailLevel DefaultReadDetailLevel { get; set; } = ReadDetailLevel.Full;
+        public bool ConfirmExternalScanActions { get; set; } = true;
         public string? ActiveAudioInputProvider { get; set; }
         public string? ActiveAudioOutputProvider { get; set; }
         public OpenAiProvider Provider { get; set; }
@@ -294,6 +301,7 @@ public class HeyCyanCameraSelectionTests
         public string Voice { get; set; } = string.Empty;
         public string TurnDetection { get; set; } = string.Empty;
         public string NoiseReduction { get; set; } = string.Empty;
+        public string OutputMode { get; set; } = "Speak";
         public string SystemInstructions { get; set; } = string.Empty;
         public bool DebugMode { get; set; }
         public bool ShowTokenCounts { get; set; }
@@ -312,6 +320,8 @@ public class HeyCyanCameraSelectionTests
         public string? A9CameraUid { get; set; }
         public string? A9CameraUsername { get; set; }
         public string? A9CameraPassword { get; set; }
+        public string? Vue990CameraIp { get; set; }
+        public string? UsbCameraDeviceMatch { get; set; }
         public Models.DeviceSettings DeviceSettings { get; set; } = new();
         public bool SetupCompleted { get; set; }
     }

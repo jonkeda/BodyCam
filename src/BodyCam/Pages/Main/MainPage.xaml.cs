@@ -69,6 +69,9 @@ public partial class MainPage : ContentPage
 
 		if (BindingContext is MainViewModel vm)
 		{
+			buttonInput.ActionTriggered += (_, action) =>
+				Dispatcher.Dispatch(async () => await vm.HandleButtonActionAsync(action));
+
 			vm.Entries.CollectionChanged += (_, e) =>
 			{
 				if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add

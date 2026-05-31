@@ -1,5 +1,6 @@
 using BodyCam.Agents;
 using BodyCam.Services;
+using BodyCam.Services.Audio.WebRtcApm;
 using FluentAssertions;
 using NSubstitute;
 
@@ -55,6 +56,31 @@ public class VoiceOutputAgentTests
         // Audio is resampled 24kHz → 48kHz (2x), so expect roughly 2x the bytes
         await audioOutput.Received(1).PlayChunkAsync(Arg.Any<byte[]>(), Arg.Any<CancellationToken>());
         agent.Tracker.BytesPlayed.Should().BeGreaterThan(4); // Resampled chunk is larger
+    }
+
+    [Fact]
+    public async Task PlayAudioDeltaAsync_DoesNotFeedAecRenderReferenceDirectly()
+    {
+        var audioOutput = Substitute.For<IAudioOutputService>();
+        var aec = Substitute.For<IAecProcessor>();
+        var agent = new VoiceOutputAgent(audioOutput, aec);
+
+        await agent.PlayAudioDeltaAsync(new byte[100]);
+
+        aec.DidNotReceive().FeedRenderReference(Arg.Any<byte[]>());
+        await audioOutput.Received(1).PlayChunkAsync(Arg.Any<byte[]>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task PlayAudioDeltaAsync_TracksPlaybackAtOutputSampleRate()
+    {
+        var audioOutput = Substitute.For<IAudioOutputService>();
+        var agent = new VoiceOutputAgent(audioOutput);
+
+        await agent.PlayAudioDeltaAsync(new byte[2400]);
+
+        agent.Tracker.SampleRate.Should().Be(48000);
+        agent.Tracker.PlayedMs.Should().BeInRange(45, 55);
     }
 
     [Fact]

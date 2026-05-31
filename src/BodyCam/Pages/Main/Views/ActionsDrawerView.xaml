@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:BodyCam.ViewModels"
+             x:Class="BodyCam.Pages.Main.Views.ActionsDrawerView"
+             x:DataType="vm:MainViewModel"
+             IsVisible="{Binding IsActionsDrawerExpanded}"
+             Padding="12,0,12,8">
+
+    <ContentView.Resources>
+        <Style x:Key="ActionButton" TargetType="Button">
+            <Setter Property="HeightRequest" Value="48" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="BackgroundColor"
+                    Value="{AppThemeBinding Light={StaticResource MutedSurface}, Dark={StaticResource CardSurfaceDark}}" />
+            <Setter Property="TextColor"
+                    Value="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource TextPrimaryDark}}" />
+        </Style>
+    </ContentView.Resources>
+
+    <Border AutomationId="ActionsDrawer"
+            StrokeShape="RoundRectangle 8"
+            Stroke="{AppThemeBinding Light={StaticResource BorderDefault}, Dark={StaticResource BorderDefaultDark}}"
+            BackgroundColor="{AppThemeBinding Light={StaticResource CardSurface}, Dark={StaticResource CardSurfaceDark}}"
+            Padding="8"
+            VerticalOptions="End"
+            MaximumWidthRequest="520"
+            HorizontalOptions="Fill">
+        <VerticalStackLayout Spacing="8">
+            <Button AutomationId="LookButton"
+                    Text="Look"
+                    Command="{Binding LookCommand}"
+                    SemanticProperties.Description="Look"
+                    SemanticProperties.Hint="Describes the scene"
+                    Style="{StaticResource ActionButton}" />
+            <Button AutomationId="ReadButton"
+                    Text="Read"
+                    Command="{Binding ReadCommand}"
+                    SemanticProperties.Description="Read"
+                    SemanticProperties.Hint="Reads visible text"
+                    Style="{StaticResource ActionButton}" />
+            <Button AutomationId="ScanButton"
+                    Text="Scan"
+                    Command="{Binding ScanCommand}"
+                    SemanticProperties.Description="Scan"
+                    SemanticProperties.Hint="Scans a QR code or barcode"
+                    Style="{StaticResource ActionButton}" />
+        </VerticalStackLayout>
+    </Border>
+</ContentView>

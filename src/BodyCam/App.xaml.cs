@@ -19,6 +19,30 @@ public partial class App : Application
 	protected override Window CreateWindow(IActivationState? activationState)
 	{
 		var shell = _services.GetRequiredService<AppShell>();
-		return new Window(shell);
+		var window = new Window(shell);
+#if WINDOWS
+		window.Title = BuildWindowTitle();
+#endif
+		return window;
+	}
+
+	private static string BuildWindowTitle()
+	{
+		var version = Microsoft.Maui.ApplicationModel.AppInfo.Current.VersionString;
+		if (string.IsNullOrWhiteSpace(version))
+			version = typeof(App).Assembly.GetName().Version?.ToString() ?? string.Empty;
+
+		var buildNumber = typeof(App).Assembly
+			.GetCustomAttributes(typeof(System.Reflection.AssemblyMetadataAttribute), false)
+			.OfType<System.Reflection.AssemblyMetadataAttribute>()
+			.FirstOrDefault(a => a.Key == "BuildNumber")?.Value;
+
+		if (!string.IsNullOrWhiteSpace(version) && !string.IsNullOrWhiteSpace(buildNumber))
+			return $"BodyCam {version} ({buildNumber})";
+
+		if (!string.IsNullOrWhiteSpace(version))
+			return $"BodyCam {version}";
+
+		return "BodyCam";
 	}
 }

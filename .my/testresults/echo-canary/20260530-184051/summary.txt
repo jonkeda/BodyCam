@@ -1,0 +1,5 @@
+Prompt: For an echo canary test, speak exactly two uncommon words of your choice, then stop. Do not include any explanation or question.
+Assistant canary: Is there something specific you'd like to discuss or explore further? I'm here to help.
+Canary tokens: there, something, specific, you, like, discuss, explore, further, help
+User transcripts after canary: It's not your fault.
+Assistant responses after canary: Is there something specific you'd like to discuss or explore further? I'm here to help.

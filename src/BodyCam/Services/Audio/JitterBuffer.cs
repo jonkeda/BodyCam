@@ -49,7 +49,11 @@ public sealed class JitterBuffer : IDisposable
     /// Drain the jitter buffer to the provider, monitoring fill level and
     /// adapting target depth on underrun/overflow events.
     /// </summary>
-    public async Task DrainToProviderAsync(IAudioOutputProvider provider, int sampleRate, CancellationToken ct)
+    public async Task DrainToProviderAsync(
+        IAudioOutputProvider provider,
+        int sampleRate,
+        Action<byte[]>? beforePlayChunk,
+        CancellationToken ct)
     {
         var reader = _queue.Reader;
         var chunks = new Queue<byte[]>();
@@ -82,6 +86,7 @@ public sealed class JitterBuffer : IDisposable
             while (chunks.Count > 0 && !_disposed && !ct.IsCancellationRequested)
             {
                 var chunk = chunks.Dequeue();
+                beforePlayChunk?.Invoke(chunk);
                 await provider.PlayChunkAsync(chunk, ct);
 
                 currentBytes -= chunk.Length;
@@ -126,6 +131,9 @@ public sealed class JitterBuffer : IDisposable
             }
         }
     }
+
+    public Task DrainToProviderAsync(IAudioOutputProvider provider, int sampleRate, CancellationToken ct)
+        => DrainToProviderAsync(provider, sampleRate, beforePlayChunk: null, ct);
 
     /// <summary>
     /// Clear all buffered audio and reset adaptive target to minimum.

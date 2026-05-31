@@ -1,5 +1,6 @@
 using System.Text.Json;
 using BodyCam.Models;
+using BodyCam.Services.Camera.Commands;
 
 namespace BodyCam.Services;
 
@@ -51,6 +52,12 @@ public class SettingsService : ISettingsService
     {
         get => Preferences.Get(nameof(NoiseReduction), ModelOptions.DefaultNoiseReduction);
         set { lock (_prefsLock) Preferences.Set(nameof(NoiseReduction), value); }
+    }
+
+    public string OutputMode
+    {
+        get => Preferences.Get(nameof(OutputMode), "Speak");
+        set { lock (_prefsLock) Preferences.Set(nameof(OutputMode), value); }
     }
 
     // Provider
@@ -122,6 +129,45 @@ public class SettingsService : ISettingsService
     {
         get { var v = Preferences.Get(nameof(ActiveCameraProvider), string.Empty); return v.Length == 0 ? null : v; }
         set { lock (_prefsLock) Preferences.Set(nameof(ActiveCameraProvider), value ?? string.Empty); }
+    }
+
+    public CameraCommandMode DefaultTouchCommandMode
+    {
+        get => Enum.TryParse<CameraCommandMode>(
+            Preferences.Get(nameof(DefaultTouchCommandMode), nameof(CameraCommandMode.ManualAim)),
+            true,
+            out var mode)
+            ? mode
+            : CameraCommandMode.ManualAim;
+        set { lock (_prefsLock) Preferences.Set(nameof(DefaultTouchCommandMode), value.ToString()); }
+    }
+
+    public LookDetailLevel DefaultLookDetailLevel
+    {
+        get => Enum.TryParse<LookDetailLevel>(
+            Preferences.Get(nameof(DefaultLookDetailLevel), nameof(LookDetailLevel.Summary)),
+            true,
+            out var level)
+            ? level
+            : LookDetailLevel.Summary;
+        set { lock (_prefsLock) Preferences.Set(nameof(DefaultLookDetailLevel), value.ToString()); }
+    }
+
+    public ReadDetailLevel DefaultReadDetailLevel
+    {
+        get => Enum.TryParse<ReadDetailLevel>(
+            Preferences.Get(nameof(DefaultReadDetailLevel), nameof(ReadDetailLevel.Full)),
+            true,
+            out var level)
+            ? level
+            : ReadDetailLevel.Full;
+        set { lock (_prefsLock) Preferences.Set(nameof(DefaultReadDetailLevel), value.ToString()); }
+    }
+
+    public bool ConfirmExternalScanActions
+    {
+        get => Preferences.Get(nameof(ConfirmExternalScanActions), true);
+        set { lock (_prefsLock) Preferences.Set(nameof(ConfirmExternalScanActions), value); }
     }
 
     // Audio Input
@@ -231,6 +277,13 @@ public class SettingsService : ISettingsService
     {
         get { var v = Preferences.Get(nameof(Vue990CameraIp), string.Empty); return v.Length == 0 ? null : v; }
         set { lock (_prefsLock) Preferences.Set(nameof(Vue990CameraIp), value ?? string.Empty); }
+    }
+
+    // USB Camera
+    public string? UsbCameraDeviceMatch
+    {
+        get { var v = Preferences.Get(nameof(UsbCameraDeviceMatch), string.Empty); return v.Length == 0 ? null : v; }
+        set { lock (_prefsLock) Preferences.Set(nameof(UsbCameraDeviceMatch), value ?? string.Empty); }
     }
 
     // Device Settings (JSON)

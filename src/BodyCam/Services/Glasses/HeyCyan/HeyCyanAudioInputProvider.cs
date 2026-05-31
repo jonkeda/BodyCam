@@ -22,6 +22,7 @@ public sealed class HeyCyanAudioInputProvider : IAudioInputProvider, IAsyncDispo
 
     public string ProviderId => "heycyan-glasses";
     public string DisplayName => "HeyCyan Glasses Mic";
+    public AudioInputCapabilities InputCapabilities => AudioInputCapabilities.Default;
 
     public bool IsAvailable =>
         _session.State == HeyCyanState.Connected &&

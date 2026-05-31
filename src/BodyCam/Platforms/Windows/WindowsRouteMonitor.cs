@@ -40,11 +40,7 @@ public class WindowsRouteMonitor : IRouteMonitor
             // Heuristic: check device friendly name for common headphone/BT indicators
             string friendlyName = defaultDevice.FriendlyName ?? "";
             
-            IsHeadphonesConnected = friendlyName.Contains("Headphones", StringComparison.OrdinalIgnoreCase) ||
-                                    friendlyName.Contains("Headset", StringComparison.OrdinalIgnoreCase) ||
-                                    friendlyName.Contains("Earbuds", StringComparison.OrdinalIgnoreCase) ||
-                                    friendlyName.Contains("AirPods", StringComparison.OrdinalIgnoreCase) ||
-                                    friendlyName.Contains("Bluetooth", StringComparison.OrdinalIgnoreCase);
+            IsHeadphonesConnected = AudioCapabilityHeuristics.IsLikelyHeadsetName(friendlyName);
 
             IsBluetoothAudioConnected = friendlyName.Contains("Bluetooth", StringComparison.OrdinalIgnoreCase);
         }

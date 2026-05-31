@@ -1,0 +1,74 @@
+<Window AutomationId="" Name="BodyCam 1.0.0.1" ClassName="WinUIDesktopWin32WindowClass">
+  <Pane AutomationId="" Name="Non Client Input Sink Window" ClassName="InputNonClientPointerSource">
+  </Pane>
+  <Pane AutomationId="" Name="AppWindow Custom Title Bar" ClassName="ReunionWindowingCaptionControls">
+    <Button AutomationId="Minimize" Name="Minimize" ClassName="">
+    </Button>
+    <Button AutomationId="Maximize" Name="Maximize" ClassName="">
+    </Button>
+    <Button AutomationId="Close" Name="Close" ClassName="">
+    </Button>
+  </Pane>
+  <Pane AutomationId="" Name="" ClassName="Microsoft.UI.Content.DesktopChildSiteBridge">
+    <Pane AutomationId="" Name="" ClassName="InputSiteWindowClass">
+      <Text AutomationId="AppTitle" Name="BodyCam 1.0.0.1" ClassName="TextBlock">
+      </Text>
+      <Custom AutomationId="" Name="" ClassName="">
+        <Custom AutomationId="" Name="" ClassName="">
+          <Group AutomationId="" Name="Mode" ClassName="NamedContainerAutomationPeer">
+            <Button AutomationId="OffButton" Name="Sleep" ClassName="Button">
+            </Button>
+            <Button AutomationId="OnButton" Name="Listen" ClassName="Button">
+            </Button>
+            <Button AutomationId="ListeningButton" Name="Active selected" ClassName="Button">
+            </Button>
+          </Group>
+          <Group AutomationId="" Name="Output mode" ClassName="NamedContainerAutomationPeer">
+            <Button AutomationId="SpeakButton" Name="Speak selected" ClassName="Button">
+            </Button>
+            <Button AutomationId="SilentButton" Name="Silent" ClassName="Button">
+            </Button>
+          </Group>
+          <Button AutomationId="SettingsButton" Name="Settings" ClassName="Button">
+          </Button>
+          <Group AutomationId="" Name="Transcript" ClassName="NamedContainerAutomationPeer">
+            <List AutomationId="TranscriptList" Name="Conversation transcript" ClassName="ListView">
+              <ListItem AutomationId="" Name="You: For an echo canary test, speak exactly two uncommon words of your choice, then stop. Do not include any explanation or question." ClassName="ListViewItem">
+                <Group AutomationId="" Name="You: For an echo canary test, speak exactly two uncommon words of your choice, then stop. Do not include any explanation or question." ClassName="NamedContainerAutomationPeer">
+                  <Text AutomationId="TranscriptYouEntryLabel" Name="You: For an echo canary test, speak exactly two uncommon words of your choice, then stop. Do not include any explanation or question." ClassName="TextBlock">
+                  </Text>
+                </Group>
+              </ListItem>
+              <ListItem AutomationId="" Name="AI: Ephemeral, Luminous" ClassName="ListViewItem">
+                <Group AutomationId="" Name="AI: Ephemeral, Luminous" ClassName="NamedContainerAutomationPeer">
+                  <Text AutomationId="TranscriptAiEntryLabel" Name="AI: Ephemeral, Luminous" ClassName="TextBlock">
+                  </Text>
+                </Group>
+              </ListItem>
+            </List>
+          </Group>
+          <Edit AutomationId="MessageEntry" Name="Message" ClassName="TextBox">
+          </Edit>
+          <Button AutomationId="SendMessageButton" Name="Send message" ClassName="Button">
+          </Button>
+          <Button AutomationId="ActionsDrawerButton" Name="Actions menu collapsed" ClassName="Button">
+          </Button>
+          <Text AutomationId="AudioPolicyDebugLabel" Name="Audio: DirectDeviceSpeaker | AEC WebRtcApm | cleanup NoiseSuppressionAndAgc | 200ms" ClassName="TextBlock">
+          </Text>
+        </Custom>
+      </Custom>
+    </Pane>
+  </Pane>
+  <TitleBar AutomationId="TitleBar" Name="" ClassName="">
+    <MenuBar AutomationId="SystemMenuBar" Name="System" ClassName="">
+      <MenuItem AutomationId="" Name="System" ClassName="">
+      </MenuItem>
+    </MenuBar>
+    <Button AutomationId="Minimize-Restore" Name="Minimize" ClassName="">
+    </Button>
+    <Button AutomationId="Maximize-Restore" Name="Maximize" ClassName="">
+    </Button>
+    <Button AutomationId="Close" Name="Close" ClassName="">
+    </Button>
+  </TitleBar>
+</Window>

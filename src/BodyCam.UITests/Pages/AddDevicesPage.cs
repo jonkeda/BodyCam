@@ -15,4 +15,8 @@ public class AddDevicesPage : PageObjectBase<AddDevicesPage>
     public Button<AddDevicesPage> AddCyanGlassesButton => Button("AddCyanGlassesButton");
 
     public Button<AddDevicesPage> AddA9CameraButton => Button("AddA9CameraButton");
+
+    public Button<AddDevicesPage> AddVue990CameraButton => Button("AddVue990CameraButton");
+
+    public Button<AddDevicesPage> AddUsbCameraButton => Button("AddUsbCameraButton");
 }

@@ -50,6 +50,18 @@ public class AddDevicesViewModelTests
     }
 
     [Fact]
+    public void DeviceOptions_IncludesAddUsbCamera()
+    {
+        var vm = new AddDevicesViewModel();
+
+        vm.DeviceOptions.Should().ContainSingle(option =>
+            option.Title == "Add USB Camera"
+            && option.Description.Contains("USB/UVC")
+            && option.AutomationId == "AddUsbCameraButton"
+            && option.Command == vm.AddUsbCameraCommand);
+    }
+
+    [Fact]
     public async Task AddCyanGlassesAsync_NavigatesToGlassesRoute()
     {
         var routes = new List<string>();
@@ -92,5 +104,20 @@ public class AddDevicesViewModelTests
         await vm.AddVue990CameraAsync();
 
         routes.Should().Equal(AddDevicesViewModel.Vue990CameraRoute);
+    }
+
+    [Fact]
+    public async Task AddUsbCameraAsync_NavigatesToUsbCameraSettingsRoute()
+    {
+        var routes = new List<string>();
+        var vm = new AddDevicesViewModel(route =>
+        {
+            routes.Add(route);
+            return Task.CompletedTask;
+        });
+
+        await vm.AddUsbCameraAsync();
+
+        routes.Should().Equal(AddDevicesViewModel.UsbCameraRoute);
     }
 }

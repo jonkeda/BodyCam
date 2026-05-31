@@ -1,5 +1,6 @@
 using Android.Content;
 using Android.Media;
+using BodyCam.Services.Audio;
 
 namespace BodyCam.Platforms.Android;
 
@@ -32,8 +33,9 @@ public class AndroidRouteMonitor : BodyCam.Services.Audio.IRouteMonitor
             d.Type == AudioDeviceType.WiredHeadphones ||
             d.Type == AudioDeviceType.WiredHeadset ||
             d.Type == AudioDeviceType.UsbHeadset ||
-            d.Type == AudioDeviceType.BluetoothA2dp ||
-            d.Type == AudioDeviceType.BluetoothSco);
+            d.Type == AudioDeviceType.BluetoothSco ||
+            (d.Type == AudioDeviceType.BluetoothA2dp &&
+                AudioCapabilityHeuristics.IsLikelyHeadsetName(d.ProductName?.ToString())));
 
         IsBluetoothAudioConnected = devices.Any(d =>
             d.Type == AudioDeviceType.BluetoothA2dp ||

@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net10.0-windows10.0.19041.0;net10.0-ios26.2</TargetFrameworks>
+    <TargetFrameworks>net10.0-windows10.0.19041.0;net10.0-ios</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
@@ -9,6 +9,12 @@
     <MauiEnableResizetizer>false</MauiEnableResizetizer>
     <ResizetizerErrorOnDuplicateOutputFilename>false</ResizetizerErrorOnDuplicateOutputFilename>
     <NoWarn>MEAI001;OPENAI002</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">
+    <TargetPlatformVersion>26.5</TargetPlatformVersion>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">iossimulator-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
   </PropertyGroup>
 
   <ItemGroup>
@@ -23,7 +29,14 @@
     <ProjectReference Include="..\BodyCam\BodyCam.csproj" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-ios26.2'">
+  <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">
+    <Compile Remove="Fixtures\HeyCyanHardwareCollection.cs" />
+    <Compile Remove="Fixtures\HeyCyanWiFiTransferCollection.cs" />
+    <Compile Remove="Fixtures\WindowsHeyCyanRealFixture.cs" />
+    <Compile Remove="Services\Glasses\HeyCyan\AiPhotoThumbnailTests.cs" />
+    <Compile Remove="Services\Glasses\HeyCyan\CaptureAndDownloadTests.cs" />
+    <Compile Remove="Services\Glasses\HeyCyan\WiFi*DiagnosticTests.cs" />
+    <Compile Remove="Services\Glasses\HeyCyan\Windows*.cs" />
     <ProjectReference Include="..\BodyCam.HeyCyan.iOS.Bindings\BodyCam.HeyCyan.iOS.Bindings.csproj" />
   </ItemGroup>
 

@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:BodyCam.ViewModels.Settings"
+             x:Class="BodyCam.Pages.Settings.UsbCameraSettingsPage"
+             x:DataType="vm:UsbCameraSettingsViewModel"
+             AutomationId="UsbCameraSettingsPage"
+             Shell.TabBarIsVisible="False"
+             Title="USB Camera">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="12" MaximumWidthRequest="500">
+
+            <Frame Padding="12" CornerRadius="8"
+                   BackgroundColor="{AppThemeBinding Light={StaticResource CardSurface}, Dark={StaticResource CardSurfaceDark}}"
+                   BorderColor="{AppThemeBinding Light={StaticResource BorderDefault}, Dark={StaticResource BorderDefaultDark}}">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Device Match" Style="{StaticResource SettingsDeviceHeader}" />
+                    <Entry AutomationId="UsbCameraDeviceMatchEntry"
+                           Text="{Binding DeviceMatch}"
+                           Placeholder="VID_349C&amp;PID_0411 or HD camera"
+                           Keyboard="Text" />
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8" Margin="0,8,0,0">
+                        <Button AutomationId="UsbCameraTestCaptureButton"
+                                Text="Test Capture"
+                                Command="{Binding TestCaptureCommand}"
+                                IsEnabled="{Binding IsTesting, Converter={StaticResource InvertBoolConverter}}"
+                                Style="{StaticResource SettingsOutlineButton}" />
+                        <Button AutomationId="UsbCameraSaveButton"
+                                Grid.Column="1"
+                                Text="Save"
+                                Command="{Binding SaveCommand}"
+                                Style="{StaticResource SettingsButton}" />
+                    </Grid>
+
+                    <HorizontalStackLayout Spacing="8"
+                                           IsVisible="{Binding IsTesting}">
+                        <ActivityIndicator IsRunning="{Binding IsTesting}"
+                                           WidthRequest="18"
+                                           HeightRequest="18"
+                                           VerticalOptions="Center" />
+                        <Label Text="Testing"
+                               Style="{StaticResource SettingsStatusText}"
+                               VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+
+                    <Label AutomationId="UsbCameraStatusLabel"
+                           Text="{Binding Status}"
+                           Style="{StaticResource SettingsStatusText}" />
+                </VerticalStackLayout>
+            </Frame>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
+

@@ -6,51 +6,37 @@
              xmlns:views="clr-namespace:BodyCam.Pages.Main.Views"
              x:Class="BodyCam.Pages.Main.MainPage"
              x:DataType="vm:MainViewModel"
+             Shell.NavBarIsVisible="False"
              Title="{Binding Title}">
 
     <ContentPage.Resources>
         <converters:InvertBoolConverter x:Key="InvertBool" />
     </ContentPage.Resources>
 
-    <Grid RowDefinitions="Auto,*,Auto,Auto">
+    <Grid RowDefinitions="Auto,*,Auto,Auto,Auto">
 
         <!-- Row 0: Status bar -->
         <views:StatusBarView Grid.Row="0" />
 
-        <!-- Row 1: Content area (transcript OR camera) -->
-        <Grid Grid.Row="1">
+        <!-- Row 1: Transcript owns the main screen area. -->
+        <views:TranscriptView Grid.Row="1" x:Name="TranscriptPanel" />
 
-            <!-- Transcript tab -->
-            <views:TranscriptView x:Name="TranscriptPanel" />
+        <!-- Row 2: Typed message entry stays available below the transcript. -->
+        <views:MessageEntryView Grid.Row="2" />
 
-            <!-- Camera tab -->
-            <views:CameraTabView x:Name="CameraPanel" />
+        <!-- Row 3: Inline camera preview; hidden until Look, Read, or Scan needs it. -->
+        <views:CameraTabView Grid.Row="3" x:Name="CameraPanel" />
 
-            <!-- Scan result overlay (floats above both tabs) -->
-            <views:ScanResultOverlay />
+        <!-- Row 4: Bottom actions button. -->
+        <views:QuickActionsView Grid.Row="4" />
 
-            <!-- Debug overlay -->
-            <views:DebugOverlayView />
-        </Grid>
+        <!-- Action list overlays the page above the bottom Actions button. -->
+        <views:ActionsDrawerView Grid.Row="1" Grid.RowSpan="3" />
 
-        <!-- Row 2: Tab selector -->
-        <Grid Grid.Row="2" ColumnDefinitions="*,*" HeightRequest="40"
-              BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceAlt}, Dark={StaticResource SurfaceAltDark}}">
-            <Button AutomationId="TranscriptTabButton"
-                    Text="📝 Transcript"
-                    Command="{Binding SwitchToTranscriptCommand}"
-                    BackgroundColor="{Binding TranscriptTabBackground}"
-                    TextColor="{Binding TranscriptTabTextColor}"
-                    FontSize="14" />
-            <Button Grid.Column="1" AutomationId="CameraTabButton"
-                    Text="📷 Camera"
-                    Command="{Binding SwitchToCameraCommand}"
-                    BackgroundColor="{Binding CameraTabBackground}"
-                    TextColor="{Binding CameraTabTextColor}"
-                    FontSize="14" />
-        </Grid>
+        <!-- Scan result overlay floats over the first page content. -->
+        <views:ScanResultOverlay Grid.Row="1" Grid.RowSpan="4" />
 
-        <!-- Row 3: Quick action bar -->
-        <views:QuickActionsView Grid.Row="3" />
+        <!-- Debug overlay remains nonmodal and anchored at the bottom. -->
+        <views:DebugOverlayView Grid.Row="1" Grid.RowSpan="4" />
     </Grid>
 </ContentPage>

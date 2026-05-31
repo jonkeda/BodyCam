@@ -4,22 +4,30 @@
              xmlns:models="clr-namespace:BodyCam.Models"
              x:Class="BodyCam.Pages.Main.Views.TranscriptView">
 
-    <Frame IsVisible="{Binding ShowTranscriptTab}"
-           BorderColor="{AppThemeBinding Light={StaticResource BorderDefault}, Dark={StaticResource BorderDefaultDark}}" Padding="8" CornerRadius="4">
+    <Frame BorderColor="{AppThemeBinding Light={StaticResource BorderDefault}, Dark={StaticResource BorderDefaultDark}}"
+           Padding="8"
+           CornerRadius="4"
+           Margin="8"
+           SemanticProperties.Description="Transcript">
         <CollectionView x:Name="TranscriptList"
                         AutomationId="TranscriptList"
-                        ItemsSource="{Binding Entries}">
+                        ItemsSource="{Binding Entries}"
+                        SemanticProperties.Description="Conversation transcript">
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="models:TranscriptEntry">
-                    <VerticalStackLayout Padding="4,2">
-                        <Label Text="{Binding DisplayText}"
+                    <VerticalStackLayout Padding="4,2"
+                                         SemanticProperties.Description="{Binding AccessibleText}">
+                        <Label AutomationId="{Binding AutomationId}"
+                               Text="{Binding DisplayText}"
                                FontSize="14"
                                FontFamily="OpenSansRegular"
+                               SemanticProperties.Description="{Binding AccessibleText}"
                                TextColor="{Binding RoleColor}" />
                         <Image Source="{Binding Image}"
                                IsVisible="{Binding HasImage}"
                                HeightRequest="200"
                                Aspect="AspectFit"
+                               SemanticProperties.Description="{Binding ImageCaption}"
                                Margin="0,4" />
                         <Label Text="{Binding ImageCaption}"
                                IsVisible="{Binding HasImage}"
@@ -35,7 +43,8 @@
                                     <Button Text="{Binding Label}"
                                             Command="{Binding Command}"
                                             FontSize="12"
-                                            HeightRequest="32"
+                                            HeightRequest="44"
+                                            MinimumWidthRequest="44"
                                             Padding="8,0"
                                             CornerRadius="4"
                                             BackgroundColor="{AppThemeBinding Light={StaticResource InfoSurface}, Dark={StaticResource InfoSurfaceDark}}"

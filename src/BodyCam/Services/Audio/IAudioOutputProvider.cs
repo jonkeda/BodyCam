@@ -12,6 +12,12 @@ public interface IAudioOutputProvider : IAsyncDisposable
     /// <summary>Unique identifier for this provider type (e.g. "windows-speaker", "phone-speaker").</summary>
     string ProviderId { get; }
 
+    /// <summary>
+    /// Audio behavior metadata. Provider IDs identify an output, but policy
+    /// decisions should use these capabilities instead of parsing IDs.
+    /// </summary>
+    AudioOutputCapabilities OutputCapabilities => AudioOutputCapabilities.Unknown(EstimatedOutputLatencyMs);
+
     /// <summary>Whether the audio output hardware is currently connected and ready.</summary>
     bool IsAvailable { get; }
 

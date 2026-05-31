@@ -44,6 +44,9 @@ public sealed class AudioOutputManager : IAudioOutputService, IAsyncDisposable
     /// <summary>Fires when the active output provider changes.</summary>
     public event EventHandler? ActiveProviderChanged;
 
+    /// <summary>Fires when the active output provider reports a route change.</summary>
+    public event EventHandler? ActiveOutputRouteChanged;
+
     /// <summary>Currently active audio output provider.</summary>
     public IAudioOutputProvider? Active => _active;
 
@@ -67,15 +70,23 @@ public sealed class AudioOutputManager : IAudioOutputService, IAsyncDisposable
 
         if (_active is not null)
         {
-            await _active.StartAsync(_appSettings.SampleRate, ct);
+            var active = _active;
+            await active.StartAsync(_appSettings.SampleRate, ct);
+            UpdateAecStreamDelay(active);
+            ActiveOutputRouteChanged?.Invoke(this, EventArgs.Empty);
 
             if (_appSettings.EnableJitterBuffer)
             {
-                // Start jitter buffer drain task
                 var loggerFactory = LoggerFactory.Create(builder => { });
                 _jitterBuffer = new JitterBuffer(loggerFactory.CreateLogger<JitterBuffer>());
                 _drainCts = new CancellationTokenSource();
-                _drainTask = Task.Run(() => _jitterBuffer.DrainToProviderAsync(_active, _appSettings.SampleRate, _drainCts.Token), _drainCts.Token);
+                _drainTask = Task.Run(
+                    () => _jitterBuffer.DrainToProviderAsync(
+                        active,
+                        _appSettings.SampleRate,
+                        chunk => FeedRenderReferenceIfNeeded(active, chunk),
+                        _drainCts.Token),
+                    _drainCts.Token);
             }
         }
     }
@@ -108,9 +119,15 @@ public sealed class AudioOutputManager : IAudioOutputService, IAsyncDisposable
         if (_active is null) return;
 
         if (_jitterBuffer is not null)
+        {
             await _jitterBuffer.EnqueueAsync(pcmData, ct);
+        }
         else
-            await _active.PlayChunkAsync(pcmData, ct);
+        {
+            var active = _active;
+            FeedRenderReferenceIfNeeded(active, pcmData);
+            await active.PlayChunkAsync(pcmData, ct);
+        }
     }
 
     public void ClearBuffer()
@@ -181,8 +198,7 @@ public sealed class AudioOutputManager : IAudioOutputService, IAsyncDisposable
         _active.Disconnected += OnProviderDisconnected;
         _active.OutputRouteChanged += OnOutputRouteChanged;
 
-        // Update AEC stream delay
-        _aec?.UpdateStreamDelay(_active.EstimatedOutputLatencyMs);
+        UpdateAecStreamDelay(_active);
         ActiveProviderChanged?.Invoke(this, EventArgs.Empty);
     }
 
@@ -217,7 +233,29 @@ public sealed class AudioOutputManager : IAudioOutputService, IAsyncDisposable
     private void OnOutputRouteChanged(object? sender, EventArgs e)
     {
         if (_active is not null)
-            _aec?.UpdateStreamDelay(_active.EstimatedOutputLatencyMs);
+            UpdateAecStreamDelay(_active);
+
+        ActiveOutputRouteChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void FeedRenderReferenceIfNeeded(IAudioOutputProvider provider, byte[] pcmData)
+    {
+        var capabilities = provider.OutputCapabilities;
+        if (_aec is null || !capabilities.NeedsEchoCancellation || !capabilities.SupportsRenderReference)
+            return;
+
+        _aec.FeedRenderReference(pcmData);
+    }
+
+    private void UpdateAecStreamDelay(IAudioOutputProvider provider)
+    {
+        _aec?.UpdateStreamDelay(GetEstimatedOutputLatencyMs(provider));
+    }
+
+    private static int GetEstimatedOutputLatencyMs(IAudioOutputProvider provider)
+    {
+        return provider.OutputCapabilities?.EstimatedOutputLatencyMs
+            ?? provider.EstimatedOutputLatencyMs;
     }
 
     private async Task FallbackToDefaultAsync(CancellationToken ct = default)

@@ -1,0 +1,5 @@
+Prompt: For an echo canary test, speak exactly two uncommon words of your choice, then stop. Do not include any explanation or question.
+Assistant canary: Serendipity, mellifluous
+Canary tokens: serendipity, mellifluous
+User transcripts after canary: 
+Assistant responses after canary: 

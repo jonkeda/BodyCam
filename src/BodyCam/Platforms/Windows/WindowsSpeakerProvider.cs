@@ -8,6 +8,8 @@ namespace BodyCam.Platforms.Windows;
 /// </summary>
 public sealed class WindowsSpeakerProvider : IAudioOutputProvider, IDisposable
 {
+    private const int DesiredLatencyMs = 200;
+
     private WaveOutEvent? _waveOut;
     private BufferedWaveProvider? _buffer;
     private readonly object _lock = new();
@@ -21,7 +23,13 @@ public sealed class WindowsSpeakerProvider : IAudioOutputProvider, IDisposable
     public string ProviderId => "windows-speaker";
     public bool IsAvailable => true;
     public bool IsPlaying { get; private set; }
-    public int EstimatedOutputLatencyMs => _waveOut?.DesiredLatency ?? 80;
+    public int EstimatedOutputLatencyMs => _waveOut?.DesiredLatency ?? DesiredLatencyMs;
+    public AudioOutputCapabilities OutputCapabilities => new(
+        EchoPathKind.DirectDeviceSpeaker,
+        NeedsEchoCancellation: true,
+        IsAcousticallyIsolated: false,
+        SupportsRenderReference: true,
+        EstimatedOutputLatencyMs);
 
     public event EventHandler? Disconnected;
     public event EventHandler? OutputRouteChanged;
@@ -40,7 +48,7 @@ public sealed class WindowsSpeakerProvider : IAudioOutputProvider, IDisposable
 
         _waveOut = new WaveOutEvent
         {
-            DesiredLatency = 200
+            DesiredLatency = DesiredLatencyMs
         };
         _waveOut.Init(_buffer);
         _waveOut.Play();

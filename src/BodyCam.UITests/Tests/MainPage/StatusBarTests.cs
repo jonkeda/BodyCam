@@ -35,6 +35,24 @@ public class StatusBarTests
     }
 
     [Fact]
+    public void SettingsButton_Exists()
+    {
+        Page.SettingsButton.AssertExists();
+    }
+
+    [Fact]
+    public void SpeakButton_Exists()
+    {
+        Page.SpeakButton.AssertExists();
+    }
+
+    [Fact]
+    public void SilentButton_Exists()
+    {
+        Page.SilentButton.AssertExists();
+    }
+
+    [Fact]
     public void OffButton_IsClickable()
     {
         Page.OffButton.AssertVisible(true);
@@ -56,8 +74,23 @@ public class StatusBarTests
     }
 
     [Fact]
-    public void ClearButton_Exists()
+    public void SettingsButton_IsClickable()
     {
-        Page.ClearButton.AssertExists();
+        Page.SettingsButton.AssertVisible(true);
+        Page.SettingsButton.AssertEnabled(true);
+    }
+
+    [Fact]
+    public void SpeakButton_IsClickable()
+    {
+        Page.SpeakButton.AssertVisible(true);
+        Page.SpeakButton.AssertEnabled(true);
+    }
+
+    [Fact]
+    public void SilentButton_IsClickable()
+    {
+        Page.SilentButton.AssertVisible(true);
+        Page.SilentButton.AssertEnabled(true);
     }
 }

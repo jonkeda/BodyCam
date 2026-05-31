@@ -7,35 +7,49 @@ public class MainPage : PageObjectBase<MainPage>
     public override string Name => "MainPage";
 
     public override bool IsLoaded(int? timeoutMs = null)
-        => TranscriptTabButton.WaitExists(true, timeoutMs);
+        => TranscriptList.WaitExists(true, timeoutMs);
 
-    // Shell navigation
-    public Button<MainPage> NavIcon => Button("NavIcon");
+    // First-page navigation
+    public Button<MainPage> SettingsButton => Button("SettingsButton");
+    public Button<MainPage> NavIcon => SettingsButton;
 
     // Status bar
     public Button<MainPage> OffButton => Button("OffButton");
     public Button<MainPage> OnButton => Button("OnButton");
     public Button<MainPage> ListeningButton => Button("ListeningButton");
-    public Button<MainPage> ClearButton => Button("ClearButton");
+    public Button<MainPage> SpeakButton => Button("SpeakButton");
+    public Button<MainPage> SilentButton => Button("SilentButton");
 
-    // Tab switcher
+    // Legacy tab switcher sentinels
     public Button<MainPage> TranscriptTabButton => Button("TranscriptTabButton");
     public Button<MainPage> CameraTabButton => Button("CameraTabButton");
 
     // Quick actions
+    public Button<MainPage> ActionsDrawerButton => Button("ActionsDrawerButton");
     public Button<MainPage> LookButton => Button("LookButton");
     public Button<MainPage> ReadButton => Button("ReadButton");
-    public Button<MainPage> FindButton => Button("FindButton");
-    public Button<MainPage> AskButton => Button("AskButton");
-    public Button<MainPage> PhotoButton => Button("PhotoButton");
+    public Button<MainPage> ScanButton => Button("ScanButton");
 
-    // Content panels (using child elements as sentinels since MAUI Grid/Frame don't create UIA peers)
-    public Label<MainPage> CameraPlaceholder => Label("CameraPlaceholder");
+    // Content panels
+    public Brinell.Maui.Controls.Collection.CollectionView<MainPage> TranscriptList => CollectionView("TranscriptList");
+    public Entry<MainPage> MessageEntry => Entry("MessageEntry");
+    public Button<MainPage> SendMessageButton => Button("SendMessageButton");
+    public Brinell.Maui.Controls.Container.Grid<MainPage> CameraPreviewPanel => Grid("CameraPreviewPanel");
+    public Button<MainPage> CaptureFrameButton => Button("CaptureFrameButton");
 
     // Debug overlay
     public Label<MainPage> DebugLabel => Label("DebugLabel");
+    public Label<MainPage> AudioPolicyDebugLabel => Label("AudioPolicyDebugLabel");
 
     // Snapshot overlay
     public Label<MainPage> SnapshotCaption => Label("SnapshotCaption");
     public Button<MainPage> DismissSnapshotButton => Button("DismissSnapshotButton");
+
+    public void EnsureActionsExpanded()
+    {
+        if (!LookButton.WaitExists(true, 1000))
+            ActionsDrawerButton.Click();
+
+        LookButton.WaitExists(true, 5000);
+    }
 }

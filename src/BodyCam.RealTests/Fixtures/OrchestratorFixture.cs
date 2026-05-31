@@ -5,6 +5,7 @@ using BodyCam.Orchestration;
 using BodyCam.Services;
 using BodyCam.Services.Audio.WebRtcApm;
 using BodyCam.Services.Camera;
+using BodyCam.Services.Camera.Commands;
 using BodyCam.Services.QrCode;
 using BodyCam.Services.QrCode.Handlers;
 using BodyCam.Services.Vision;
@@ -107,11 +108,28 @@ public class OrchestratorFixture : IAsyncLifetime
         };
         var contentResolver = new QrContentResolver(contentHandlers);
 
-        // Vision pipeline
-        var qrScanStage = new QrScanStage(QrScanner, QrHistory, contentResolver);
-        var textDetectionStage = new TextDetectionStage(vision);
-        var sceneDescriptionStage = new SceneDescriptionStage(vision);
-        var visionPipeline = new VisionPipeline([qrScanStage, textDetectionStage, sceneDescriptionStage]);
+        // Supporting services
+        var settingsService = new InMemorySettingsService(Settings);
+        var wakeWord = new NullWakeWordService();
+        var micCoordinator = new NoOpMicrophoneCoordinator();
+        var cameraManager = new CameraManager(
+            [FrameProvider],
+            settingsService,
+            new DefaultCameraSelector(),
+            NullLogger<CameraManager>.Instance);
+        await cameraManager.SetActiveAsync(FrameProvider.ProviderId);
+
+        var commandRegistry = new CameraCommandRegistry([
+            new LookCommand(vision),
+            new ReadCommand(vision),
+            new ScanCommand(QrScanner, QrHistory, contentResolver),
+        ]);
+        var commandService = new CameraCommandService(
+            commandRegistry,
+            cameraManager,
+            settingsService,
+            new ManualCameraCaptureCoordinator(),
+            NullLogger<CameraCommandService>.Instance);
 
         // Tools — all 16
         var memoryStore = new MemoryStore(_tempMemoryPath);
@@ -119,7 +137,7 @@ public class OrchestratorFixture : IAsyncLifetime
         {
             new DescribeSceneTool(vision),
             new DeepAnalysisTool(conversation),
-            new ReadTextTool(vision),
+            new ReadTextTool(commandService),
             new TakePhotoTool(),
             new SaveMemoryTool(memoryStore),
             new RecallMemoryTool(memoryStore),
@@ -130,21 +148,11 @@ public class OrchestratorFixture : IAsyncLifetime
             new FindObjectTool(vision),
             new NavigateToTool(),
             new StartSceneWatchTool(vision),
-            new ScanQrCodeTool(QrScanner, QrHistory, contentResolver),
+            new ScanQrCodeTool(commandService),
             new RecallLastScanTool(QrHistory, contentResolver),
-            new LookTool(visionPipeline),
+            new LookTool(commandService),
         };
         var dispatcher = new ToolDispatcher(tools);
-
-        // Supporting services
-        var settingsService = new InMemorySettingsService(Settings);
-        var wakeWord = new NullWakeWordService();
-        var micCoordinator = new NoOpMicrophoneCoordinator();
-        var cameraManager = new CameraManager(
-            [FrameProvider],
-            settingsService,
-            new DefaultCameraSelector(),
-            NullLogger<CameraManager>.Instance);
 
         Orchestrator = new AgentOrchestrator(
             voiceIn, conversation, voiceOut, vision,
@@ -312,6 +320,8 @@ public class OrchestratorFixture : IAsyncLifetime
             set => _settings.NoiseReduction = value;
         }
 
+        public string OutputMode { get; set; } = "Speak";
+
         public OpenAiProvider Provider
         {
             get => _settings.Provider;
@@ -359,6 +369,10 @@ public class OrchestratorFixture : IAsyncLifetime
         }
 
         public string? ActiveCameraProvider { get; set; }
+        public CameraCommandMode DefaultTouchCommandMode { get; set; } = CameraCommandMode.ManualAim;
+        public LookDetailLevel DefaultLookDetailLevel { get; set; } = LookDetailLevel.Summary;
+        public ReadDetailLevel DefaultReadDetailLevel { get; set; } = ReadDetailLevel.Full;
+        public bool ConfirmExternalScanActions { get; set; } = true;
         public string? ActiveAudioInputProvider { get; set; }
         public string? ActiveAudioOutputProvider { get; set; }
         public string? PicovoiceAccessKey { get; set; }
@@ -376,6 +390,7 @@ public class OrchestratorFixture : IAsyncLifetime
         public string? A9CameraUsername { get; set; }
         public string? A9CameraPassword { get; set; }
         public string? Vue990CameraIp { get; set; }
+        public string? UsbCameraDeviceMatch { get; set; }
         public Models.DeviceSettings DeviceSettings { get; set; } = new();
         public bool SetupCompleted { get; set; }
     }

@@ -19,6 +19,10 @@ public sealed class PlatformMicProvider : IAudioInputProvider, IDisposable
 
     public string DisplayName => "Phone Microphone";
     public string ProviderId => "platform";
+    public AudioInputCapabilities InputCapabilities => new(
+        HasPlatformEchoCancellation: AcousticEchoCanceler.IsAvailable,
+        PlatformEchoCancellationActive: AcousticEchoCanceler.IsAvailable,
+        EstimatedInputLatencyMs: 0);
     public bool IsAvailable => true;
     public bool IsCapturing { get; private set; }
 

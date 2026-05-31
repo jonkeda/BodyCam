@@ -1,6 +1,6 @@
 using BodyCam.Agents;
 using BodyCam.Services;
-using BodyCam.Services.Vision;
+using BodyCam.Services.Camera.Commands;
 using BodyCam.Tools;
 using FluentAssertions;
 using Microsoft.Extensions.AI;
@@ -23,8 +23,7 @@ public class WakeWordBindingTests
     [Fact]
     public void LookTool_HasWakeWord()
     {
-        var pipeline = new VisionPipeline([]);
-        var tool = new LookTool(pipeline);
+        var tool = new LookTool(Substitute.For<ICameraCommandService>());
 
         tool.WakeWord.Should().NotBeNull();
         tool.WakeWord!.KeywordPath.Should().Contain("bodycam-look");
@@ -54,8 +53,7 @@ public class WakeWordBindingTests
     [Fact]
     public void BuildWakeWordEntries_IncludesToolWithWakeWord()
     {
-        var pipeline = new VisionPipeline([]);
-        var lookTool = new LookTool(pipeline);
+        var lookTool = new LookTool(Substitute.For<ICameraCommandService>());
         var dispatcher = new ToolDispatcher(new ITool[] { lookTool });
 
         var entries = dispatcher.BuildWakeWordEntries();
@@ -79,8 +77,7 @@ public class WakeWordBindingTests
     [Fact]
     public void BuildWakeWordEntries_NoDuplicateKeywordPaths()
     {
-        var pipeline = new VisionPipeline([]);
-        var lookTool = new LookTool(pipeline);
+        var lookTool = new LookTool(Substitute.For<ICameraCommandService>());
         var dispatcher = new ToolDispatcher(new ITool[] { lookTool });
 
         var entries = dispatcher.BuildWakeWordEntries();

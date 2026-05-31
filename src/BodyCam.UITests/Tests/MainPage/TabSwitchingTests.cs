@@ -17,22 +17,22 @@ public class TabSwitchingTests
     }
 
     [Fact]
-    public void TranscriptTabButton_Exists()
+    public void TranscriptTabButton_IsRemoved()
     {
-        Page.TranscriptTabButton.AssertExists();
+        Assert.False(Page.TranscriptTabButton.IsExists(),
+            "The m42 first page should not show a Transcript tab.");
     }
 
     [Fact]
-    public void CameraTabButton_Exists()
+    public void CameraTabButton_IsRemoved()
     {
-        Page.CameraTabButton.AssertExists();
+        Assert.False(Page.CameraTabButton.IsExists(),
+            "The m42 first page should not show a Camera tab.");
     }
 
     [Fact]
-    public void CameraTabButton_Click_DoesNotThrow()
+    public void TranscriptList_Exists()
     {
-        Page.CameraTabButton.Click();
-        // Verify we can switch back
-        Page.TranscriptTabButton.Click();
+        Page.TranscriptList.AssertExists();
     }
 }

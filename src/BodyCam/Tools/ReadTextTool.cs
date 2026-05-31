@@ -1,17 +1,20 @@
 using System.ComponentModel;
-using BodyCam.Agents;
+using BodyCam.Services.Camera.Commands;
 
 namespace BodyCam.Tools;
 
 public class ReadTextArgs
 {
+    [Description("Optional detail level: Summary, Overview, or Full")]
+    public ReadDetailLevel? DetailLevel { get; set; }
+
     [Description("Optional focus area: sign, label, document, screen, etc.")]
     public string? Focus { get; set; }
 }
 
 public class ReadTextTool : ToolBase<ReadTextArgs>
 {
-    private readonly VisionAgent _vision;
+    private readonly ICameraCommandService _commands;
 
     public override string Name => "read_text";
     public override string Description =>
@@ -25,23 +28,25 @@ public class ReadTextTool : ToolBase<ReadTextArgs>
         InitialPrompt = "Read any text you can see."
     };
 
-    public ReadTextTool(VisionAgent vision)
+    public ReadTextTool(ICameraCommandService commands)
     {
-        _vision = vision;
+        _commands = commands;
     }
 
     protected override async Task<ToolResult> ExecuteAsync(
         ReadTextArgs args, ToolContext context, CancellationToken ct)
     {
-        var frame = await context.CaptureFrame(ct);
-        if (frame is null)
-            return ToolResult.Fail("Camera not available.");
+        var options = new ReadCommandOptions(args.DetailLevel, args.Focus);
+        var request = new CameraCommandRequest(
+            "read",
+            Mode: null,
+            Origin: context.CommandOrigin ?? CommandTriggerOrigin.LlmToolCall,
+            Options: options,
+            Query: args.Focus);
 
-        var prompt = args.Focus is not null
-            ? $"Read and extract all text from the {args.Focus}. Return the exact text you can read."
-            : "Read and extract all visible text. Return the exact text you can read.";
-
-        var text = await _vision.DescribeFrameAsync(frame, prompt);
-        return ToolResult.Success(new { text });
+        var result = await _commands.ExecuteAsync(request, ct);
+        return result.Success
+            ? ToolResult.Success(result.Data ?? new { text = result.TranscriptText })
+            : ToolResult.Fail(result.Error ?? result.TranscriptText);
     }
 }

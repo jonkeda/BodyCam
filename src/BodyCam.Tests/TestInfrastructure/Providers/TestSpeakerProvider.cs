@@ -4,15 +4,19 @@ namespace BodyCam.Tests.TestInfrastructure.Providers;
 
 public class TestSpeakerProvider : IAudioOutputProvider
 {
+    private const int DefaultLatencyMs = 50;
+
     private readonly List<byte[]> _chunks = new();
     private readonly object _lock = new();
+    private readonly AudioOutputCapabilities _outputCapabilities;
 
     public string DisplayName => "Test Speaker";
     public string ProviderId => "test-speaker";
     public bool IsAvailable => true;
     public bool IsPlaying { get; private set; }
     public int SampleRate { get; private set; }
-    public int EstimatedOutputLatencyMs => 50;
+    public int EstimatedOutputLatencyMs => _outputCapabilities.EstimatedOutputLatencyMs;
+    public AudioOutputCapabilities OutputCapabilities => _outputCapabilities;
 
     public event EventHandler? Disconnected;
     public event EventHandler? OutputRouteChanged;
@@ -21,6 +25,16 @@ public class TestSpeakerProvider : IAudioOutputProvider
     public int TotalBytesPlayed { get { lock (_lock) return _chunks.Sum(c => c.Length); } }
     public int ChunkCount { get { lock (_lock) return _chunks.Count; } }
     public bool WasAudioPlayed { get { lock (_lock) return _chunks.Count > 0; } }
+
+    public TestSpeakerProvider(AudioOutputCapabilities? outputCapabilities = null)
+    {
+        _outputCapabilities = outputCapabilities ?? new AudioOutputCapabilities(
+            EchoPathKind.DirectDeviceSpeaker,
+            NeedsEchoCancellation: true,
+            IsAcousticallyIsolated: false,
+            SupportsRenderReference: true,
+            EstimatedOutputLatencyMs: DefaultLatencyMs);
+    }
 
     public byte[] GetCapturedBytes()
     {

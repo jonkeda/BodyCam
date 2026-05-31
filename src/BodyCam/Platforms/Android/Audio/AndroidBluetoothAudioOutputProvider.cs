@@ -22,6 +22,11 @@ public class AndroidBluetoothAudioOutputProvider : IAudioOutputProvider, IDispos
     public bool IsAvailable => true;
     public bool IsPlaying { get; private set; }
     public int EstimatedOutputLatencyMs => 220; // BT A2DP typical latency
+    public AudioOutputCapabilities OutputCapabilities =>
+        AudioCapabilityHeuristics.BluetoothOutput(
+            DisplayName,
+            EstimatedOutputLatencyMs,
+            knownHeadsetRoute: _device.Type == AudioDeviceType.BluetoothSco);
 
     public event EventHandler? Disconnected;
     public event EventHandler? OutputRouteChanged;

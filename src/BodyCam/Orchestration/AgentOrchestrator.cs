@@ -3,10 +3,17 @@ using BodyCam.Models;
 using BodyCam.Services;
 using BodyCam.Services.Audio.WebRtcApm;
 using BodyCam.Services.Camera;
+using BodyCam.Services.Camera.Commands;
 using BodyCam.Services.QrCode;
 using BodyCam.Tools;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
+using SdkRealtimeConversationSessionAudioOptions = OpenAI.Realtime.RealtimeConversationSessionAudioOptions;
+using SdkRealtimeConversationSessionInputAudioOptions = OpenAI.Realtime.RealtimeConversationSessionInputAudioOptions;
+using SdkRealtimeConversationSessionOptions = OpenAI.Realtime.RealtimeConversationSessionOptions;
+using SdkRealtimeNoiseReduction = OpenAI.Realtime.RealtimeNoiseReduction;
+using SdkRealtimeNoiseReductionKind = OpenAI.Realtime.RealtimeNoiseReductionKind;
+using SdkRealtimeServerVadTurnDetection = OpenAI.Realtime.RealtimeServerVadTurnDetection;
 
 #pragma warning disable OPENAI002
 #pragma warning disable SCME0001
@@ -133,7 +140,37 @@ public class AgentOrchestrator
                 Enabled = true,
                 AllowInterruption = true,
             },
+            RawRepresentationFactory = CreateOpenAiRealtimeSessionOptions,
         };
+    }
+
+    private SdkRealtimeConversationSessionOptions CreateOpenAiRealtimeSessionOptions()
+    {
+        return new SdkRealtimeConversationSessionOptions
+        {
+            AudioOptions = new SdkRealtimeConversationSessionAudioOptions
+            {
+                InputAudioOptions = new SdkRealtimeConversationSessionInputAudioOptions
+                {
+                    NoiseReduction = new SdkRealtimeNoiseReduction(GetNoiseReductionKind(_settings.NoiseReduction)),
+                    TurnDetection = new SdkRealtimeServerVadTurnDetection
+                    {
+                        DetectionThreshold = Math.Clamp(_settings.RealtimeServerVadThreshold, 0f, 1f),
+                        PrefixPadding = TimeSpan.FromMilliseconds(Math.Clamp(_settings.RealtimeServerVadPrefixPaddingMs, 0, 1000)),
+                        SilenceDuration = TimeSpan.FromMilliseconds(Math.Clamp(_settings.RealtimeServerVadSilenceDurationMs, 100, 2000)),
+                        CreateResponseEnabled = true,
+                        InterruptResponseEnabled = true,
+                    },
+                },
+            },
+        };
+    }
+
+    private static SdkRealtimeNoiseReductionKind GetNoiseReductionKind(string? noiseReduction)
+    {
+        return string.Equals(noiseReduction, "far_field", StringComparison.OrdinalIgnoreCase)
+            ? SdkRealtimeNoiseReductionKind.FarField
+            : SdkRealtimeNoiseReductionKind.NearField;
     }
 
     public async Task StartAsync()
@@ -188,14 +225,13 @@ public class AgentOrchestrator
         });
         _voiceIn.SetConnected(true);
 
-        // Initialize echo cancellation.
-        // Android/iOS use the platform's built-in AcousticEchoCanceler (configured in PlatformMicProvider),
-        // so WebRTC APM is only needed on desktop where there's no OS-level AEC.
-        if (_settings.AecEnabled && !OperatingSystem.IsAndroid() && !OperatingSystem.IsIOS())
+        // Initialize echo cancellation. The active audio route policy decides
+        // whether the processor is enabled for this route.
+        if (_settings.AecEnabled)
         {
             try
             {
-                _aec.Initialize(mobileMode: false);
+                _aec.Initialize(mobileMode: OperatingSystem.IsAndroid() || OperatingSystem.IsIOS());
             }
             catch (Exception ex)
             {
@@ -262,7 +298,7 @@ public class AgentOrchestrator
                     try
                     {
                         var audioMsg = (OutputTextAudioRealtimeServerMessage)msg;
-                        if (audioMsg.Audio is not null)
+                        if (audioMsg.Audio is not null && ShouldSpeakResponses)
                         {
                             var audioBytes = Convert.FromBase64String(audioMsg.Audio);
                             await _voiceOut.PlayAudioDeltaAsync(audioBytes);
@@ -311,7 +347,7 @@ public class AgentOrchestrator
                 else if (type == RealtimeServerMessageType.ResponseOutputItemAdded)
                 {
                     var itemMsg = (ResponseOutputItemRealtimeServerMessage)msg;
-                    if (itemMsg.Item?.Id is not null)
+                    if (itemMsg.Item?.Id is not null && ShouldSpeakResponses)
                     {
                         _voiceOut.SetCurrentItem(itemMsg.Item.Id);
                     }
@@ -389,7 +425,7 @@ public class AgentOrchestrator
                 var result = await _dispatcher.ExecuteAsync(name, args, context, ct);
 
                 // Fire scan result event for UI overlay
-                if (name is "scan_qr_code" or "look")
+                if (name is "scan_qr_code")
                     TryFireScanResult(result);
 
                 // Send tool result back via raw SDK command
@@ -505,6 +541,15 @@ public class AgentOrchestrator
         await StopAsync();
     }
 
+    private bool ShouldSpeakResponses =>
+        !string.Equals(_settingsService.OutputMode, "Silent", StringComparison.OrdinalIgnoreCase);
+
+    public async Task StopSpeakingAsync(CancellationToken ct = default)
+    {
+        await _voiceOut.HandleInterruptionAsync(ct);
+        _voiceOut.ResetTracker();
+    }
+
     public async Task StartListeningAsync()
     {
         _wakeWord.WakeWordDetected += OnWakeWordDetected;
@@ -545,7 +590,7 @@ public class AgentOrchestrator
                         if (!wasActive)
                             await StartAsync();
 
-                        var context = CreateToolContext();
+                        var context = CreateToolContext(CommandTriggerOrigin.WakeWord);
                         var result = await _dispatcher.ExecuteAsync(
                             e.ToolName, null, context, _cts?.Token ?? CancellationToken.None);
 
@@ -560,11 +605,13 @@ public class AgentOrchestrator
         }
     }
 
-    private ToolContext CreateToolContext() => new()
+    private ToolContext CreateToolContext(
+        CommandTriggerOrigin origin = CommandTriggerOrigin.LlmToolCall) => new()
     {
         CaptureFrame = FrameCaptureFunc ?? _cameraManager.CaptureFrameAsync,
         Session = Session,
         Log = msg => DebugLog?.Invoke(this, msg),
+        CommandOrigin = origin,
     };
 
     private void TryFireScanResult(string resultJson)

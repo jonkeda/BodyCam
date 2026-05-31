@@ -2,6 +2,7 @@ using BodyCam.Models;
 using BodyCam.Services;
 using BodyCam.Services.Audio;
 using BodyCam.Services.Audio.WebRtcApm;
+using BodyCam.Services.Camera.Commands;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -161,6 +162,7 @@ public class AudioInputManagerChannelTests
         public string Voice { get; set; } = "alloy";
         public string TurnDetection { get; set; } = "server_vad";
         public string NoiseReduction { get; set; } = "off";
+        public string OutputMode { get; set; } = "Speak";
         public OpenAiProvider Provider { get; set; } = OpenAiProvider.OpenAi;
         public string? AzureEndpoint { get; set; }
         public string? AzureRealtimeDeploymentName { get; set; }
@@ -172,6 +174,10 @@ public class AudioInputManagerChannelTests
         public bool ShowCostEstimate { get; set; }
         public string SystemInstructions { get; set; } = string.Empty;
         public string? ActiveCameraProvider { get; set; }
+        public CameraCommandMode DefaultTouchCommandMode { get; set; } = CameraCommandMode.ManualAim;
+        public LookDetailLevel DefaultLookDetailLevel { get; set; } = LookDetailLevel.Summary;
+        public ReadDetailLevel DefaultReadDetailLevel { get; set; } = ReadDetailLevel.Full;
+        public bool ConfirmExternalScanActions { get; set; } = true;
         public string? ActiveAudioInputProvider { get; set; }
         public string? ActiveAudioOutputProvider { get; set; }
         public string? ActiveVideoProvider { get; set; }
@@ -190,6 +196,7 @@ public class AudioInputManagerChannelTests
         public string? A9CameraUsername { get; set; }
         public string? A9CameraPassword { get; set; }
         public string? Vue990CameraIp { get; set; }
+        public string? UsbCameraDeviceMatch { get; set; }
         public DeviceSettings DeviceSettings { get; set; } = new();
         public bool SetupCompleted { get; set; }
     }

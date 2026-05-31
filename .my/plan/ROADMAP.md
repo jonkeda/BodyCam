@@ -173,15 +173,6 @@ All milestones sorted by number. Each task corresponds to one phase from the mil
 - [x] Phase 4 — First-Start State Management
 - [ ] Phase 5 — Welcome & Onboarding (Optional)
 
-### M24 — Anti-Echo (WebRTC APM)
-
-**Plan:** [m24-anti-echo/](m24-anti-echo/)
-
-- [ ] Windows AEC (WebRTC APM via P/Invoke)
-- [x] Android AEC Verification
-- [ ] iOS AEC
-- [x] Reference Signal Plumbing (`AecProcessor` + resampling)
-
 ### M25 — MAF Realtime Migration
 
 **Plan:** [m25-maf-realtime/](m25-maf-realtime/)
@@ -247,17 +238,6 @@ All milestones sorted by number. Each task corresponds to one phase from the mil
 - [x] Phase 6 — iOS QCSDK.framework Binding
 - [x] Phase 7 — `GlassesDeviceManager` Wiring & Connection UI
 
-### M34 — Audio Quality & Anti-Echo Improvements
-
-**Plan:** [m34-audio-quality/](m34-audio-quality/)
-
-- [ ] Phase 1 — Correctness Fixes
-- [ ] Phase 2 — Resampling
-- [ ] Phase 3 — Threading & Latency
-- [ ] Phase 4 — Platform Coverage
-- [ ] Phase 5 — Voice Quality Polish
-- [ ] Phase 6 — Observability
-
 ### M35 — .NET 10 Update
 
 **Plan:** [m35-dotnet10-update/](m35-dotnet10-update/)
@@ -266,6 +246,39 @@ All milestones sorted by number. Each task corresponds to one phase from the mil
 - [ ] Phase 2 — Fix CS0618 Obsolete MAUI API Warnings
 - [ ] Phase 3 — NuGet Package Update
 - [ ] Phase 4 — Verify Build & Workload Notes
+
+### M41 — USB Camera
+
+**Plan:** [m41-usb-camera/](m41-usb-camera/)
+
+- [x] Phase 1A — Windows Direct USB/UVC Probe
+- [x] Phase 3 — Windows C# Client And BodyCam Provider
+
+### M43 — Audio
+
+**Plan:** [m43-audio/](m43-audio/)
+
+- [ ] Phase 1 — [Provider Capabilities And Echo Policy](m43-audio/phase-1-provider-capabilities-policy.md)
+- [ ] Phase 2 — [Split Echo Cancellation From Voice Cleanup](m43-audio/phase-2-echo-vs-cleanup.md)
+- [ ] Phase 3 — [Windows, Android, and iOS Route Validation](m43-audio/phase-3-platform-route-validation.md)
+- [ ] Phase 4 — [Diagnostics](m43-audio/phase-4-diagnostics.md)
+- [ ] Phase 5 — [Brinell Audio Automation](m43-audio/phase-5-brinell-automation.md)
+- [ ] Phase 6 — [Realtime Echo Canary](m43-audio/phase-6-realtime-echo-canary.md)
+
+### M44 — Command Redesign
+
+**Plan:** [m44-command-redesign/](m44-command-redesign/)
+
+**Compatibility:** No backward compatibility required. Phase 1/2 connect Look
+only; Read and Scan return as new registered commands in Phase 3/4.
+
+- [ ] Phase 1 — [Command Contracts And Defaults](m44-command-redesign/phase-1-command-contracts.md)
+- [ ] Phase 2 — [Look Command](m44-command-redesign/phase-2-look-command.md)
+- [ ] Phase 3 — [Read Command](m44-command-redesign/phase-3-read-command.md)
+- [ ] Phase 4 — [Scan Command](m44-command-redesign/phase-4-scan-command.md)
+- [ ] Phase 5 — [UI And Accessibility](m44-command-redesign/phase-5-ui-accessibility.md)
+- [ ] Phase 6 — [Provider Coverage And Tests](m44-command-redesign/phase-6-provider-coverage-tests.md)
+- [ ] Phase 7 — [Future Helpful Commands](m44-command-redesign/phase-7-future-commands.md)
 
 ---
 
@@ -281,4 +294,14 @@ Renamed to M30.
 
 ### ~~M32 — Voice Quality~~
 
-Scope folded into M34.
+Scope folded into M34, then superseded by M43.
+
+### ~~M24 — Anti-Echo (WebRTC APM)~~
+
+Archived at [archive/m24-anti-echo/](archive/m24-anti-echo/). Scope folded into
+M43 so echo cancellation is provider/route dependent.
+
+### ~~M34 — Audio Quality & Anti-Echo Improvements~~
+
+Archived at [archive/m34-audio-quality/](archive/m34-audio-quality/). Scope
+folded into M43.

@@ -2,8 +2,10 @@
 using BodyCam.Platforms.iOS.HeyCyan;
 using BodyCam.Services.Glasses.HeyCyan;
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
+using PlatformIosHeyCyanGlassesSession = BodyCam.Platforms.iOS.HeyCyan.IosHeyCyanGlassesSession;
 
 namespace BodyCam.RealTests.Services.Glasses.HeyCyan;
 
@@ -18,9 +20,11 @@ public sealed class IosHeyCyanRealDeviceTests
     private static bool IsRealDeviceEnabled =>
         Environment.GetEnvironmentVariable("BODYCAM_HEYCYAN_REAL_DEVICE") == "1";
 
-    private static IosHeyCyanGlassesSession CreateSession()
+    private static IHeyCyanGlassesSession CreateSession()
     {
-        return new IosHeyCyanGlassesSession(NullLoggerFactory.Instance);
+        return new PlatformIosHeyCyanGlassesSession(
+            NullLoggerFactory.Instance.CreateLogger<PlatformIosHeyCyanGlassesSession>(),
+            NullLoggerFactory.Instance);
     }
 
     [SkippableFact]
@@ -58,7 +62,7 @@ public sealed class IosHeyCyanRealDeviceTests
         version.Hardware.Should().NotBeNullOrEmpty();
 
         var battery = await session.GetBatteryAsync(default);
-        battery.Level.Should().BeInRange(0, 100);
+        battery.Percentage.Should().BeInRange(0, 100);
     }
 
     [SkippableFact]

@@ -18,25 +18,14 @@ public partial class AppShell : Shell
 		Routing.RegisterRoute(nameof(Pages.Settings.AddDevicesPage), typeof(Pages.Settings.AddDevicesPage));
 		Routing.RegisterRoute(nameof(Pages.Settings.A9CameraSettingsPage), typeof(Pages.Settings.A9CameraSettingsPage));
 		Routing.RegisterRoute(nameof(Pages.Settings.Vue990CameraSettingsPage), typeof(Pages.Settings.Vue990CameraSettingsPage));
+#if WINDOWS
+		Routing.RegisterRoute(nameof(Pages.Settings.UsbCameraSettingsPage), typeof(Pages.Settings.UsbCameraSettingsPage));
+#endif
 		Routing.RegisterRoute(nameof(Pages.Settings.AdvancedSettingsPage), typeof(Pages.Settings.AdvancedSettingsPage));
-
-		var buildNumber = typeof(AppShell).Assembly
-			.GetCustomAttributes(typeof(System.Reflection.AssemblyMetadataAttribute), false)
-			.OfType<System.Reflection.AssemblyMetadataAttribute>()
-			.FirstOrDefault(a => a.Key == "BuildNumber")?.Value;
-		if (!string.IsNullOrEmpty(buildNumber))
-			BuildLabel.Text = $"{buildNumber}";
 	}
 
-	private async void OnShellNavigated(object? sender, ShellNavigatedEventArgs e)
+	private void OnShellNavigated(object? sender, ShellNavigatedEventArgs e)
 	{
-		var loc = e.Current?.Location?.OriginalString ?? "";
-
-		// Show ⚙ only on MainPage root; pushed pages use Shell back arrow
-		// Root: "//MainPage", pushed: "//MainPage/SettingsPage"
-		var segments = loc.Trim('/').Split('/');
-		NavIcon.IsVisible = segments.Length <= 1;
-
 		if (!_checkedSetup)
 		{
 			_checkedSetup = true;
@@ -48,10 +37,5 @@ public partial class AppShell : Shell
 				return;
 			}
 		}
-	}
-
-	private async void OnNavIconTapped(object? sender, EventArgs e)
-	{
-		await Current.GoToAsync(nameof(Pages.Settings.SettingsPage));
 	}
 }

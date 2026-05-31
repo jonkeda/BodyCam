@@ -20,6 +20,9 @@ public sealed class BluetoothAudioOutputProvider : IBluetoothAudioOutputProvider
     public bool IsAvailable => _selectedProvider?.IsAvailable ?? false;
     public bool IsPlaying => _selectedProvider?.IsPlaying ?? false;
     public int EstimatedOutputLatencyMs => _selectedProvider?.EstimatedOutputLatencyMs ?? 200;
+    public AudioOutputCapabilities OutputCapabilities =>
+        _selectedProvider?.OutputCapabilities
+        ?? AudioCapabilityHeuristics.BluetoothOutput(DisplayName, EstimatedOutputLatencyMs);
 
     public event EventHandler? Disconnected;
     public event EventHandler? OutputRouteChanged;

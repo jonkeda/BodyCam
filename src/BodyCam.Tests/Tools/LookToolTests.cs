@@ -1,6 +1,8 @@
-using BodyCam.Services.Vision;
+using BodyCam.Models;
+using BodyCam.Services.Camera.Commands;
 using BodyCam.Tools;
 using FluentAssertions;
+using NSubstitute;
 using Xunit;
 
 namespace BodyCam.Tests.Tools;
@@ -8,37 +10,41 @@ namespace BodyCam.Tests.Tools;
 public class LookToolTests
 {
     [Fact]
-    public async Task ExecuteAsync_QrFound_ReturnsQrResult()
+    public async Task ExecuteAsync_DelegatesToLookCommand()
     {
-        var qrResult = new VisionPipelineResult("QR Scan", "https://example.com", new()
-        {
-            ["found_type"] = "qr_barcode",
-            ["content"] = "https://example.com",
-        });
+        var commands = Substitute.For<ICameraCommandService>();
+        commands.ExecuteAsync(Arg.Any<CameraCommandRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new CameraCommandResult(
+                "look",
+                true,
+                "A desk is ahead.",
+                new Dictionary<string, object?> { ["description"] = "A desk is ahead." },
+                null));
 
-        var stage = new FakeStage("QR Scan", 0, qrResult);
-        var pipeline = new VisionPipeline([stage]);
-        var tool = new LookTool(pipeline);
-
-        var frame = new byte[] { 0xFF, 0xD8 };
-        var context = TestToolContext.Create(frame);
+        var tool = new LookTool(commands);
+        var context = TestToolContext.Create();
 
         var result = await tool.ExecuteAsync(null, context, CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
-        result.Json.Should().Contain("qr_barcode");
-        result.Json.Should().Contain("example.com");
+        result.Json.Should().Contain("A desk is ahead");
+        await commands.Received(1).ExecuteAsync(
+            Arg.Is<CameraCommandRequest>(r =>
+                r.CommandId == "look"
+                && r.Origin == CommandTriggerOrigin.LlmToolCall),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task ExecuteAsync_CameraUnavailable_Fails()
+    public async Task ExecuteAsync_CommandFailure_ReturnsFail()
     {
-        var pipeline = new VisionPipeline([]);
-        var tool = new LookTool(pipeline);
+        var commands = Substitute.For<ICameraCommandService>();
+        commands.ExecuteAsync(Arg.Any<CameraCommandRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new CameraCommandResult("look", false, "Camera not available.", null, "Camera not available."));
 
-        var context = TestToolContext.Create(null);
+        var tool = new LookTool(commands);
 
-        var result = await tool.ExecuteAsync(null, context, CancellationToken.None);
+        var result = await tool.ExecuteAsync(null, TestToolContext.Create(), CancellationToken.None);
 
         result.IsSuccess.Should().BeFalse();
         result.Json.Should().Contain("Camera not available");
@@ -47,8 +53,7 @@ public class LookToolTests
     [Fact]
     public void Name_IsLook()
     {
-        var pipeline = new VisionPipeline([]);
-        var tool = new LookTool(pipeline);
+        var tool = new LookTool(Substitute.For<ICameraCommandService>());
 
         tool.Name.Should().Be("look");
     }
@@ -56,37 +61,20 @@ public class LookToolTests
     [Fact]
     public void WakeWord_IsLook()
     {
-        var pipeline = new VisionPipeline([]);
-        var tool = new LookTool(pipeline);
+        var tool = new LookTool(Substitute.For<ICameraCommandService>());
 
         tool.WakeWord.Should().NotBeNull();
         tool.WakeWord!.KeywordPath.Should().Contain("look");
-    }
-
-    private sealed class FakeStage : IVisionPipelineStage
-    {
-        private readonly VisionPipelineResult? _result;
-        public string Name { get; }
-        public int Cost { get; }
-
-        public FakeStage(string name, int cost, VisionPipelineResult? result)
-        {
-            Name = name;
-            Cost = cost;
-            _result = result;
-        }
-
-        public Task<VisionPipelineResult?> ProcessAsync(byte[] jpegFrame, string? query, CancellationToken ct)
-            => Task.FromResult(_result);
     }
 }
 
 internal static class TestToolContext
 {
-    public static ToolContext Create(byte[]? frame) => new()
+    public static ToolContext Create(CommandTriggerOrigin? origin = null) => new()
     {
-        CaptureFrame = _ => Task.FromResult(frame),
-        Session = new BodyCam.Models.SessionContext(),
+        CaptureFrame = _ => Task.FromResult<byte[]?>(null),
+        Session = new SessionContext(),
         Log = _ => { },
+        CommandOrigin = origin,
     };
 }
