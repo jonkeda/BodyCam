@@ -69,6 +69,35 @@ public class HeyCyanFrameParserTests
     }
 
     [Fact]
+    public void Normalize_transfer_ip_text_preserves_valid_p2p_ip()
+    {
+        var result = HeyCyanFrameParser.TryNormalizeTransferIpText("192.168.49.183", out var ip);
+
+        result.Should().BeTrue();
+        ip.Should().NotBeNull();
+        ip!.ToString().Should().Be("192.168.49.183");
+    }
+
+    [Fact]
+    public void Normalize_transfer_ip_text_repairs_vendor_shifted_p2p_ip()
+    {
+        var result = HeyCyanFrameParser.TryNormalizeTransferIpText("49.183.0.0", out var ip);
+
+        result.Should().BeTrue();
+        ip.Should().NotBeNull();
+        ip!.ToString().Should().Be("192.168.49.183");
+    }
+
+    [Fact]
+    public void Normalize_transfer_ip_text_rejects_invalid_text()
+    {
+        var result = HeyCyanFrameParser.TryNormalizeTransferIpText("not-an-ip", out var ip);
+
+        result.Should().BeFalse();
+        ip.Should().BeNull();
+    }
+
+    [Fact]
     public void P2p_error_frame_loadData6_eq_09_value_FF_is_classified_noisy()
     {
         var frame = new byte[] { 0xFF, 0, 0, 0, 0, 0, 0x09, 0xFF };

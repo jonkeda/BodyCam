@@ -34,6 +34,12 @@ public class SettingsHubTests
     }
 
     [Fact]
+    public void CommandsSettingsCard_Exists()
+    {
+        _fixture.SettingsPage.CommandsSettingsCard.AssertExists();
+    }
+
+    [Fact]
     public void AdvancedSettingsCard_Exists()
     {
         _fixture.SettingsPage.AdvancedSettingsCard.AssertExists();

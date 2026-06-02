@@ -1,6 +1,7 @@
 using System.Net.NetworkInformation;
 using System.Runtime.InteropServices.WindowsRuntime;
 using System.Security;
+using System.Text;
 using Microsoft.Extensions.Logging;
 using Windows.Devices.WiFi;
 using Windows.Security.Credentials;
@@ -409,11 +410,13 @@ internal sealed class WindowsGlassesWiFiManager
 
     private static async Task<string> RunPowershellAsync(string command, CancellationToken ct)
     {
+        var encodedCommand = Convert.ToBase64String(Encoding.Unicode.GetBytes(command));
+
         using var process = new System.Diagnostics.Process();
         process.StartInfo = new System.Diagnostics.ProcessStartInfo
         {
             FileName = "powershell",
-            Arguments = $"-NoProfile -Command \"{command}\"",
+            Arguments = $"-NoProfile -EncodedCommand {encodedCommand}",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,

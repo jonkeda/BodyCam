@@ -104,6 +104,42 @@ test.unknown";
     }
 
     [Fact]
+    public void Parse_extracts_timestamp_from_bare_m01_filename()
+    {
+        var result = MediaConfigParser.Parse("20260531190723036.jpg");
+
+        result.Should().HaveCount(1);
+        result[0].Name.Should().Be("20260531190723036.jpg");
+        result[0].Kind.Should().Be(HeyCyanMediaKind.Photo);
+        result[0].Timestamp.Should().Be(
+            new DateTimeOffset(2026, 5, 31, 19, 7, 23, TimeSpan.Zero)
+                .AddMilliseconds(36));
+    }
+
+    [Fact]
+    public void Parse_handles_phase_1e_mixed_media_config()
+    {
+        var raw = """
+            20260531184722907.mp4
+            20260531190723036.jpg
+            20260531190726933.mp4
+            """;
+
+        var result = MediaConfigParser.Parse(raw);
+
+        result.Should().HaveCount(3);
+        result[0].Name.Should().Be("20260531184722907.mp4");
+        result[0].Kind.Should().Be(HeyCyanMediaKind.Video);
+        result[0].Timestamp.Should().Be(
+            new DateTimeOffset(2026, 5, 31, 18, 47, 22, TimeSpan.Zero)
+                .AddMilliseconds(907));
+        result[1].Name.Should().Be("20260531190723036.jpg");
+        result[1].Kind.Should().Be(HeyCyanMediaKind.Photo);
+        result[2].Name.Should().Be("20260531190726933.mp4");
+        result[2].Kind.Should().Be(HeyCyanMediaKind.Video);
+    }
+
+    [Fact]
     public void Parse_handles_filename_without_timestamp()
     {
         var result = MediaConfigParser.Parse("photo.jpg");

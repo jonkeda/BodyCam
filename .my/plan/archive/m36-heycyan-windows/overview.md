@@ -1,5 +1,9 @@
 # M36 — HeyCyan Windows Connectivity (BLE + WiFi Transfer)
 
+> **Archived on 2026-05-31.** Superseded by
+> [M46 Phase 7 - Windows C# Wi-Fi Direct Route](../../m46-heycyan-csharp-wifi-retry/phase-7-windows-csharp-wifi-direct-route.md).
+> Kept for Windows research and RCA history only.
+
 **Status:** Proposed
 **Depends on:** M33 (HeyCyan SDK, landed), M35 (.NET 10 update, landed)
 

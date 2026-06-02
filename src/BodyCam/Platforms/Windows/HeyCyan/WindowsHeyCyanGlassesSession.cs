@@ -67,6 +67,9 @@ internal sealed class WindowsHeyCyanGlassesSession : IHeyCyanGlassesSession
     /// </summary>
     internal event EventHandler<byte[]>? RawNotifyReceived;
 
+    internal IReadOnlyList<IPAddress> DiagnosticLastTransferEndpointCandidates { get; private set; } = [];
+    internal IPAddress? DiagnosticLastValidatedTransferIp { get; private set; }
+
     private HeyCyanState _state = HeyCyanState.Disconnected;
     private HeyCyanMediaCount? _lastMediaCount;
 
@@ -729,7 +732,7 @@ internal sealed class WindowsHeyCyanGlassesSession : IHeyCyanGlassesSession
         => SendCommandAsync(HeyCyanCommands.StartVideoRecording(), ct);
 
     public Task StopVideoAsync(CancellationToken ct)
-        => SendCommandAsync(HeyCyanCommands.StopMode(), ct);
+        => SendCommandAsync(HeyCyanCommands.StopVideoRecording(), ct);
 
     public Task StartAudioAsync(CancellationToken ct)
         => SendCommandAsync(HeyCyanCommands.StartAudioRecording(), ct);
@@ -742,6 +745,9 @@ internal sealed class WindowsHeyCyanGlassesSession : IHeyCyanGlassesSession
 
     public async Task<HeyCyanTransferSession> EnterTransferModeAsync(CancellationToken ct)
     {
+        DiagnosticLastTransferEndpointCandidates = [];
+        DiagnosticLastValidatedTransferIp = null;
+
         // Create a channel to capture ALL 0x41 notifications during transfer.
         _transferNotifyChannel = Channel.CreateUnbounded<byte[]>(
             new UnboundedChannelOptions { SingleReader = false, SingleWriter = true });
@@ -878,8 +884,13 @@ internal sealed class WindowsHeyCyanGlassesSession : IHeyCyanGlassesSession
                     {
                         routeReady = true;
                         Console.Error.WriteLine($"[WIFIDIRECT] Route established; endpoint IP={directIp}");
-                        AddCandidate(routeCandidates, bleIp);
-                        AddCandidate(routeCandidates, directIp);
+                        AddCandidates(
+                            routeCandidates,
+                            BuildTransferEndpointCandidates(
+                                bleIp,
+                                directIp,
+                                _wifiDirectManager.ConnectionEndpointPairs,
+                                includeKnownP2pCandidates: true));
                     }
                     else
                     {
@@ -934,8 +945,13 @@ internal sealed class WindowsHeyCyanGlassesSession : IHeyCyanGlassesSession
                     if (joinedIp is not null)
                     {
                         routeReady = true;
-                        AddCandidate(routeCandidates, bleIp);
-                        AddCandidate(routeCandidates, joinedIp);
+                        AddCandidates(
+                            routeCandidates,
+                            BuildTransferEndpointCandidates(
+                                bleIp,
+                                joinedIp,
+                                endpointPairs: null,
+                                includeKnownP2pCandidates: false));
                     }
                     else
                     {
@@ -967,8 +983,9 @@ internal sealed class WindowsHeyCyanGlassesSession : IHeyCyanGlassesSession
                         await SendCommandAsync(HeyCyanCommands.GetWifiIP(), ct).ConfigureAwait(false);
                     }
 
-                    glassesIp = await ProbeTransferEndpointAsync(routeCandidates, ct).ConfigureAwait(false)
-                        ?? routeCandidates.FirstOrDefault();
+                    DiagnosticLastTransferEndpointCandidates = routeCandidates.ToArray();
+                    glassesIp = await ProbeTransferEndpointAsync(routeCandidates, ct).ConfigureAwait(false);
+                    DiagnosticLastValidatedTransferIp = glassesIp;
                 }
 
                 if (glassesIp is null)
@@ -977,6 +994,7 @@ internal sealed class WindowsHeyCyanGlassesSession : IHeyCyanGlassesSession
                     glassesIp = routeReady
                         ? await ProbeCandidateIpsAsync(ct).ConfigureAwait(false)
                         : null;
+                    DiagnosticLastValidatedTransferIp = glassesIp;
                 }
             }
 
@@ -1275,6 +1293,41 @@ internal sealed class WindowsHeyCyanGlassesSession : IHeyCyanGlassesSession
         candidates.Add(ip);
     }
 
+    private static void AddCandidates(List<IPAddress> candidates, IEnumerable<IPAddress> ips)
+    {
+        foreach (var ip in ips)
+            AddCandidate(candidates, ip);
+    }
+
+    internal static IReadOnlyList<IPAddress> BuildTransferEndpointCandidates(
+        IPAddress? bleReportedIp,
+        IPAddress? routeIp,
+        IEnumerable<WindowsWiFiDirectEndpointPair>? endpointPairs,
+        bool includeKnownP2pCandidates)
+    {
+        var candidates = new List<IPAddress>();
+        AddCandidate(candidates, bleReportedIp);
+        AddCandidate(candidates, routeIp);
+
+        if (endpointPairs is not null)
+        {
+            foreach (var pair in endpointPairs)
+            {
+                if (IPAddress.TryParse(pair.RemoteHost, out var remoteIp))
+                    AddCandidate(candidates, remoteIp);
+            }
+        }
+
+        if (includeKnownP2pCandidates)
+        {
+            AddCandidate(candidates, IPAddress.Parse("192.168.49.183"));
+            AddCandidate(candidates, IPAddress.Parse("192.168.49.200"));
+            AddCandidate(candidates, IPAddress.Parse("192.168.49.1"));
+        }
+
+        return candidates;
+    }
+
     /// <summary>
     /// Verifies which routed candidate actually serves the glasses media API.
     /// This avoids returning a BLE-reported IP when Windows has connected via a
@@ -1331,9 +1384,11 @@ internal sealed class WindowsHeyCyanGlassesSession : IHeyCyanGlassesSession
         // almost always the home router and will return HTTP 200 (router login page).
         var candidates = new[]
         {
+            "192.168.49.183", // Android-observed glasses media host
+            "192.168.49.200", // Android logs briefly observed this during import
+            "192.168.49.1",  // WiFi Direct group-owner candidate
             "192.168.43.1",  // Android hotspot / WiFi Direct GO default
             "192.168.4.1",   // ESP32 / common IoT default
-            "192.168.49.1",  // WiFi Direct (Android 10+)
             "192.168.0.1",   // Generic router default
         };
 

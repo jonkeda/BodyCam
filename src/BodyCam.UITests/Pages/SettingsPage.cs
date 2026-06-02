@@ -13,5 +13,6 @@ public class SettingsPage : PageObjectBase<SettingsPage>
     public Button<SettingsPage> ConnectionSettingsCard => Button("ConnectionSettingsCard");
     public Button<SettingsPage> VoiceSettingsCard => Button("VoiceSettingsCard");
     public Button<SettingsPage> DeviceSettingsCard => Button("DeviceSettingsCard");
+    public Button<SettingsPage> CommandsSettingsCard => Button("CommandsSettingsCard");
     public Button<SettingsPage> AdvancedSettingsCard => Button("AdvancedSettingsCard");
 }

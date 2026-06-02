@@ -3,6 +3,7 @@ using System.Windows.Input;
 using BodyCam.Models;
 using BodyCam.Mvvm;
 using BodyCam.Services;
+using BodyCam.Services.AiProviders;
 
 namespace BodyCam.ViewModels;
 
@@ -156,8 +157,9 @@ public class SetupViewModel : ViewModelBase
         // Pre-check permissions that are already granted
         _ = CheckExistingPermissionsAsync();
         // Pre-fill provider from settings
-        IsOpenAi = _settings.Provider == OpenAiProvider.OpenAi;
-        IsAzure = _settings.Provider == OpenAiProvider.Azure;
+        var providerId = AiProviderIds.Normalize(_settings.ProviderId);
+        IsOpenAi = providerId == AiProviderIds.OpenAi;
+        IsAzure = providerId == AiProviderIds.AzureOpenAi;
     }
 
     private async Task CheckExistingPermissionsAsync()
@@ -264,8 +266,8 @@ public class SetupViewModel : ViewModelBase
         try
         {
             // Save the provider setting
-            _settings.Provider = IsAzure ? OpenAiProvider.Azure : OpenAiProvider.OpenAi;
-            _appSettings.Provider = _settings.Provider;
+            _settings.ProviderId = IsAzure ? AiProviderIds.AzureOpenAi : AiProviderIds.OpenAi;
+            _appSettings.ProviderId = _settings.ProviderId;
 
             // Save the key
             await _apiKeyService.SetApiKeyAsync(ApiKey.Trim());

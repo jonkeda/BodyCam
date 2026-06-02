@@ -10,12 +10,12 @@ namespace BodyCam.Services.Glasses.HeyCyan;
 internal static class HeyCyanCommands
 {
     // Serial Port protocol action IDs
-    private const byte ActionSyncTime = 0x40;
-    private const byte ActionGlassesControl = 0x41;
-    private const byte ActionBattery = 0x42;
-    private const byte ActionDeviceInfo = 0x43;
-    private const byte ActionHeartbeat = 0x45;
-    private const byte ActionDeviceConfig = 0x47;
+    internal const byte ActionSyncTime = 0x40;
+    internal const byte ActionGlassesControl = 0x41;
+    internal const byte ActionBattery = 0x42;
+    internal const byte ActionDeviceInfo = 0x43;
+    internal const byte ActionHeartbeat = 0x45;
+    internal const byte ActionDeviceConfig = 0x47;
 
     /// <summary>
     /// Take photo. CyanBridge: binding.btnCamera → glassesControl(byteArrayOf(0x02, 0x01, 0x01)).
@@ -41,8 +41,10 @@ internal static class HeyCyanCommands
 
     /// <summary>
     /// Enter transfer mode (enable Wi-Fi for HTTP media download).
-    /// CyanBridge: startDataDownload() → glassesControl(byteArrayOf(0x02, 0x01, 0x04)).
-    /// The 0x02 prefix triggers the AP/hotspot broadcast on the glasses.
+    /// CyanBridge media import uses glassesControl(byteArrayOf(0x02, 0x01, 0x04)).
+    /// This is distinct from the official realtime-preview P2P command
+    /// byteArrayOf(0x02, 0x01, 0x14, 0x01), which opens RTSP preview but not
+    /// the /files/media.config HTTP server.
     /// </summary>
     public static byte[] EnterTransferMode() => BuildFrame(ActionGlassesControl, [0x02, 0x01, 0x04]);
 
@@ -69,6 +71,11 @@ internal static class HeyCyanCommands
     public static byte[] StartVideoRecording() => BuildFrame(ActionGlassesControl, [0x02, 0x01, 0x02]);
 
     /// <summary>
+    /// Stop video recording. CyanBridge: controlVideoRecording(false).
+    /// </summary>
+    public static byte[] StopVideoRecording() => BuildFrame(ActionGlassesControl, [0x02, 0x01, 0x03]);
+
+    /// <summary>
     /// Start audio recording.
     /// </summary>
     public static byte[] StartAudioRecording() => BuildFrame(ActionGlassesControl, [0x02, 0x01, 0x08]);
@@ -86,24 +93,25 @@ internal static class HeyCyanCommands
     /// <summary>
     /// Get battery level. Response on notify: [percentage, charging_flag].
     /// </summary>
-    public static byte[] GetBattery() => BuildFrame(ActionBattery, []);
+    public static byte[] GetBattery() => BuildFrame(ActionBattery, [0x00, 0x00]);
 
     /// <summary>
     /// Get device version/info. Response on notify: version strings.
     /// </summary>
-    public static byte[] GetVersion() => BuildFrame(ActionDeviceInfo, []);
+    public static byte[] GetVersion() => BuildFrame(ActionDeviceInfo, [0x00, 0x00]);
 
     /// <summary>
     /// Heartbeat / keepalive. Glasses respond with status byte.
     /// </summary>
-    public static byte[] Heartbeat() => BuildFrame(ActionHeartbeat, []);
+    public static byte[] Heartbeat() => BuildFrame(ActionHeartbeat, [0x00, 0x01]);
 
     /// <summary>
-    /// Get device config (iOS SDK: getDeviceConfigWithFinished, opcode 0x47).
-    /// Called after GetWifiIP to verify the glasses are in WiFi hotspot mode
-    /// and signal them to start broadcasting. CRITICAL for AP activation.
+    /// Get device config / support flags (opcode 0x47).
+    /// Android SDK: wearFunctionSupport(new byte[] { 1, 0 }).
+    /// iOS SDK names the same opcode getDeviceConfigWithFinished.
+    /// Used as a low-cost transfer activation/keepalive pulse after GetWifiIP.
     /// </summary>
-    public static byte[] GetDeviceConfig() => BuildFrame(ActionDeviceConfig, []);
+    public static byte[] GetDeviceConfig() => BuildFrame(ActionDeviceConfig, [0x01, 0x00]);
 
     /// <summary>
     /// Builds a Serial Port protocol frame.

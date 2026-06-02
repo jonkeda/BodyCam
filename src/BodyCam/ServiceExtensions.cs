@@ -1,6 +1,7 @@
 using BodyCam.Agents;
 using BodyCam.Orchestration;
 using BodyCam.Services;
+using BodyCam.Services.AiProviders;
 using BodyCam.Services.Audio;
 using BodyCam.Services.Audio.WebRtcApm;
 using BodyCam.Services.Camera;
@@ -291,6 +292,14 @@ public static class ServiceExtensions
 		services.AddSingleton<IWakeWordService>(sp => sp.GetRequiredService<PorcupineWakeWordService>());
 		services.AddSingleton<IMicrophoneCoordinator, MicrophoneCoordinator>();
 		services.AddSingleton<IApiKeyService, ApiKeyService>();
+		services.AddSingleton<IAiProviderAdapter, OpenAiProviderAdapter>();
+		services.AddSingleton<IAiProviderAdapter, AzureOpenAiProviderAdapter>();
+		services.AddSingleton<IAiProviderAdapter, XaiGrokProviderAdapter>();
+		services.AddSingleton<IAiProviderRegistry, AiProviderRegistry>();
+		services.AddSingleton<IAiProviderInstanceStore, AiProviderInstanceStore>();
+		services.AddSingleton<IAiProviderDiagnosticsService, AiProviderDiagnosticsService>();
+		services.AddSingleton<IGrokEphemeralTokenBroker, GrokEphemeralTokenBroker>();
+		services.AddSingleton<IGrokRealtimeVoiceProvider, GrokRealtimeVoiceProvider>();
 
 		// MAF Realtime client — wraps the SDK's RealtimeClient with IRealtimeClient
 #pragma warning disable OPENAI002
@@ -298,12 +307,13 @@ public static class ServiceExtensions
 		{
 			var settings = sp.GetRequiredService<AppSettings>();
 			var apiKeyService = sp.GetRequiredService<IApiKeyService>();
+			var provider = sp.GetRequiredService<IAiProviderRegistry>().GetRequired(settings.ProviderId);
 
 			// Use Task.Run to avoid deadlocking Android's main thread on SecureStorage
-			var apiKey = Task.Run(() => apiKeyService.GetApiKeyAsync()).GetAwaiter().GetResult()
+			var apiKey = Task.Run(() => apiKeyService.GetApiKeyAsync(settings.ProviderId)).GetAwaiter().GetResult()
 				?? throw new InvalidOperationException("API key not configured.");
 
-			if (settings.Provider == OpenAiProvider.Azure)
+			if (provider.Id == AiProviderIds.AzureOpenAi)
 			{
 				var rtOptions = new OpenAI.Realtime.RealtimeClientOptions
 				{
@@ -313,11 +323,21 @@ public static class ServiceExtensions
 				return new Microsoft.Extensions.AI.OpenAIRealtimeClient(
 					sdkClient, settings.AzureRealtimeDeploymentName!);
 			}
-			else
+			else if (provider.Id == AiProviderIds.OpenAi)
 			{
 				return new Microsoft.Extensions.AI.OpenAIRealtimeClient(
 					apiKey, settings.RealtimeModel);
 			}
+			else if (provider.Id == AiProviderIds.XaiGrok)
+			{
+				var grokRealtime = sp.GetRequiredService<IGrokRealtimeVoiceProvider>()
+					.CreateSessionOptions(settings);
+				return new UnsupportedRealtimeClient(
+					$"Grok realtime voice is configured for {grokRealtime.WebSocketUri}; the Android realtime session still needs the device audio-route implementation.");
+			}
+
+			throw new InvalidOperationException(
+				$"Realtime client creation is not implemented for provider '{provider.DisplayName}'.");
 		});
 #pragma warning restore OPENAI002
 
@@ -378,11 +398,7 @@ public static class ServiceExtensions
 		services.AddSingleton<Services.Glasses.HeyCyan.StoredImageHeyCyanMediaTransfer>();
 		services.AddSingleton<Services.Glasses.HeyCyan.IHeyCyanMediaTransfer>(sp =>
 		{
-#if WINDOWS
-			return sp.GetRequiredService<Services.Glasses.HeyCyan.StoredImageHeyCyanMediaTransfer>();
-#else
 			return sp.GetRequiredService<Services.Glasses.HeyCyan.HeyCyanMediaTransfer>();
-#endif
 		});
 		services.AddSingleton<Services.Glasses.HeyCyan.Media.IHeyCyanRecordedMediaService, Services.Glasses.HeyCyan.Media.HeyCyanRecordedMediaService>();
 	// Glasses device manager (aggregates session + providers)
@@ -399,6 +415,9 @@ public static class ServiceExtensions
 		services.AddTransient<MainViewModel>();
 		services.AddTransient<SettingsViewModel>();
 		services.AddTransient<ViewModels.Settings.ConnectionViewModel>();
+		services.AddTransient<ViewModels.Settings.LlmProvidersViewModel>();
+		services.AddTransient<ViewModels.Settings.AddLlmProviderViewModel>();
+		services.AddTransient<ViewModels.Settings.LlmProviderDetailViewModel>();
 		services.AddTransient<ViewModels.Settings.VoiceViewModel>();
 		services.AddTransient<ViewModels.Settings.DeviceViewModel>();
 		services.AddTransient<ViewModels.Settings.AddDevicesViewModel>();
@@ -407,6 +426,8 @@ public static class ServiceExtensions
 #if WINDOWS
 		services.AddTransient<ViewModels.Settings.UsbCameraSettingsViewModel>();
 #endif
+		services.AddTransient<ViewModels.Settings.CommandsViewModel>();
+		services.AddTransient<ViewModels.Settings.CommandDetailViewModel>();
 		services.AddTransient<ViewModels.Settings.AdvancedViewModel>();
 		services.AddTransient<ViewModels.Settings.GlassesCameraSectionViewModel>();
 		services.AddTransient<MediaGalleryViewModel>();
@@ -415,6 +436,9 @@ public static class ServiceExtensions
 		services.AddTransient<Pages.Main.MainPage>();
 		services.AddTransient<Pages.Settings.SettingsPage>();
 		services.AddTransient<Pages.Settings.ConnectionSettingsPage>();
+		services.AddTransient<Pages.Settings.LlmProvidersSettingsPage>();
+		services.AddTransient<Pages.Settings.AddLlmProviderPage>();
+		services.AddTransient<Pages.Settings.LlmProviderSettingsPage>();
 		services.AddTransient<Pages.Settings.VoiceSettingsPage>();
 		services.AddTransient<Pages.Settings.DeviceSettingsPage>();
 		services.AddTransient<Pages.Settings.AddDevicesPage>();
@@ -423,6 +447,8 @@ public static class ServiceExtensions
 #if WINDOWS
 		services.AddTransient<Pages.Settings.UsbCameraSettingsPage>();
 #endif
+		services.AddTransient<Pages.Settings.CommandsSettingsPage>();
+		services.AddTransient<Pages.Settings.CommandDetailSettingsPage>();
 		services.AddTransient<Pages.Settings.AdvancedSettingsPage>();
 		services.AddTransient<Pages.MediaGalleryPage>();
 		services.AddTransient<Pages.ImageViewerPage>();

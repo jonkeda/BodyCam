@@ -51,18 +51,28 @@ internal static partial class MediaConfigParser
 
     /// <summary>
     /// Try to parse a timestamp from the filename.
-    /// Common patterns: IMG_20260430_123045.jpg, VID_20260430_123100.mp4, etc.
+    /// Common patterns: IMG_20260430_123045.jpg, VID_20260430_123100.mp4,
+    /// and M01 Pro media names such as 20260531190723036.jpg.
     /// If parsing fails, returns null (caller should use current time).
     /// </summary>
     private static DateTimeOffset? TryParseTimestamp(string name)
     {
         // Match pattern: {prefix}_{YYYYMMDD}_{HHMMSS}.{ext}
-        var match = TimestampPattern().Match(name);
+        var match = PrefixedTimestampPattern().Match(name);
+        if (!match.Success)
+        {
+            // Match pattern: {YYYYMMDD}{HHMMSS}{fff?}.{ext}
+            match = BareTimestampPattern().Match(name);
+        }
+
         if (!match.Success)
             return null;
 
         var datePart = match.Groups[1].Value; // YYYYMMDD
         var timePart = match.Groups[2].Value; // HHMMSS
+        var millisPart = match.Groups.Count > 3 && match.Groups[3].Success
+            ? match.Groups[3].Value
+            : string.Empty;
 
         if (datePart.Length != 8 || timePart.Length != 6)
             return null;
@@ -73,10 +83,14 @@ internal static partial class MediaConfigParser
         var hour = int.Parse(timePart.AsSpan(0, 2), CultureInfo.InvariantCulture);
         var minute = int.Parse(timePart.AsSpan(2, 2), CultureInfo.InvariantCulture);
         var second = int.Parse(timePart.AsSpan(4, 2), CultureInfo.InvariantCulture);
+        var milliseconds = millisPart.Length == 3
+            ? int.Parse(millisPart, CultureInfo.InvariantCulture)
+            : 0;
 
         try
         {
-            return new DateTimeOffset(year, month, day, hour, minute, second, TimeSpan.Zero);
+            return new DateTimeOffset(year, month, day, hour, minute, second, TimeSpan.Zero)
+                .AddMilliseconds(milliseconds);
         }
         catch (ArgumentOutOfRangeException)
         {
@@ -85,5 +99,8 @@ internal static partial class MediaConfigParser
     }
 
     [GeneratedRegex(@"_(\d{8})_(\d{6})\.", RegexOptions.Compiled)]
-    private static partial Regex TimestampPattern();
+    private static partial Regex PrefixedTimestampPattern();
+
+    [GeneratedRegex(@"(?:^|[^\d])(\d{8})(\d{6})(\d{3})?(?=\D|$)", RegexOptions.Compiled)]
+    private static partial Regex BareTimestampPattern();
 }

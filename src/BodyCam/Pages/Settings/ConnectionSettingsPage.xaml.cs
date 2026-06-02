@@ -10,15 +10,15 @@ public partial class ConnectionSettingsPage : ContentPage
         BindingContext = viewModel;
     }
 
-    private void OnOpenAiChecked(object? sender, CheckedChangedEventArgs e)
+    private void OnProviderChecked(object? sender, CheckedChangedEventArgs e)
     {
-        if (e.Value && BindingContext is ConnectionViewModel vm)
-            vm.SelectedProvider = OpenAiProvider.OpenAi;
-    }
+        if (!e.Value)
+            return;
 
-    private void OnAzureChecked(object? sender, CheckedChangedEventArgs e)
-    {
-        if (e.Value && BindingContext is ConnectionViewModel vm)
-            vm.SelectedProvider = OpenAiProvider.Azure;
+        if (sender is RadioButton { BindingContext: ProviderOptionViewModel option }
+            && BindingContext is ConnectionViewModel vm)
+        {
+            vm.SelectedProviderId = option.Id;
+        }
     }
 }

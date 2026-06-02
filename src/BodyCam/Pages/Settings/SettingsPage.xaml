@@ -22,8 +22,8 @@
                    FontSize="12" TextColor="Gray" FontAttributes="Italic" />
 
             <views:SettingsCardView CardAutomationId="ConnectionSettingsCard"
-                                    Icon="🔗" CardTitle="Connection"
-                                    Description="Provider, API key, models"
+                                    Icon="🔗" CardTitle="LLM Providers"
+                                    Description="Providers, API keys, models"
                                     CardClicked="OnConnectionTapped" />
 
             <views:SettingsCardView CardAutomationId="VoiceSettingsCard"
@@ -35,6 +35,11 @@
                                     Icon="📱" CardTitle="Devices"
                                     Description="Camera, microphone, speaker"
                                     CardClicked="OnDevicesTapped" />
+
+            <views:SettingsCardView CardAutomationId="CommandsSettingsCard"
+                                    Icon="⚡" CardTitle="Commands"
+                                    Description="Look, read, scan behavior"
+                                    CardClicked="OnCommandsTapped" />
 
             <views:SettingsCardView CardAutomationId="AdvancedSettingsCard"
                                     Icon="⚙" CardTitle="Advanced"

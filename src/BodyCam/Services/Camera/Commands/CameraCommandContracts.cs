@@ -32,6 +32,17 @@ public sealed record CommandOptionDefinition(
     object? DefaultValue,
     bool PersistLastSelectedValue);
 
+public sealed record CommandPromptDefinition(
+    string Key,
+    string DisplayName,
+    string Text,
+    string Prompt);
+
+public sealed record CameraCommandTranscriptInput(
+    string Text,
+    byte[]? ImageBytes,
+    string? ImageCaption);
+
 public sealed record CameraCommandRequest(
     string CommandId,
     CameraCommandMode? Mode,
@@ -52,7 +63,8 @@ public sealed record CameraCommandResult(
     bool Success,
     string TranscriptText,
     object? Data,
-    string? Error);
+    string? Error,
+    CameraCommandTranscriptInput? TranscriptInput = null);
 
 public interface ICameraCommand
 {
@@ -64,6 +76,11 @@ public interface ICameraCommand
 
     CameraCommandMode ResolveMode(CameraCommandRequest request, CameraCommandContext context);
     Task<CameraCommandResult> ExecuteAsync(CameraCommandContext context, CancellationToken ct);
+}
+
+public interface ICommandPromptProvider
+{
+    IReadOnlyList<CommandPromptDefinition> PromptDefinitions { get; }
 }
 
 public interface ICameraCommandRegistry

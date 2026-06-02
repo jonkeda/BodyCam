@@ -87,7 +87,7 @@ public class CameraCommandServiceTests
     {
         var settings = Substitute.For<ISettingsService>();
         settings.DefaultTouchCommandMode.Returns(CameraCommandMode.ManualAim);
-        settings.DefaultLookDetailLevel.Returns(LookDetailLevel.Summary);
+        settings.DefaultLookDetailLevel.Returns(LookDetailLevel.Overview);
         settings.DefaultReadDetailLevel.Returns(ReadDetailLevel.Full);
         settings.ConfirmExternalScanActions.Returns(true);
         return settings;

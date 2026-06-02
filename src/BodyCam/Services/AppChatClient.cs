@@ -1,4 +1,5 @@
 using Microsoft.Extensions.AI;
+using BodyCam.Services.AiProviders;
 
 namespace BodyCam.Services;
 
@@ -11,13 +12,18 @@ public sealed class AppChatClient : IChatClient
 {
 	private readonly IApiKeyService _apiKeyService;
 	private readonly AppSettings _settings;
+	private readonly IAnalyticsService? _analytics;
 	private IChatClient? _inner;
 	private readonly SemaphoreSlim _gate = new(1, 1);
 
-	public AppChatClient(IApiKeyService apiKeyService, AppSettings settings)
+	public AppChatClient(
+		IApiKeyService apiKeyService,
+		AppSettings settings,
+		IAnalyticsService? analytics = null)
 	{
 		_apiKeyService = apiKeyService;
 		_settings = settings;
+		_analytics = analytics;
 	}
 
 	public async Task<ChatResponse> GetResponseAsync(
@@ -61,22 +67,32 @@ public sealed class AppChatClient : IChatClient
 			if (_inner is not null)
 				return _inner;
 
-			var key = await _apiKeyService.GetApiKeyAsync();
+			var providerId = AiProviderIds.Normalize(_settings.ProviderId);
+			var key = await _apiKeyService.GetApiKeyAsync(providerId);
 			if (string.IsNullOrEmpty(key))
 				throw new InvalidOperationException(
 					"API key not configured. Open Settings and enter your OpenAI or Azure OpenAI key.");
 
-			if (_settings.Provider == OpenAiProvider.Azure)
+			if (providerId == AiProviderIds.AzureOpenAi)
 			{
 				var credential = new Azure.AzureKeyCredential(key);
 				var azureClient = new Azure.AI.OpenAI.AzureOpenAIClient(
 					new Uri(_settings.AzureEndpoint!), credential);
 				_inner = azureClient.GetChatClient(_settings.AzureChatDeploymentName!).AsIChatClient();
 			}
-			else
+			else if (providerId == AiProviderIds.OpenAi)
 			{
 				var openAiClient = new OpenAI.OpenAIClient(key);
 				_inner = openAiClient.GetChatClient(_settings.ChatModel).AsIChatClient();
+			}
+			else if (providerId == AiProviderIds.XaiGrok)
+			{
+				_inner = new GrokChatClient(key, _settings, _analytics);
+			}
+			else
+			{
+				throw new InvalidOperationException(
+					$"Chat client creation is not implemented for provider '{providerId}'.");
 			}
 
 			return _inner;

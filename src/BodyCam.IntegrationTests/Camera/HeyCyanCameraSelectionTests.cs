@@ -283,12 +283,17 @@ public class HeyCyanCameraSelectionTests
     {
         public string? ActiveCameraProvider { get; set; }
         public CameraCommandMode DefaultTouchCommandMode { get; set; } = CameraCommandMode.ManualAim;
-        public LookDetailLevel DefaultLookDetailLevel { get; set; } = LookDetailLevel.Summary;
+        public LookDetailLevel DefaultLookDetailLevel { get; set; } = LookDetailLevel.Overview;
         public ReadDetailLevel DefaultReadDetailLevel { get; set; } = ReadDetailLevel.Full;
         public bool ConfirmExternalScanActions { get; set; } = true;
         public string? ActiveAudioInputProvider { get; set; }
         public string? ActiveAudioOutputProvider { get; set; }
-        public OpenAiProvider Provider { get; set; }
+        public string ProviderId { get; set; } = BodyCam.Services.AiProviders.AiProviderIds.OpenAi;
+        public OpenAiProvider Provider
+        {
+            get => BodyCam.Services.AiProviders.AiProviderIds.ToLegacyProvider(ProviderId);
+            set => ProviderId = BodyCam.Services.AiProviders.AiProviderIds.FromLegacyProvider(value);
+        }
         public string? AzureEndpoint { get; set; }
         public string? AzureRealtimeDeploymentName { get; set; }
         public string? AzureChatDeploymentName { get; set; }

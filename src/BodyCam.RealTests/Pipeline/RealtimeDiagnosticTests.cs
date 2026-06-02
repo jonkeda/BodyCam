@@ -18,10 +18,10 @@ public class RealtimeDiagnosticTests
     public async Task DirectSession_SendText_ReceivesResponse()
     {
         var settings = RealtimeFixture.LoadSettings();
-        var apiKey = RealtimeFixture.LoadApiKey(settings.Provider);
+        var apiKey = RealtimeFixture.LoadApiKey(settings.ProviderId);
         var client = RealtimeFixture.BuildClient(apiKey, settings);
 
-        _output.WriteLine($"Provider: {settings.Provider}");
+        _output.WriteLine($"Provider: {settings.ProviderId}");
         _output.WriteLine($"Creating session...");
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));

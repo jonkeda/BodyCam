@@ -9,24 +9,53 @@ namespace BodyCam.Platforms.Android.HeyCyan;
 /// Wraps WiFiP2pHttpClient (which binds the process to the P2P network) behind
 /// the cross-platform IHeyCyanHttpClient interface.
 /// </summary>
-internal sealed class AndroidHeyCyanHttpClientFactory : IHeyCyanHttpClientFactory
+internal sealed class AndroidHeyCyanHttpClientFactory : IHeyCyanHttpClientFactory, IHeyCyanTransferPreparation
 {
     private readonly ILoggerFactory _logFactory;
+    private WiFiP2pHttpClient? _preparedClient;
 
     public AndroidHeyCyanHttpClientFactory(ILoggerFactory logFactory)
     {
         _logFactory = logFactory;
     }
 
+    public async Task PrepareForTransferAsync(CancellationToken ct)
+    {
+        if (_preparedClient is not null)
+            await _preparedClient.DisposeAsync().ConfigureAwait(false);
+
+        _preparedClient = new WiFiP2pHttpClient(_logFactory.CreateLogger<WiFiP2pHttpClient>());
+        try
+        {
+            await _preparedClient.PrepareForTransferAsync(ct).ConfigureAwait(false);
+        }
+        catch
+        {
+            await _preparedClient.DisposeAsync().ConfigureAwait(false);
+            _preparedClient = null;
+            throw;
+        }
+    }
+
     public async Task<IHeyCyanHttpClient> CreateAsync(Uri baseUri, CancellationToken ct)
     {
         // Extract the glasses IP from the base URI (e.g. http://192.168.49.x/)
         var host = baseUri.Host;
-        
-        var p2pClient = new WiFiP2pHttpClient(_logFactory.CreateLogger<WiFiP2pHttpClient>());
-        await p2pClient.ConnectAsync(host, ct).ConfigureAwait(false);
-        
-        return new AndroidHeyCyanHttpClient(p2pClient);
+
+        var p2pClient = _preparedClient
+            ?? new WiFiP2pHttpClient(_logFactory.CreateLogger<WiFiP2pHttpClient>());
+        _preparedClient = null;
+
+        try
+        {
+            await p2pClient.ConnectAsync(host, ct).ConfigureAwait(false);
+            return new AndroidHeyCyanHttpClient(p2pClient);
+        }
+        catch
+        {
+            await p2pClient.DisposeAsync().ConfigureAwait(false);
+            throw;
+        }
     }
 
     /// <summary>

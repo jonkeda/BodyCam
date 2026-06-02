@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using BodyCam.Mvvm;
+using Microsoft.Maui.Controls;
 
 namespace BodyCam.Models;
 
@@ -32,12 +33,15 @@ public class TranscriptEntry : ObservableObject
             if (SetProperty(ref _text, value))
             {
                 OnPropertyChanged(nameof(DisplayText));
-                OnPropertyChanged(nameof(AccessibleText));
+                OnPropertyChanged(nameof(FormattedText));
+                if (!IsThinking)
+                    OnPropertyChanged(nameof(AccessibleText));
             }
         }
     }
 
     public string DisplayText => $"{Role}: {Text}";
+    public FormattedString FormattedText => TranscriptMarkdownFormatter.ToFormattedString(Role, Text, RoleColor);
 
     public string AutomationId => Role switch
     {
@@ -51,7 +55,7 @@ public class TranscriptEntry : ObservableObject
         ? $"{Role} is thinking"
         : string.IsNullOrEmpty(Text)
             ? Role
-            : $"{Role}: {Text}";
+            : $"{Role}: {TranscriptMarkdownFormatter.ToPlainText(Text)}";
 
     public ImageSource? Image { get; set; }
     public string? ImageCaption { get; set; }

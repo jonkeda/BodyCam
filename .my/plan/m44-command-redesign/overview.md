@@ -345,6 +345,8 @@ more than visual polish:
 
 1. [Command Contracts And Defaults](phase-1-command-contracts.md)
 2. [Look Command](phase-2-look-command.md)
+2b. [Look Command And Command Settings](phase-2b-look-command-and-command-settings.md)
+2c. [Capture Busy State](phase-2c-capture-busy-state.md)
 3. [Read Command](phase-3-read-command.md)
 4. [Scan Command](phase-4-scan-command.md)
 5. [UI And Accessibility](phase-5-ui-accessibility.md)

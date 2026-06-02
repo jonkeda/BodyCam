@@ -1,5 +1,6 @@
 using System.Text.Json;
 using BodyCam.Models;
+using BodyCam.Services.AiProviders;
 using BodyCam.Services.Camera.Commands;
 
 namespace BodyCam.Services;
@@ -9,6 +10,7 @@ public class SettingsService : ISettingsService
     // Serialize writes to preferences.dat — MAUI's UnpackagedPreferencesImplementation
     // opens the file with FileShare.None, so concurrent Set() calls throw IOException.
     private static readonly object _prefsLock = new();
+    private const string LegacyProviderPreferenceKey = "Provider";
 
     // Models
     public string RealtimeModel
@@ -61,11 +63,33 @@ public class SettingsService : ISettingsService
     }
 
     // Provider
+    public string ProviderId
+    {
+        get
+        {
+            var providerId = Preferences.Get(nameof(ProviderId), string.Empty);
+            if (!string.IsNullOrWhiteSpace(providerId))
+                return AiProviderIds.Normalize(providerId);
+
+            var legacyProvider = Preferences.Get(LegacyProviderPreferenceKey, string.Empty);
+            return AiProviderIds.FromLegacyProviderName(legacyProvider);
+        }
+        set
+        {
+            var providerId = AiProviderIds.Normalize(value);
+            lock (_prefsLock)
+            {
+                Preferences.Set(nameof(ProviderId), providerId);
+                Preferences.Set(LegacyProviderPreferenceKey, AiProviderIds.ToLegacyProvider(providerId).ToString());
+            }
+        }
+    }
+
+    [Obsolete("Use ProviderId instead.")]
     public OpenAiProvider Provider
     {
-        get => Enum.TryParse<OpenAiProvider>(Preferences.Get(nameof(Provider), nameof(OpenAiProvider.OpenAi)), true, out var p)
-            ? p : OpenAiProvider.OpenAi;
-        set { lock (_prefsLock) Preferences.Set(nameof(Provider), value.ToString()); }
+        get => AiProviderIds.ToLegacyProvider(ProviderId);
+        set => ProviderId = AiProviderIds.FromLegacyProvider(value);
     }
 
     public string? AzureEndpoint
@@ -145,11 +169,11 @@ public class SettingsService : ISettingsService
     public LookDetailLevel DefaultLookDetailLevel
     {
         get => Enum.TryParse<LookDetailLevel>(
-            Preferences.Get(nameof(DefaultLookDetailLevel), nameof(LookDetailLevel.Summary)),
+            Preferences.Get(nameof(DefaultLookDetailLevel), nameof(LookDetailLevel.Overview)),
             true,
             out var level)
             ? level
-            : LookDetailLevel.Summary;
+            : LookDetailLevel.Overview;
         set { lock (_prefsLock) Preferences.Set(nameof(DefaultLookDetailLevel), value.ToString()); }
     }
 

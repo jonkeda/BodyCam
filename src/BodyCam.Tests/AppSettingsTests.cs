@@ -1,4 +1,5 @@
 using FluentAssertions;
+using BodyCam.Services.AiProviders;
 
 namespace BodyCam.Tests;
 
@@ -11,7 +12,7 @@ public class AppSettingsTests
     {
         var settings = new AppSettings
         {
-            Provider = OpenAiProvider.OpenAi,
+            ProviderId = AiProviderIds.OpenAi,
             RealtimeModel = "gpt-realtime-1.5"
         };
 
@@ -27,7 +28,7 @@ public class AppSettingsTests
     {
         var settings = new AppSettings
         {
-            Provider = OpenAiProvider.Azure,
+            ProviderId = AiProviderIds.AzureOpenAi,
             AzureEndpoint = "https://myresource.cognitiveservices.azure.com",
             AzureRealtimeDeploymentName = "my-rt-deploy",
             AzureApiVersion = "2025-04-01-preview"
@@ -46,7 +47,7 @@ public class AppSettingsTests
     [Fact]
     public void GetChatUri_OpenAi_ReturnsChatCompletionsUrl()
     {
-        var settings = new AppSettings { Provider = OpenAiProvider.OpenAi };
+        var settings = new AppSettings { ProviderId = AiProviderIds.OpenAi };
 
         var uri = settings.GetChatUri();
 
@@ -58,7 +59,7 @@ public class AppSettingsTests
     {
         var settings = new AppSettings
         {
-            Provider = OpenAiProvider.Azure,
+            ProviderId = AiProviderIds.AzureOpenAi,
             AzureEndpoint = "https://myresource.cognitiveservices.azure.com",
             AzureChatDeploymentName = "my-chat",
             AzureApiVersion = "2025-04-01-preview"
@@ -77,7 +78,7 @@ public class AppSettingsTests
     [Fact]
     public void GetVisionUri_OpenAi_ReturnsChatCompletionsUrl()
     {
-        var settings = new AppSettings { Provider = OpenAiProvider.OpenAi };
+        var settings = new AppSettings { ProviderId = AiProviderIds.OpenAi };
 
         var uri = settings.GetVisionUri();
 
@@ -89,7 +90,7 @@ public class AppSettingsTests
     {
         var settings = new AppSettings
         {
-            Provider = OpenAiProvider.Azure,
+            ProviderId = AiProviderIds.AzureOpenAi,
             AzureEndpoint = "https://myresource.cognitiveservices.azure.com",
             AzureVisionDeploymentName = "my-vision",
             AzureApiVersion = "2025-04-01-preview"
@@ -114,6 +115,16 @@ public class AppSettingsTests
     {
         var settings = new AppSettings();
         settings.AzureApiVersion.Should().Be("2025-04-01-preview");
+    }
+
+    [Fact]
+    public void LegacyProvider_SetToAzure_MigratesProviderId()
+    {
+#pragma warning disable CS0618
+        var settings = new AppSettings { Provider = OpenAiProvider.Azure };
+#pragma warning restore CS0618
+
+        settings.ProviderId.Should().Be(AiProviderIds.AzureOpenAi);
     }
 
 }

@@ -1,4 +1,5 @@
 using BodyCam.Services;
+using BodyCam.Services.AiProviders;
 using Microsoft.Extensions.AI;
 using OpenAI.Realtime;
 
@@ -15,7 +16,7 @@ internal static class RealtimeFixture
         var provider = DotEnvReader.Read("OPENAI_PROVIDER");
         if (string.Equals(provider, "azure", StringComparison.OrdinalIgnoreCase))
         {
-            settings.Provider = OpenAiProvider.Azure;
+            settings.ProviderId = AiProviderIds.AzureOpenAi;
             settings.AzureEndpoint = DotEnvReader.Read("AZURE_OPENAI_ENDPOINT");
             settings.AzureRealtimeDeploymentName = DotEnvReader.Read("AZURE_OPENAI_DEPLOYMENT");
             settings.AzureChatDeploymentName = DotEnvReader.Read("AZURE_OPENAI_CHAT_DEPLOYMENT");
@@ -26,18 +27,19 @@ internal static class RealtimeFixture
         return settings;
     }
 
-    internal static string LoadApiKey(OpenAiProvider provider)
+    internal static string LoadApiKey(string providerId)
     {
-        var key = provider == OpenAiProvider.Azure
+        var isAzure = AiProviderIds.Normalize(providerId) == AiProviderIds.AzureOpenAi;
+        var key = isAzure
             ? DotEnvReader.Read("AZURE_OPENAI_API_KEY")
             : DotEnvReader.Read("OPENAI_API_KEY");
         return key ?? throw new InvalidOperationException(
-            $"API key not found. Set {(provider == OpenAiProvider.Azure ? "AZURE_OPENAI_API_KEY" : "OPENAI_API_KEY")}.");
+            $"API key not found. Set {(isAzure ? "AZURE_OPENAI_API_KEY" : "OPENAI_API_KEY")}.");
     }
 
     internal static IRealtimeClient BuildClient(string apiKey, AppSettings settings)
     {
-        if (settings.Provider == OpenAiProvider.Azure)
+        if (AiProviderIds.Normalize(settings.ProviderId) == AiProviderIds.AzureOpenAi)
         {
             var rtOpts = new RealtimeClientOptions
             {

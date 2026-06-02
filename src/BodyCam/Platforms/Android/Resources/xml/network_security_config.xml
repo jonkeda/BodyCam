@@ -1,8 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-	<domain-config cleartextTrafficPermitted="true">
-		<!-- Default Wi-Fi-Direct group owner and glasses P2P subnet. Phase 2 Wave 1. -->
-		<domain includeSubdomains="true">192.168.49.1</domain>
-		<domain includeSubdomains="true">192.168.49.0</domain>
-	</domain-config>
+	<!--
+		The glasses expose local HTTP endpoints such as
+		http://192.168.49.x/files/media.config over Wi-Fi Direct. Android network
+		security config does not support a subnet wildcard for IP addresses, so a
+		base config is the practical option for this local-device transfer path.
+	-->
+	<base-config cleartextTrafficPermitted="true">
+		<trust-anchors>
+			<certificates src="system" />
+		</trust-anchors>
+	</base-config>
 </network-security-config>

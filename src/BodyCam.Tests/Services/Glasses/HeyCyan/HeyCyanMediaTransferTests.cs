@@ -42,6 +42,30 @@ public class HeyCyanMediaTransferTests
     }
 
     [Fact]
+    public async Task ListAsync_handles_phase_1e_mixed_m01_media_config()
+    {
+        var (transfer, _, factory, _) = Build();
+        factory.ScriptedMediaConfig = """
+            20260531184722907.mp4
+            20260531190723036.jpg
+            20260531190726933.mp4
+            """;
+
+        var result = await transfer.ListAsync(CancellationToken.None);
+
+        result.Should().HaveCount(3);
+        result.Select(e => e.Name).Should().Equal(
+            "20260531184722907.mp4",
+            "20260531190723036.jpg",
+            "20260531190726933.mp4");
+        result.Select(e => e.Kind).Should().Equal(
+            HeyCyanMediaKind.Video,
+            HeyCyanMediaKind.Photo,
+            HeyCyanMediaKind.Video);
+        factory.RequestedStringPaths.Should().Equal("/files/media.config");
+    }
+
+    [Fact]
     public async Task DownloadAsync_enters_transfer_mode_and_returns_bytes()
     {
         var (transfer, session, factory, _) = Build();
@@ -53,6 +77,25 @@ public class HeyCyanMediaTransferTests
         result.Should().BeEquivalentTo(expectedBytes);
         session.EnterCount.Should().Be(1);
         session.ExitCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task DownloadAsync_uses_files_endpoint_for_phase_1e_jpeg_and_mp4()
+    {
+        var (transfer, _, factory, _) = Build();
+        var jpegBytes = new byte[] { 0xFF, 0xD8, 0xFF, 0xE0 };
+        var mp4Bytes = new byte[] { 0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70 };
+        factory.ScriptedFileContent["20260531190723036.jpg"] = jpegBytes;
+        factory.ScriptedFileContent["20260531190726933.mp4"] = mp4Bytes;
+
+        var jpg = await transfer.DownloadAsync("20260531190723036.jpg", CancellationToken.None);
+        var mp4 = await transfer.DownloadAsync("20260531190726933.mp4", CancellationToken.None);
+
+        jpg.Should().Equal(jpegBytes);
+        mp4.Should().Equal(mp4Bytes);
+        factory.RequestedBytePaths.Should().Equal(
+            "/files/20260531190723036.jpg",
+            "/files/20260531190726933.mp4");
     }
 
     [Fact]
@@ -289,6 +332,9 @@ public class HeyCyanMediaTransferTests
         public string ScriptedMediaConfig { get; set; } = "";
         public Dictionary<string, byte[]> ScriptedFileContent { get; } = new();
         public Func<string, CancellationToken, byte[]>? OnGetByteArray { get; set; }
+        public List<string> RequestedStringPaths { get; } = new();
+        public List<string> RequestedBytePaths { get; } = new();
+        public List<string> RequestedStreamPaths { get; } = new();
 
         public Task<IHeyCyanHttpClient> CreateAsync(Uri baseUri, CancellationToken _)
         {
@@ -310,6 +356,8 @@ public class HeyCyanMediaTransferTests
 
             public Task<string> GetStringAsync(string path, CancellationToken _)
             {
+                _factory.RequestedStringPaths.Add(path);
+
                 if (path == "/files/media.config")
                     return Task.FromResult(_factory.ScriptedMediaConfig);
                 throw new InvalidOperationException($"Unexpected path: {path}");
@@ -317,6 +365,8 @@ public class HeyCyanMediaTransferTests
 
             public Task<byte[]> GetByteArrayAsync(string path, CancellationToken ct)
             {
+                _factory.RequestedBytePaths.Add(path);
+
                 if (_factory.OnGetByteArray is not null)
                     return Task.FromResult(_factory.OnGetByteArray(path, ct));
 
@@ -330,6 +380,8 @@ public class HeyCyanMediaTransferTests
 
             public Task<Stream> GetStreamAsync(string path, CancellationToken ct)
             {
+                _factory.RequestedStreamPaths.Add(path);
+
                 if (_factory.OnGetByteArray is not null)
                 {
                     var streamBytes = _factory.OnGetByteArray(path, ct);

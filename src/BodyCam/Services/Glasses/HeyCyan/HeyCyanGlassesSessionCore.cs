@@ -8,12 +8,16 @@ namespace BodyCam.Services.Glasses.HeyCyan;
 /// </summary>
 internal sealed class HeyCyanGlassesSessionCore : Mvvm.ViewModelBase, IHeyCyanGlassesSession
 {
+    private static readonly System.Net.IPAddress DefaultP2pProbeSeed = System.Net.IPAddress.Parse("192.168.49.183");
+
     private readonly IHeyCyanSdkBridge _bridge;
     private readonly ILogger _log;
     private readonly SemaphoreSlim _connectGate = new(1, 1);
     private HeyCyanState _state = HeyCyanState.Disconnected;
     private HeyCyanDeviceInfo? _device;
     private HeyCyanMediaCount? _lastMediaCount;
+    private CancellationTokenSource? _transferKeepaliveCts;
+    private Task? _transferKeepaliveTask;
 
     public HeyCyanState State
     {
@@ -115,6 +119,7 @@ internal sealed class HeyCyanGlassesSessionCore : Mvvm.ViewModelBase, IHeyCyanGl
             return;
 
         State = HeyCyanState.Disconnecting;
+        await StopTransferKeepaliveAsync().ConfigureAwait(false);
         await _bridge.DisconnectAsync().ConfigureAwait(false);
         State = HeyCyanState.Disconnected;
         Device = null;
@@ -155,10 +160,10 @@ internal sealed class HeyCyanGlassesSessionCore : Mvvm.ViewModelBase, IHeyCyanGl
     }
 
     public Task StartVideoAsync(CancellationToken ct)
-        => throw new NotImplementedException("M33 Phase 2");
+        => _bridge.SendAsync(HeyCyanCommands.StartVideoRecording(), ct);
 
     public Task StopVideoAsync(CancellationToken ct)
-        => throw new NotImplementedException("M33 Phase 2");
+        => _bridge.SendAsync(HeyCyanCommands.StopVideoRecording(), ct);
 
     public Task StartAudioAsync(CancellationToken ct)
         => throw new NotImplementedException("M33 Phase 5 — recorded OPUS, not live mic");
@@ -177,10 +182,9 @@ internal sealed class HeyCyanGlassesSessionCore : Mvvm.ViewModelBase, IHeyCyanGl
         State = HeyCyanState.TransferMode;
         try
         {
-            // Step 1: Send BLE enter transfer mode command (0x02, 0x01, 0x04)
-            _ = await _bridge.SendAsync(HeyCyanCommands.EnterTransferMode(), ct).ConfigureAwait(false);
+            await StopTransferKeepaliveAsync().ConfigureAwait(false);
 
-            // Step 2: Wait for the GlassesDeviceNotifyRsp frame where LoadData[6] == 0x08 (IP notify)
+            // Subscribe before sending so a synchronous vendor callback cannot be missed.
             var ipTcs = new TaskCompletionSource<System.Net.IPAddress>(TaskCreationOptions.RunContinuationsAsynchronously);
             
             void OnRawNotify(object? s, HeyCyanRawNotify e)
@@ -208,14 +212,42 @@ internal sealed class HeyCyanGlassesSessionCore : Mvvm.ViewModelBase, IHeyCyanGl
             _bridge.RawNotify += OnRawNotify;
             try
             {
-                using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(12));
-                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
-                linkedCts.Token.Register(() => ipTcs.TrySetCanceled(linkedCts.Token));
+                // Step 1: Send BLE media transfer command (0x02, 0x01, 0x04).
+                _ = await _bridge.SendAsync(HeyCyanCommands.EnterTransferMode(), ct).ConfigureAwait(false);
 
-                var ip = await ipTcs.Task.ConfigureAwait(false);
+                // Step 2: Ask for the Wi-Fi IP. Some firmware reports it through a
+                // GlassesDeviceNotifyRsp 0x08 frame; some only responds after polling.
+                for (var attempt = 0; attempt < 3 && !ipTcs.Task.IsCompleted; attempt++)
+                {
+                    try
+                    {
+                        _ = await _bridge.SendAsync(HeyCyanCommands.GetWifiIP(), ct).ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                    {
+                        throw;
+                    }
+                    catch (Exception ex)
+                    {
+                        _log.LogDebug(ex, "GetWifiIP poll failed during transfer mode entry");
+                    }
+                }
+
+                // Step 3: Prefer the BLE-reported IP, but do not block the Wi-Fi
+                // Direct HTTP path on it. The Android HTTP client validates the
+                // requested host and probes the P2P subnet once the group forms.
+                var delayTask = Task.Delay(TimeSpan.FromSeconds(2), ct);
+                var completed = await Task.WhenAny(ipTcs.Task, delayTask).ConfigureAwait(false);
+                var ip = completed == ipTcs.Task
+                    ? await ipTcs.Task.ConfigureAwait(false)
+                    : DefaultP2pProbeSeed;
+
                 var baseUrl = $"http://{ip}/";
                 
-                _log.LogInformation("Transfer mode entered, glasses IP: {Ip}", ip);
+                _log.LogInformation("Transfer mode entered, initial glasses IP candidate: {Ip}", ip);
+
+                await SendTransferActivationPulseAsync(ct).ConfigureAwait(false);
+                StartTransferKeepalive();
                 
                 // Return session with base URL (filenames will be fetched via HTTP media.config by caller)
                 return new HeyCyanTransferSession(baseUrl, Array.Empty<string>());
@@ -227,6 +259,7 @@ internal sealed class HeyCyanGlassesSessionCore : Mvvm.ViewModelBase, IHeyCyanGl
         }
         catch
         {
+            await StopTransferKeepaliveAsync().ConfigureAwait(false);
             State = HeyCyanState.Connected;
             throw;
         }
@@ -242,6 +275,7 @@ internal sealed class HeyCyanGlassesSessionCore : Mvvm.ViewModelBase, IHeyCyanGl
 
         try
         {
+            await StopTransferKeepaliveAsync().ConfigureAwait(false);
             _ = await _bridge.SendAsync(HeyCyanCommands.ExitTransferMode(), ct).ConfigureAwait(false);
             _log.LogInformation("Transfer mode exited");
         }
@@ -258,6 +292,7 @@ internal sealed class HeyCyanGlassesSessionCore : Mvvm.ViewModelBase, IHeyCyanGl
             try { await DisconnectAsync(CancellationToken.None).ConfigureAwait(false); }
             catch (Exception ex) { _log.LogWarning(ex, "Dispose disconnect failed"); }
         }
+        await StopTransferKeepaliveAsync().ConfigureAwait(false);
         _bridge.Dispose();
         _connectGate.Dispose();
     }
@@ -281,6 +316,9 @@ internal sealed class HeyCyanGlassesSessionCore : Mvvm.ViewModelBase, IHeyCyanGl
 
     private void OnBridgeConnectionStateChanged(object? s, HeyCyanConnectionState e)
     {
+        if (e == HeyCyanConnectionState.Disconnected)
+            _transferKeepaliveCts?.Cancel();
+
         State = e switch
         {
             HeyCyanConnectionState.Disconnected => HeyCyanState.Disconnected,
@@ -290,5 +328,94 @@ internal sealed class HeyCyanGlassesSessionCore : Mvvm.ViewModelBase, IHeyCyanGl
             _ => State,
         };
         if (e == HeyCyanConnectionState.Disconnected) Device = null;
+    }
+
+    private async Task SendTransferActivationPulseAsync(CancellationToken ct)
+    {
+        try
+        {
+            _ = await _bridge.SendAsync(HeyCyanCommands.GetDeviceConfig(), ct).ConfigureAwait(false);
+            _log.LogInformation("Transfer activation pulse sent");
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _log.LogDebug(ex, "Transfer activation pulse failed");
+        }
+    }
+
+    private void StartTransferKeepalive()
+    {
+        var cts = new CancellationTokenSource();
+        _transferKeepaliveCts = cts;
+        _transferKeepaliveTask = RunTransferKeepaliveAsync(cts.Token);
+    }
+
+    private async Task RunTransferKeepaliveAsync(CancellationToken ct)
+    {
+        var pulse = 0;
+        try
+        {
+            while (!ct.IsCancellationRequested)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(5), ct).ConfigureAwait(false);
+                pulse++;
+
+                var command = pulse % 3 == 0
+                    ? HeyCyanCommands.GetDeviceConfig()
+                    : HeyCyanCommands.GetWifiIP();
+
+                try
+                {
+                    _ = await _bridge.SendAsync(command, ct).ConfigureAwait(false);
+                    _log.LogDebug("Transfer keepalive sent action 0x{Action:X2}", command[1]);
+                }
+                catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    _log.LogDebug(ex, "Transfer keepalive failed");
+                }
+            }
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            // Normal transfer teardown.
+        }
+    }
+
+    private async Task StopTransferKeepaliveAsync()
+    {
+        var cts = _transferKeepaliveCts;
+        var task = _transferKeepaliveTask;
+        _transferKeepaliveCts = null;
+        _transferKeepaliveTask = null;
+
+        if (cts is null)
+            return;
+
+        try
+        {
+            cts.Cancel();
+            if (task is not null)
+                await task.ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            // Normal transfer teardown.
+        }
+        catch (Exception ex)
+        {
+            _log.LogDebug(ex, "Transfer keepalive cleanup failed");
+        }
+        finally
+        {
+            cts.Dispose();
+        }
     }
 }

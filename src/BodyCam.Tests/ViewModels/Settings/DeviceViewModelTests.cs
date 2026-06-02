@@ -63,7 +63,11 @@ public class DeviceViewModelTests
         var fakeTransfer = new FakeHeyCyanMediaTransfer();
         var fakeBtInput = new FakeBluetoothAudioInputProvider(new[] { "AA:BB:CC:DD:EE:FF" });
         var fakeBtOutput = new FakeBluetoothAudioOutputProvider(new[] { "AA:BB:CC:DD:EE:FF" });
-        var camera = new HeyCyanCameraProvider(session, fakeTransfer, NullLogger<HeyCyanCameraProvider>.Instance);
+        var camera = new HeyCyanCameraProvider(
+            session,
+            fakeTransfer,
+            NullLogger<HeyCyanCameraProvider>.Instance,
+            photoSettleDelay: TimeSpan.Zero);
         var mic = new HeyCyanAudioInputProvider(session, fakeBtInput, NullLogger<HeyCyanAudioInputProvider>.Instance);
         var speaker = new HeyCyanAudioOutputProvider(session, fakeBtOutput, NullLogger<HeyCyanAudioOutputProvider>.Instance);
         var button = new HeyCyanButtonProvider(session, NullLogger<HeyCyanButtonProvider>.Instance);

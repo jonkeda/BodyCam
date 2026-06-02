@@ -88,7 +88,8 @@ public sealed class MainViewModelGlassesTests
         var camera = new HeyCyanCameraProvider(
             session,
             fakeTransfer,
-            NullLogger<HeyCyanCameraProvider>.Instance);
+            NullLogger<HeyCyanCameraProvider>.Instance,
+            photoSettleDelay: TimeSpan.Zero);
 
         var mic = new HeyCyanAudioInputProvider(
             session,

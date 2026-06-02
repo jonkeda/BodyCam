@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:BodyCam.ViewModels.Settings"
+             x:Class="BodyCam.Pages.Settings.CommandsSettingsPage"
+             x:DataType="vm:CommandsViewModel"
+             Shell.TabBarIsVisible="False"
+             Title="Commands">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="12" MaximumWidthRequest="500">
+            <Label Text="Commands"
+                   FontSize="Subtitle"
+                   FontAttributes="Bold"
+                   SemanticProperties.HeadingLevel="Level1" />
+
+            <CollectionView x:Name="CommandsList"
+                            AutomationId="CommandsList"
+                            ItemsSource="{Binding Commands}"
+                            SelectionMode="Single"
+                            SelectionChanged="OnCommandSelected">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="vm:CommandListItem">
+                        <Border StrokeShape="RoundRectangle 8"
+                                Stroke="{AppThemeBinding Light={StaticResource BorderDefault}, Dark={StaticResource BorderDefaultDark}}"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource CardSurface}, Dark={StaticResource CardSurfaceDark}}"
+                                Padding="14"
+                                Margin="0,0,0,10"
+                                AutomationId="{Binding AutomationId}">
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="{Binding DisplayName}"
+                                       FontSize="16"
+                                       FontAttributes="Bold"
+                                       TextColor="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource TextPrimaryDark}}" />
+                                <Label Text="{Binding Summary}"
+                                       FontSize="13"
+                                       TextColor="{AppThemeBinding Light={StaticResource TextMuted}, Dark={StaticResource TextMutedDark}}" />
+                                <Label Text="{Binding ToolText}"
+                                       FontSize="12"
+                                       TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+                            </VerticalStackLayout>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

@@ -1,5 +1,9 @@
 # M33 — HeyCyan Glasses SDK Integration
 
+> **Archived on 2026-05-31.** Superseded by
+> [M46 - HeyCyan C# WiFi Retry](../../m46-heycyan-csharp-wifi-retry/overview.md).
+> Kept for vendor SDK, protocol, and historical design reference only.
+
 **Status:** IMPLEMENTATION COMPLETE — Hardware Validation Pending
 **Goal:** Integrate the vendor **HeyCyan / QCSDK** smart-glasses SDK as the
 concrete implementation backing the M11/M12/M13/M14 provider abstractions and

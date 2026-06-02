@@ -30,9 +30,11 @@ Thumbs.db
 *.env.local
 
 # Local camera/protocol investigation artifacts
+.my/plan/*/captures/
 .my/plan/m38-a9-camera/captures/
 .my/plan/m38-a9-camera/image/
 .my/plan/m41-usb-camera/captures/
+.my/plan/m46-heycyan-csharp-wifi-retry/captures/
 .my/tools/
 /captures/
 *.pcap
@@ -45,6 +47,11 @@ soundflow-apm.zip
 *.apk
 *.aab
 *.apks
+*.dex
+
+# Local decompiler output
+**/jadx-out/
+**/apk-extract/
 
 # Vendor/native binary drops used only for local camera investigation
 tools/BodyCam.A9PhoneProbe/NativeLibs/

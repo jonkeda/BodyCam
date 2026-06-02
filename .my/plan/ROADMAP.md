@@ -226,18 +226,6 @@ All milestones sorted by number. Each task corresponds to one phase from the mil
 
 - [x] Phase 1 — Status bar redesign (icons, rename, cleanup)
 
-### M33 — HeyCyan Glasses SDK Integration
-
-**Plan:** [m33-heycyan-sdk/](m33-heycyan-sdk/)
-
-- [x] Phase 1 — Android AAR Binding & Core Session
-- [x] Phase 2 — Camera Provider (file-based snapshot via WiFi-Direct + HTTP)
-- [x] Phase 3 — BT Audio Providers (live A2DP/HFP routing)
-- [x] Phase 4 — Button Provider (notify-frame pre-recognized gestures)
-- [x] Phase 5 — Recorded Media Pipeline (OPUS / MP4 / JPG, optional M16 hook)
-- [x] Phase 6 — iOS QCSDK.framework Binding
-- [x] Phase 7 — `GlassesDeviceManager` Wiring & Connection UI
-
 ### M35 — .NET 10 Update
 
 **Plan:** [m35-dotnet10-update/](m35-dotnet10-update/)
@@ -274,11 +262,76 @@ only; Read and Scan return as new registered commands in Phase 3/4.
 
 - [ ] Phase 1 — [Command Contracts And Defaults](m44-command-redesign/phase-1-command-contracts.md)
 - [ ] Phase 2 — [Look Command](m44-command-redesign/phase-2-look-command.md)
+- [ ] Phase 2b — [Look Command And Command Settings](m44-command-redesign/phase-2b-look-command-and-command-settings.md)
+- [ ] Phase 2c — [Capture Busy State](m44-command-redesign/phase-2c-capture-busy-state.md)
 - [ ] Phase 3 — [Read Command](m44-command-redesign/phase-3-read-command.md)
 - [ ] Phase 4 — [Scan Command](m44-command-redesign/phase-4-scan-command.md)
 - [ ] Phase 5 — [UI And Accessibility](m44-command-redesign/phase-5-ui-accessibility.md)
 - [ ] Phase 6 — [Provider Coverage And Tests](m44-command-redesign/phase-6-provider-coverage-tests.md)
 - [ ] Phase 7 — [Future Helpful Commands](m44-command-redesign/phase-7-future-commands.md)
+
+### M45 — Grok Provider
+
+**Plan:** [m45-grok-provider/](m45-grok-provider/)
+
+**Goal:** Add xAI/Grok beside OpenAI and Azure OpenAI, validate official OAuth
+options, and create a provider capability model for future providers.
+
+- [ ] Phase 1 — [Provider Registry And Settings Foundation](m45-grok-provider/phase-1-provider-registry-and-settings.md)
+- [ ] Phase 2 — [Grok Auth And OAuth Spike](m45-grok-provider/phase-2-grok-auth-and-oauth-spike.md)
+- [ ] Phase 3 — [Grok Text, Tools, And Vision](m45-grok-provider/phase-3-grok-text-tools-and-vision.md)
+- [ ] Phase 4 — [Grok Voice, STT, And TTS](m45-grok-provider/phase-4-grok-voice-stt-and-tts.md)
+- [ ] Phase 5 — [Grok Images And Command Capabilities](m45-grok-provider/phase-5-grok-images-and-command-capabilities.md)
+- [ ] Phase 6 — [Connection Settings UX And Diagnostics](m45-grok-provider/phase-6-connection-settings-ux-and-diagnostics.md)
+- [ ] Phase 6a — [LLM Provider Settings Design](m45-grok-provider/phase-6a-llm-provider-settings-design.md)
+- [ ] Phase 7 — [Tests, Hardening, And Future Provider Readiness](m45-grok-provider/phase-7-tests-hardening-and-future-provider-readiness.md)
+
+### M46 — HeyCyan C# WiFi Retry
+
+**Plan:** [m46-heycyan-csharp-wifi-retry/](m46-heycyan-csharp-wifi-retry/)
+
+**Goal:** Retry HeyCyan WiFi/media transfer with the M38 method: use the
+official mobile app as an oracle, recover the BLE-to-WiFi sequence, and build a
+C#-only Android path for BLE control, WiFi/P2P connection, and media download.
+
+- [ ] Report — [Options And Chances](m46-heycyan-csharp-wifi-retry/report-options-and-chances.md)
+- [ ] Phase 1 — [Mobile App Oracle Capture](m46-heycyan-csharp-wifi-retry/phase-1-mobile-app-oracle-capture.md)
+- [x] Phase 1a — [First Android Oracle Shot](m46-heycyan-csharp-wifi-retry/phase-1a-first-android-oracle-shot.md)
+- [x] Phase 1b — [Logged-In Location-On Oracle Run](m46-heycyan-csharp-wifi-retry/phase-1b-logged-in-location-on-oracle-run.md)
+- [x] Phase 1c — [Import Transfer Observation](m46-heycyan-csharp-wifi-retry/phase-1c-import-transfer-observation.md)
+- [x] Phase 1d — [Single-Photo Endpoint Probe](m46-heycyan-csharp-wifi-retry/phase-1d-single-photo-endpoint-probe.md)
+- [x] Phase 1e — [Direct Media Download Proof](m46-heycyan-csharp-wifi-retry/phase-1e-direct-media-download-proof.md)
+- [ ] Phase 2 — [BLE And WiFi Protocol Map](m46-heycyan-csharp-wifi-retry/phase-2-ble-and-wifi-protocol-map.md)
+- [ ] Phase 3 — [Android C# WiFi Direct Connector](m46-heycyan-csharp-wifi-retry/phase-3-android-csharp-wifi-direct-connector.md)
+- [ ] Phase 4 — [Media Download And Camera Provider Path](m46-heycyan-csharp-wifi-retry/phase-4-media-download-and-camera-provider-path.md)
+- [x] Phase 4f — [P2P Sequence And Android Routing](m46-heycyan-csharp-wifi-retry/phase-4f-p2p-sequence-and-routing.md)
+- [x] Phase 5 — [Real Hardware Test Harness](m46-heycyan-csharp-wifi-retry/phase-5-real-hardware-test-harness.md)
+- [x] Phase 6 — [BodyCam Integration And UX Gate](m46-heycyan-csharp-wifi-retry/phase-6-bodycam-integration-and-ux-gate.md)
+- [ ] Phase 7 — [Windows C# Wi-Fi Direct Route](m46-heycyan-csharp-wifi-retry/phase-7-windows-csharp-wifi-direct-route.md)
+- [x] Phase 7a — [Windows Field Guide And First Implementation Slice](m46-heycyan-csharp-wifi-retry/phase-7a-windows-field-guide-and-first-implementation-slice.md)
+- [x] Phase 7b — [Windows Route Diagnostics And Candidate Selection](m46-heycyan-csharp-wifi-retry/phase-7b-windows-route-diagnostics-and-candidate-selection.md)
+- [x] Phase 7c — [Windows Artifact Probe](m46-heycyan-csharp-wifi-retry/phase-7c-windows-artifact-probe.md)
+- [x] Phase 7d — [Windows Route Boundary And Pivot](m46-heycyan-csharp-wifi-retry/phase-7d-windows-route-boundary-and-pivot.md)
+- [x] Phase 8 — [Remove Android Vendor AAR BLE Bridge](m46-heycyan-csharp-wifi-retry/phase-8-remove-android-vendor-aar-ble-bridge.md)
+
+### M47 — Device Media Architecture Report
+
+**Plan:** [m47-device-media-architecture-report/](m47-device-media-architecture-report/)
+
+**Goal:** Explain how camera pictures/video, input audio, output audio, Device
+settings, and front-page runtime source selection currently relate.
+
+- [x] Report — [Device Media Architecture](m47-device-media-architecture-report/report.md)
+
+### M48 — Post-PoC App Architecture Review
+
+**Plan:** [m48-post-poc-app-architecture-review/](m48-post-poc-app-architecture-review/)
+
+**Goal:** Review the current app architecture as BodyCam moves beyond PoC and
+propose a simpler, product-phase structure that stays blind-first, plug-and-play
+where useful, and deliberately not overengineered.
+
+- [x] Report — [Architecture Review And Improvement Proposal](m48-post-poc-app-architecture-review/report.md)
 
 ---
 
@@ -305,3 +358,14 @@ M43 so echo cancellation is provider/route dependent.
 
 Archived at [archive/m34-audio-quality/](archive/m34-audio-quality/). Scope
 folded into M43.
+
+### ~~M33 — HeyCyan Glasses SDK Integration~~
+
+Archived at [archive/m33-heycyan-sdk/](archive/m33-heycyan-sdk/). Superseded by
+M46 after the Android production path moved from the vendor AAR bridge to direct
+C# BLE plus C# Wi-Fi/media transfer.
+
+### ~~M36 — HeyCyan Windows Connectivity~~
+
+Archived at [archive/m36-heycyan-windows/](archive/m36-heycyan-windows/).
+Superseded by M46 Phase 7 for any future Windows HeyCyan route.

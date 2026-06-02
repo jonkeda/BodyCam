@@ -1,5 +1,6 @@
 ﻿using BodyCam.Services;
 using BodyCam.Services.Input;
+using BodyCam.Services.AiProviders;
 using BodyCam.Services.Logging;
 using Azure.Monitor.OpenTelemetry.Exporter;
 using CommunityToolkit.Maui;
@@ -35,7 +36,7 @@ public static class MauiProgram
 		var provider = DotEnvReader.Read("OPENAI_PROVIDER");
 		if (string.Equals(provider, "azure", StringComparison.OrdinalIgnoreCase))
 		{
-			settings.Provider = OpenAiProvider.Azure;
+			settings.ProviderId = AiProviderIds.AzureOpenAi;
 			settings.AzureEndpoint = DotEnvReader.Read("AZURE_OPENAI_ENDPOINT");
 			settings.AzureRealtimeDeploymentName = DotEnvReader.Read("AZURE_OPENAI_DEPLOYMENT");
 			settings.AzureChatDeploymentName = DotEnvReader.Read("AZURE_OPENAI_CHAT_DEPLOYMENT");
@@ -44,7 +45,7 @@ public static class MauiProgram
 			                         ?? settings.AzureApiVersion;
 
 			// Seed into ISettingsService so the Settings UI shows .env values
-			settingsService.Provider = OpenAiProvider.Azure;
+			settingsService.ProviderId = AiProviderIds.AzureOpenAi;
 			settingsService.AzureEndpoint = settings.AzureEndpoint;
 			settingsService.AzureRealtimeDeploymentName = settings.AzureRealtimeDeploymentName;
 			settingsService.AzureChatDeploymentName = settings.AzureChatDeploymentName;
@@ -54,7 +55,7 @@ public static class MauiProgram
 		else
 		{
 			// Load from persisted settings
-			settings.Provider = settingsService.Provider;
+			settings.ProviderId = settingsService.ProviderId;
 			settings.AzureEndpoint = settingsService.AzureEndpoint;
 			settings.AzureRealtimeDeploymentName = settingsService.AzureRealtimeDeploymentName;
 			settings.AzureChatDeploymentName = settingsService.AzureChatDeploymentName;

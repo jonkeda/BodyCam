@@ -1,3 +1,5 @@
+using BodyCam.Services.AiProviders;
+
 namespace BodyCam;
 
 public record ModelInfo(string Id, string Label);
@@ -66,7 +68,13 @@ public static class ModelOptions
         var all = RealtimeModels
             .Concat(ChatModels)
             .Concat(VisionModels)
-            .Concat(TranscriptionModels);
+            .Concat(TranscriptionModels)
+            .Concat(GrokModelOptions.RealtimeModels)
+            .Concat(GrokModelOptions.ChatModels)
+            .Concat(GrokModelOptions.VisionModels)
+            .Concat(GrokModelOptions.TranscriptionModels)
+            .Concat(GrokModelOptions.TextToSpeechModels)
+            .Concat(GrokModelOptions.ImageGenerationModels);
 
         return all.FirstOrDefault(m => m.Id == modelId)?.Label ?? modelId;
     }

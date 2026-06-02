@@ -1,8 +1,8 @@
 namespace BodyCam.Services.Glasses.HeyCyan;
 
 /// <summary>
-/// Cross-platform abstraction over the vendor HeyCyan SDK.
-/// Android implementation wraps LargeDataHandler / BleBaseControl / BleOperateManager.
+/// Cross-platform abstraction over the HeyCyan control transport.
+/// Android uses direct C# BLE over the serial-port GATT service.
 /// iOS implementation wraps QCCentralManager / QCSDKManager.
 /// </summary>
 internal interface IHeyCyanSdkBridge : IDisposable

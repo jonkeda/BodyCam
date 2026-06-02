@@ -1,4 +1,5 @@
 using BodyCam.Services;
+using BodyCam.Services.AiProviders;
 using BodyCam.ViewModels.Settings;
 using FluentAssertions;
 using NSubstitute;
@@ -10,14 +11,14 @@ public class ConnectionViewModelTests
     private readonly ISettingsService _settings = Substitute.For<ISettingsService>();
     private readonly IApiKeyService _apiKeyService = Substitute.For<IApiKeyService>();
 
-    private ConnectionViewModel CreateVm(Func<HttpClient>? httpFactory = null)
-        => new(_settings, _apiKeyService, httpFactory);
+    private ConnectionViewModel CreateVm(Func<HttpClient>? httpFactory = null, IAiProviderRegistry? providerRegistry = null)
+        => new(_settings, _apiKeyService, providerRegistry, httpFactory);
 
     [Fact]
     public void SelectedProvider_SetToAzure_UpdatesIsAzure()
     {
         var vm = CreateVm();
-        vm.SelectedProvider = OpenAiProvider.Azure;
+        vm.SelectedProviderId = AiProviderIds.AzureOpenAi;
         vm.IsAzure.Should().BeTrue();
         vm.IsOpenAi.Should().BeFalse();
     }
@@ -25,9 +26,9 @@ public class ConnectionViewModelTests
     [Fact]
     public void SelectedProvider_SetToOpenAi_UpdatesIsOpenAi()
     {
-        _settings.Provider.Returns(OpenAiProvider.Azure);
+        _settings.ProviderId.Returns(AiProviderIds.AzureOpenAi);
         var vm = CreateVm();
-        vm.SelectedProvider = OpenAiProvider.OpenAi;
+        vm.SelectedProviderId = AiProviderIds.OpenAi;
         vm.IsOpenAi.Should().BeTrue();
         vm.IsAzure.Should().BeFalse();
     }
@@ -37,6 +38,31 @@ public class ConnectionViewModelTests
     {
         var vm = CreateVm();
         vm.RealtimeModelOptions.Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public void SelectedProvider_SetToGrok_ShowsGrokCredentialNotice()
+    {
+        var vm = CreateVm();
+
+        vm.SelectedProviderId = AiProviderIds.XaiGrok;
+
+        vm.IsGrok.Should().BeTrue();
+        vm.ApiKeySectionTitle.Should().Be("xAI API Key");
+        vm.ApiKeyHelpText.Should().Contain("OAuth");
+    }
+
+    [Fact]
+    public void ProviderOptions_IncludesRegisteredProviders()
+    {
+        var registry = new AiProviderRegistry([
+            new OpenAiProviderAdapter(),
+            new TestProviderAdapter()
+        ]);
+
+        var vm = CreateVm(providerRegistry: registry);
+
+        vm.ProviderOptions.Should().Contain(option => option.Id == "local-test");
     }
 
     [Fact]
@@ -68,7 +94,7 @@ public class ConnectionViewModelTests
     [Fact]
     public void ApiKeyDisplay_InitialLoad_ShowsMaskedKey()
     {
-        _apiKeyService.GetApiKeyAsync().Returns("sk-proj-12345678");
+        _apiKeyService.GetApiKeyAsync(AiProviderIds.OpenAi).Returns("sk-proj-12345678");
         var vm = CreateVm();
         // Allow async void LoadApiKeyDisplay to complete
         Thread.Sleep(200);
@@ -78,7 +104,7 @@ public class ConnectionViewModelTests
     [Fact]
     public void IsKeyVisible_Toggle_ShowsFullKey()
     {
-        _apiKeyService.GetApiKeyAsync().Returns("sk-proj-12345678");
+        _apiKeyService.GetApiKeyAsync(AiProviderIds.OpenAi).Returns("sk-proj-12345678");
         var vm = CreateVm();
         Thread.Sleep(200);
         vm.IsKeyVisible = true;
@@ -89,11 +115,27 @@ public class ConnectionViewModelTests
     public void TestConnectionCommand_NoApiKey_ShowsError()
     {
         _apiKeyService.GetApiKeyAsync().Returns((string?)null);
+        _apiKeyService.GetApiKeyAsync(AiProviderIds.OpenAi).Returns((string?)null);
         var vm = CreateVm();
         // Execute is async void — fire and wait
         vm.TestConnectionCommand.Execute(null);
         Thread.Sleep(200);
-        vm.ConnectionStatus.Should().Contain("No API key");
+        vm.ConnectionStatus.Should().Contain("No OpenAI API key");
+    }
+
+    [Fact]
+    public void TestConnectionCommand_GrokApiKey_ShowsApiKeyAuthDecision()
+    {
+        _settings.ProviderId.Returns(AiProviderIds.XaiGrok);
+        _apiKeyService.GetApiKeyAsync(AiProviderIds.XaiGrok).Returns("xai-test-key");
+        var vm = CreateVm();
+
+        vm.TestConnectionCommand.Execute(null);
+        Thread.Sleep(200);
+
+        vm.ConnectionStatus.Should().Contain("Grok API key configured");
+        vm.ConnectionStatus.Should().Contain("OAuth");
+        vm.RealtimeStatus.Should().Contain("broker");
     }
 
     [Fact]
@@ -108,5 +150,27 @@ public class ConnectionViewModelTests
     {
         var vm = CreateVm();
         vm.IsTesting.Should().BeFalse();
+    }
+
+    private sealed class TestProviderAdapter : IAiProviderAdapter
+    {
+        public AiProviderDefinition Definition { get; } = new(
+            "local-test",
+            "Local Test",
+            "Test",
+            "Provider registered only inside this test.",
+            IsSelectable: true,
+            CredentialModes: [AiCredentialMode.ApiKey],
+            Capabilities: AiProviderCapability.Chat,
+            Models: new Dictionary<AiModelKind, ModelInfo[]>
+            {
+                [AiModelKind.Chat] = [new("test-chat", "Test Chat")]
+            },
+            CredentialPolicy: AiProviderCredentialPolicy.ApiKeyOnly,
+            SetupLinks: []);
+
+        public Uri GetRealtimeUri(AppSettings settings) => new("wss://example.invalid/realtime");
+        public Uri GetChatUri(AppSettings settings) => new("https://example.invalid/chat");
+        public Uri GetVisionUri(AppSettings settings) => new("https://example.invalid/vision");
     }
 }

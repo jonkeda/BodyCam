@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:BodyCam.ViewModels.Settings"
+             x:Class="BodyCam.Pages.Settings.LlmProvidersSettingsPage"
+             x:DataType="vm:LlmProvidersViewModel"
+             Shell.TabBarIsVisible="False"
+             Title="LLM Providers">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="16" MaximumWidthRequest="500">
+
+            <Button AutomationId="AddLlmProviderButton"
+                    Text="Add LLM Provider"
+                    Clicked="OnAddProviderClicked"
+                    HorizontalOptions="Fill"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryAlt}}"
+                    TextColor="White" />
+
+            <VerticalStackLayout Spacing="0"
+                                 BindableLayout.ItemsSource="{Binding Providers}">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="vm:LlmProviderRowViewModel">
+                        <VerticalStackLayout Spacing="0">
+                            <Grid Padding="0,12"
+                                  ColumnDefinitions="*,Auto"
+                                  RowDefinitions="Auto,Auto,Auto"
+                                  RowSpacing="4"
+                                  AutomationId="{Binding AutomationId}">
+                                <Label Text="{Binding DisplayName}"
+                                       FontAttributes="Bold"
+                                       FontSize="16" />
+                                <Label Grid.Row="1"
+                                       Text="{Binding StatusText}"
+                                       FontSize="13"
+                                       TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+                                <Label Grid.Row="2"
+                                       Text="{Binding CapabilitySummary}"
+                                       FontSize="13" />
+                                <Button Grid.Column="1"
+                                        Grid.RowSpan="3"
+                                        AutomationId="{Binding EditAutomationId}"
+                                        Text="Edit"
+                                        Clicked="OnEditProviderClicked"
+                                        VerticalOptions="Center"
+                                        Padding="10,6"
+                                        BackgroundColor="{AppThemeBinding Light={StaticResource ButtonMuted}, Dark={StaticResource ButtonMutedDark}}"
+                                        TextColor="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource TextPrimaryDark}}" />
+                            </Grid>
+                            <BoxView HeightRequest="1"
+                                     BackgroundColor="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}" />
+                        </VerticalStackLayout>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </VerticalStackLayout>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

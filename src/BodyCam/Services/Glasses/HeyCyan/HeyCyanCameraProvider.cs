@@ -7,11 +7,13 @@ namespace BodyCam.Services.Glasses.HeyCyan;
 /// <summary>
 /// Camera provider for HeyCyan smart glasses.
 /// Implements file-based snapshot capture: triggers BLE photo command,
-/// waits for media-count notification, downloads JPG via Wi-Fi Direct HTTP.
+/// waits for the captured file to settle, downloads JPG via Wi-Fi Direct HTTP.
 /// Does NOT support live streaming (these are not RTSP/MJPEG cameras).
 /// </summary>
 public sealed class HeyCyanCameraProvider : ICameraProvider
 {
+    private static readonly TimeSpan DefaultPhotoSettleDelay = TimeSpan.FromSeconds(5);
+
     public string ProviderId => "heycyan-glasses";
     public string DisplayName => "HeyCyan Glasses Camera";
     public bool SupportsVideoRecording => false;
@@ -26,16 +28,19 @@ public sealed class HeyCyanCameraProvider : ICameraProvider
     private readonly IHeyCyanGlassesSession _session;
     private readonly IHeyCyanMediaTransfer _transfer;
     private readonly ILogger<HeyCyanCameraProvider> _log;
+    private readonly TimeSpan _photoSettleDelay;
     private bool _started;
 
     public HeyCyanCameraProvider(
         IHeyCyanGlassesSession session,
         IHeyCyanMediaTransfer transfer,
-        ILogger<HeyCyanCameraProvider> log)
+        ILogger<HeyCyanCameraProvider> log,
+        TimeSpan? photoSettleDelay = null)
     {
         _session = session;
         _transfer = transfer;
         _log = log;
+        _photoSettleDelay = photoSettleDelay ?? DefaultPhotoSettleDelay;
 
         _session.StateChanged += (s, state) =>
         {
@@ -83,42 +88,24 @@ public sealed class HeyCyanCameraProvider : ICameraProvider
                 return fallbackJpg;
             }
 
-            // 1. Snapshot the current photo count so we can detect the new file
+            // 1. Snapshot the current photo count for logging only. Opening transfer mode
+            // before capture can make the glasses serve a stale or empty media.config.
             var beforeCount = _session.LastMediaCount?.Photos ?? 0;
-            List<string>? beforeNames = null;
-            try
-            {
-                var entries = await _transfer.ListAsync(ct).ConfigureAwait(false);
-                beforeNames = entries.Select(e => e.Name).ToList();
-            }
-            catch (Exception ex)
-            {
-                _log.LogWarning(ex, "Failed to list media before capture (will rely on count notify)");
-            }
 
             // 2. Trigger BLE photo capture
             _log.LogInformation("HeyCyan: triggering photo capture (current count={Count})", beforeCount);
             await _session.TakePhotoAsync(ct).ConfigureAwait(false);
 
-            // 3. Wait for MediaCountUpdated event or timeout after 6s
-            var newName = await WaitForNewPhotoAsync(beforeCount, beforeNames, TimeSpan.FromSeconds(6), ct)
-                .ConfigureAwait(false);
+            // 3. Give the glasses time to finalize the file before entering transfer mode.
+            // The Android proof showed capture-first-then-transfer is the reliable path.
+            await DelayAfterPhotoCaptureAsync(ct).ConfigureAwait(false);
 
-            // 4. Fallback if the count notify was missed: pick the newest .jpg
+            // 4. Enter transfer mode through the warm helper and pick the newest .jpg.
+            var newName = await FindNewestPhotoNameAsync(ct).ConfigureAwait(false);
             if (newName is null)
             {
-                _log.LogWarning("HeyCyan: media-count notify timed out, falling back to newest entry");
-                var entries = await _transfer.ListAsync(ct).ConfigureAwait(false);
-                newName = entries
-                    .Where(e => e.Kind == HeyCyanMediaKind.Photo)
-                    .OrderByDescending(e => e.Timestamp)
-                    .FirstOrDefault()?.Name;
-
-                if (newName is null)
-                {
-                    _log.LogError("No photo found on glasses after capture");
-                    return null;
-                }
+                _log.LogError("No photo found on glasses after capture");
+                return null;
             }
 
             // 5. Download via the warm transfer helper
@@ -159,64 +146,21 @@ public sealed class HeyCyanCameraProvider : ICameraProvider
         return ValueTask.CompletedTask;
     }
 
-    /// <summary>
-    /// Wait for MediaCountUpdated event indicating a new photo exists.
-    /// </summary>
-    private async Task<string?> WaitForNewPhotoAsync(
-        int beforeCount,
-        List<string>? beforeNames,
-        TimeSpan timeout,
-        CancellationToken ct)
+    private async Task DelayAfterPhotoCaptureAsync(CancellationToken ct)
     {
-        var tcs = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        if (_photoSettleDelay <= TimeSpan.Zero)
+            return;
 
-        void OnMediaCountUpdated(object? sender, HeyCyanMediaCount count)
-        {
-            if (count.Photos > beforeCount)
-            {
-                _log.LogInformation("HeyCyan: media count updated to {Photos}", count.Photos);
-                // We know a new photo exists, but we don't know the name yet
-                // Signal success and we'll list entries to find it
-                tcs.TrySetResult(null);
-            }
-        }
+        await Task.Delay(_photoSettleDelay, ct).ConfigureAwait(false);
+    }
 
-        _session.MediaCountUpdated += OnMediaCountUpdated;
-        try
-        {
-            using var timeoutCts = new CancellationTokenSource(timeout);
-            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
-            linkedCts.Token.Register(() => tcs.TrySetCanceled(linkedCts.Token));
-
-            await tcs.Task.ConfigureAwait(false);
-
-            // Now try to find the new photo by listing again
-            try
-            {
-                var entries = await _transfer.ListAsync(ct).ConfigureAwait(false);
-                var newEntry = entries
-                    .Where(e => e.Kind == HeyCyanMediaKind.Photo)
-                    .Where(e => beforeNames is null || !beforeNames.Contains(e.Name))
-                    .OrderByDescending(e => e.Timestamp)
-                    .FirstOrDefault();
-                
-                return newEntry?.Name;
-            }
-            catch (Exception ex)
-            {
-                _log.LogWarning(ex, "Failed to list entries after media count notify");
-                return null;
-            }
-        }
-        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
-        {
-            // Timeout — return null to trigger fallback
-            return null;
-        }
-        finally
-        {
-            _session.MediaCountUpdated -= OnMediaCountUpdated;
-        }
+    private async Task<string?> FindNewestPhotoNameAsync(CancellationToken ct)
+    {
+        var entries = await _transfer.ListAsync(ct).ConfigureAwait(false);
+        return entries
+            .Where(e => e.Kind == HeyCyanMediaKind.Photo)
+            .OrderByDescending(e => e.Timestamp)
+            .FirstOrDefault()?.Name;
     }
 
     /// <summary>

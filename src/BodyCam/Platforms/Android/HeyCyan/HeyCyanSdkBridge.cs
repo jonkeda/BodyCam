@@ -1,48 +1,55 @@
 #if ANDROID
+using Android.Bluetooth;
+using Android.Bluetooth.LE;
 using Android.Content;
-using Com.Oudmon.Ble.Base.Bluetooth;
-using Com.Oudmon.Ble.Base.Communication;
-using Com.Oudmon.Ble.Base.Communication.BigData.Resp;
+using Android.OS;
+using Android.Util;
+using Java.Util;
 using Microsoft.Maui.ApplicationModel;
 using System.Collections.Concurrent;
 
 namespace BodyCam.Platforms.Android.HeyCyan;
 
 /// <summary>
-/// Android-only bridge wrapping LargeDataHandler (high-level command/response),
-/// BleBaseControl (scan/connect/pair), and BleOperateManager (connection lifecycle).
-/// Marshals all SDK callbacks off the BLE I/O HandlerThread onto the captured dispatcher.
-/// 
-/// NOTE: This is a Phase 1 Wave 2 implementation that establishes the bridge structure.
-/// Many SDK API details differ from sdk-api-reference.md due to binding quirks and require
-/// hardware verification. Real scan/connect/notify flows will be completed in Wave 3
-/// once HeyCyan glasses are available for testing.
+/// Android HeyCyan BLE bridge implemented directly against Android GATT APIs.
+/// Keeps the historical class name while replacing the vendor AAR bridge.
 /// </summary>
 internal sealed class HeyCyanSdkBridge : Services.Glasses.HeyCyan.IHeyCyanSdkBridge
 {
-    // SDK singletons — see sdk-api-reference.md §A.
-    // Actual API signatures differ from docs; deferred to hardware testing.
-    private readonly BleBaseControl? _ble;
-    private readonly BleOperateManager? _ops;
+    private static readonly UUID SerialPortServiceUuid =
+        UUID.FromString("de5bf728-d711-4e47-af26-65e3012a5dc7")!;
+    private static readonly UUID SerialPortNotifyUuid =
+        UUID.FromString("de5bf729-d711-4e47-af26-65e3012a5dc7")!;
+    private static readonly UUID SerialPortWriteUuid =
+        UUID.FromString("de5bf72a-d711-4e47-af26-65e3012a5dc7")!;
+    private static readonly UUID ClientCharacteristicConfigUuid =
+        UUID.FromString("00002902-0000-1000-8000-00805f9b34fb")!;
 
-    private readonly ConcurrentDictionary<int, TaskCompletionSource<Services.Glasses.HeyCyan.HeyCyanResponse>> _pending = new();
+    private const string LogTag = "BodyCamHeyCyanBle";
+
+    private readonly Context _context;
+    private readonly BluetoothAdapter _adapter;
     private readonly SynchronizationContext _dispatcher;
+    private readonly object _gate = new();
+    private readonly SemaphoreSlim _writeGate = new(1, 1);
+    private readonly ConcurrentDictionary<string, bool> _discoveredMacs = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<byte, TaskCompletionSource<Services.Glasses.HeyCyan.HeyCyanResponse>> _pending = new();
+    private readonly List<byte> _receiveBuffer = [];
 
-    // ACTION_* constants from LargeDataHandler (sdk-api-reference.md §A).
-    private const int ACTION_DEVICE_NOTIFY = 100;   // multiplexed: battery / IP / button / errors
-    private const int ACTION_DOWNLOAD_NOTIFY = 2;   // transfer-mode IP + P2P error
-
-    // Listener instances kept alive for the bridge lifetime.
-    private readonly BleListener? _bleListener;
-
-    // Scan state
-    private readonly ConcurrentDictionary<string, bool> _discoveredMacs = new();
-    private TaskCompletionSource<bool>? _scanTcs;
+    private BluetoothLeScanner? _scanner;
+    private DirectScanCallback? _scanCallback;
     private CancellationTokenSource? _scanCts;
+    private CancellationTokenRegistration _scanRegistration;
+    private TaskCompletionSource<bool>? _scanTcs;
 
-    // Connect state
+    private BluetoothGatt? _gatt;
+    private DirectGattCallback? _gattCallback;
+    private BluetoothGattCharacteristic? _writeCharacteristic;
+    private BluetoothGattCharacteristic? _notifyCharacteristic;
     private TaskCompletionSource<bool>? _connectTcs;
-    private string? _connectingMac;
+    private CancellationTokenRegistration _connectRegistration;
+    private TaskCompletionSource<GattStatus>? _writeTcs;
+    private DateTimeOffset? _receiveStartedAt;
     private bool _disposed;
 
     public event EventHandler<Services.Glasses.HeyCyan.HeyCyanScanResult>? DeviceDiscovered;
@@ -55,59 +62,51 @@ internal sealed class HeyCyanSdkBridge : Services.Glasses.HeyCyan.IHeyCyanSdkBri
         _dispatcher = SynchronizationContext.Current
             ?? throw new InvalidOperationException("HeyCyanSdkBridge must be constructed on the main thread");
 
-        // Get Android context from MAUI.
-        var context = Platform.CurrentActivity ?? Platform.AppContext;
-        if (context is null)
-            throw new InvalidOperationException("Cannot get Android context — MAUI Platform not initialized");
+        _context = Platform.CurrentActivity ?? Platform.AppContext
+            ?? throw new InvalidOperationException("Cannot get Android context; MAUI Platform not initialized");
 
-        // Initialize SDK singletons with Android context/application.
-        var app = (global::Android.App.Application?)context.ApplicationContext;
-        
-        // NOTE: LargeDataHandler.GetInstance() binding signature differs from docs.
-        // Actual implementation will be completed in Wave 3 with hardware.
-        // _ldh = LargeDataHandler.GetInstance();  // Compilation error: no such overload
-        
-        _ble = BleBaseControl.GetInstance(context);
-        _ops = BleOperateManager.GetInstance(app);
+        var manager = (BluetoothManager?)_context.GetSystemService(Context.BluetoothService)
+            ?? throw new InvalidOperationException("Android BluetoothManager is not available");
 
-        // BLE GATT lifecycle — connection state changes.
-        // NOTE: BleBaseControl.SetListener method name/signature differs from docs.
-        // Actual listener registration will be verified in Wave 3 with hardware.
-        _bleListener = new BleListener(
-            OnBleConnectionStateChanged,
-            OnBleServiceDiscovered,
-            OnBleDeviceDiscovered);
-        // _ble.SetListener(_bleListener);  // Compilation error: no SetListener method
-
-        // NOTE: LargeDataHandler.AddOutDeviceListener API differs from docs.
-        // Notify-frame parsing will be completed in Wave 3 with hardware.
+        _adapter = manager.Adapter
+            ?? throw new InvalidOperationException("Android Bluetooth adapter is not available");
     }
 
     public Task StartScanAsync(TimeSpan timeout, CancellationToken ct)
     {
-        // NOTE: BLE scan API (BleScannerHelper) differs from docs and requires additional setup.
-        // Real scan implementation deferred to Wave 3 hardware testing.
-        if (_scanTcs is not null)
-            throw new InvalidOperationException("Scan already in progress");
+        ThrowIfDisposed();
 
-        _discoveredMacs.Clear();
-        _scanTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        _scanCts = new CancellationTokenSource();
-
-        // Stub: Real scan will use BleScannerHelper.getInstance().scanDevice(...)
-        var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, _scanCts.Token);
-        linkedCts.Token.Register(() =>
+        lock (_gate)
         {
-            _scanTcs?.TrySetCanceled(linkedCts.Token);
-            _scanTcs = null;
-            _scanCts = null;
-        });
+            if (_scanTcs is not null)
+                throw new InvalidOperationException("Scan already in progress");
 
-        _ = Task.Delay(timeout, linkedCts.Token).ContinueWith(_ =>
+            if (!_adapter.IsEnabled)
+                throw new InvalidOperationException("Bluetooth is disabled");
+
+            _scanner = _adapter.BluetoothLeScanner
+                ?? throw new InvalidOperationException("Bluetooth LE scanner is not available");
+
+            _discoveredMacs.Clear();
+            _scanTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            _scanCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            _scanCallback = new DirectScanCallback(OnScanDeviceDiscovered, OnScanFailed);
+
+            _scanRegistration = _scanCts.Token.Register(() =>
+            {
+                CompleteScan(false, CancellationToken.None);
+            });
+        }
+
+        var settings = new ScanSettings.Builder()
+            .SetScanMode(global::Android.Bluetooth.LE.ScanMode.LowLatency)
+            .Build();
+
+        _scanner.StartScan(null, settings, _scanCallback);
+
+        _ = Task.Delay(timeout, CancellationToken.None).ContinueWith(_ =>
         {
-            _scanTcs?.TrySetResult(true);
-            _scanTcs = null;
-            _scanCts = null;
+            CompleteScan(false, CancellationToken.None);
         }, TaskScheduler.Default);
 
         return _scanTcs.Task;
@@ -115,221 +114,579 @@ internal sealed class HeyCyanSdkBridge : Services.Glasses.HeyCyan.IHeyCyanSdkBri
 
     public Task StopScanAsync()
     {
-        _scanCts?.Cancel();
-        _scanTcs?.TrySetResult(true);
-        _scanTcs = null;
-        _scanCts = null;
+        CompleteScan(false, CancellationToken.None);
         return Task.CompletedTask;
     }
 
     public Task ConnectAsync(string macAddress, CancellationToken ct)
     {
-        if (_connectTcs is not null)
-            throw new InvalidOperationException("Connect already in progress");
+        ThrowIfDisposed();
 
-        _connectingMac = macAddress;
-        _connectTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        if (string.IsNullOrWhiteSpace(macAddress))
+            throw new ArgumentException("MAC address is required", nameof(macAddress));
 
-        ct.Register(() =>
+        TaskCompletionSource<bool> tcs;
+        lock (_gate)
         {
-            _connectTcs?.TrySetCanceled(ct);
-            _connectTcs = null;
-            _connectingMac = null;
-        });
+            if (_connectTcs is not null)
+                throw new InvalidOperationException("Connect already in progress");
 
-        // Use BleOperateManager.ConnectDirectly (assumes device was already discovered).
-        _ops?.ConnectDirectly(macAddress);
+            if (!_adapter.IsEnabled)
+                throw new InvalidOperationException("Bluetooth is disabled");
 
-        return _connectTcs.Task;
-    }
+            _connectTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            _connectRegistration = ct.Register(() =>
+            {
+                FailConnect(new System.OperationCanceledException(ct));
+            });
+            tcs = _connectTcs;
+        }
 
-    public Task DisconnectAsync()
-    {
-        _ops?.Disconnect();
-        Raise(ConnectionStateChanged, Services.Glasses.HeyCyan.HeyCyanConnectionState.Disconnecting);
-        return Task.CompletedTask;
-    }
+        Raise(ConnectionStateChanged, Services.Glasses.HeyCyan.HeyCyanConnectionState.Connecting);
 
-    public Task<Services.Glasses.HeyCyan.HeyCyanResponse> SendAsync(byte[] payload, CancellationToken ct)
-    {
-        if (payload.Length == 0)
-            throw new ArgumentException("Payload cannot be empty", nameof(payload));
-
-        var cmdType = payload[0];
-        var tcs = new TaskCompletionSource<Services.Glasses.HeyCyan.HeyCyanResponse>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        if (!_pending.TryAdd(cmdType, tcs))
-            throw new InvalidOperationException($"A request with cmdType {cmdType} is already pending");
-
-        using var reg = ct.Register(() =>
+        try
         {
-            if (_pending.TryRemove(cmdType, out var pending))
-                pending.TrySetCanceled(ct);
-        });
+            var device = _adapter.GetRemoteDevice(macAddress)
+                ?? throw new InvalidOperationException($"Bluetooth device {macAddress} is not available");
 
-        // NOTE: LargeDataHandler.GlassesControl API differs from docs.
-        // Real request/response correlation will be completed in Wave 3 with hardware.
-        // Placeholder: immediately fail for now.
-        tcs.TrySetException(new NotImplementedException(
-            "SendAsync requires LargeDataHandler binding fixes — deferred to Wave 3 hardware testing"));
+            _gattCallback = new DirectGattCallback(this);
+
+            _gatt = OperatingSystem.IsAndroidVersionAtLeast(23)
+                ? device.ConnectGatt(_context, false, _gattCallback, BluetoothTransports.Le)
+                : device.ConnectGatt(_context, false, _gattCallback);
+
+            if (_gatt is null)
+                throw new InvalidOperationException($"ConnectGatt returned null for {macAddress}");
+        }
+        catch (Exception ex)
+        {
+            FailConnect(ex);
+        }
 
         return tcs.Task;
     }
 
+    public Task DisconnectAsync()
+    {
+        Raise(ConnectionStateChanged, Services.Glasses.HeyCyan.HeyCyanConnectionState.Disconnecting);
+        CloseGatt();
+        Raise(ConnectionStateChanged, Services.Glasses.HeyCyan.HeyCyanConnectionState.Disconnected);
+        return Task.CompletedTask;
+    }
+
+    public async Task<Services.Glasses.HeyCyan.HeyCyanResponse> SendAsync(byte[] payload, CancellationToken ct)
+    {
+        ThrowIfDisposed();
+
+        if (payload.Length == 0)
+            throw new ArgumentException("Payload cannot be empty", nameof(payload));
+
+        var action = Services.Glasses.HeyCyan.HeyCyanDirectBleProtocol.DecodeOutgoingAction(payload);
+        var responseTcs = new TaskCompletionSource<Services.Glasses.HeyCyan.HeyCyanResponse>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        await _writeGate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            _pending[action] = responseTcs;
+
+            foreach (var chunk in Chunk(payload, Services.Glasses.HeyCyan.HeyCyanDirectBleProtocol.DefaultWriteChunkLength))
+            {
+                await WriteChunkAsync(chunk, ct).ConfigureAwait(false);
+            }
+
+            try
+            {
+                return await responseTcs.Task
+                    .WaitAsync(ResponseTimeoutFor(action), ct)
+                    .ConfigureAwait(false);
+            }
+            catch (TimeoutException)
+            {
+                Log.Debug(LogTag, $"No BLE response for action=0x{action:X2}; returning empty response after write");
+                return new Services.Glasses.HeyCyan.HeyCyanResponse(action, []);
+            }
+        }
+        finally
+        {
+            _pending.TryRemove(action, out _);
+            _writeGate.Release();
+        }
+    }
+
     public void Dispose()
     {
-        if (_disposed) return;
+        if (_disposed)
+            return;
+
         _disposed = true;
+        CompleteScan(false, CancellationToken.None);
+        CloseGatt();
 
-        // NOTE: Unhook listeners once binding APIs are verified.
-        // _ldh.RemoveOutDeviceListener(ACTION_DEVICE_NOTIFY);
-        // _ldh.RemoveOutDeviceListener(ACTION_DOWNLOAD_NOTIFY);
-        // _ble.SetListener(null);
-
-        // Complete pending requests with ObjectDisposedException.
         foreach (var kvp in _pending)
         {
             kvp.Value.TrySetException(new ObjectDisposedException(nameof(HeyCyanSdkBridge)));
         }
         _pending.Clear();
 
-        _scanTcs?.TrySetCanceled();
-        _connectTcs?.TrySetCanceled();
+        _writeTcs?.TrySetException(new ObjectDisposedException(nameof(HeyCyanSdkBridge)));
+        _connectTcs?.TrySetException(new ObjectDisposedException(nameof(HeyCyanSdkBridge)));
+        _writeGate.Dispose();
     }
 
-    // Called by DeviceNotifyListener.ParseData(int cmdType, GlassesDeviceNotifyRsp rsp)
-    // on the BleOperateManager HandlerThread — see Raise() for trampolining.
-    private void OnNotify(byte[] loadData)
+    private async Task WriteChunkAsync(byte[] chunk, CancellationToken ct)
     {
-        if (loadData.Length < 7) return;
+        BluetoothGatt? gatt;
+        BluetoothGattCharacteristic? characteristic;
+        TaskCompletionSource<GattStatus> writeTcs;
 
-        var notifyType = loadData[6]; // sdk-api-reference.md §C
-
-        switch (notifyType)
+        lock (_gate)
         {
-            case 0x02: // AI-photo button pressed; loadData[7] = button id
-                Raise(ButtonPressed, new Services.Glasses.HeyCyan.HeyCyanButtonEvent(
-                    Services.Glasses.HeyCyan.HeyCyanButtonGesture.Tap,
-                    DateTimeOffset.UtcNow));
-                return;
+            gatt = _gatt;
+            characteristic = _writeCharacteristic;
 
-            case 0x03: // AI-voice button pressed; loadData[7] == 1
-                Raise(ButtonPressed, new Services.Glasses.HeyCyan.HeyCyanButtonEvent(
-                    Services.Glasses.HeyCyan.HeyCyanButtonGesture.DoubleTap,
-                    DateTimeOffset.UtcNow));
-                return;
+            if (gatt is null || characteristic is null)
+                throw new InvalidOperationException("HeyCyan BLE is not connected");
 
-            // 0x05 battery, 0x08 transfer IP, 0x09 P2P error — forwarded to Phase 2 via RawNotify.
+            writeTcs = new TaskCompletionSource<GattStatus>(TaskCreationOptions.RunContinuationsAsynchronously);
+            _writeTcs = writeTcs;
+        }
+
+        characteristic.WriteType = GattWriteType.NoResponse;
+        if (!characteristic.SetValue(chunk))
+            throw new InvalidOperationException("Failed to set BLE write characteristic value");
+
+        Log.Verbose(LogTag, $"BLE write {chunk.Length} bytes {ToHex(chunk)}");
+        if (!gatt.WriteCharacteristic(characteristic))
+            throw new InvalidOperationException("Android rejected BLE characteristic write");
+
+        try
+        {
+            var status = await writeTcs.Task
+                .WaitAsync(TimeSpan.FromSeconds(2), ct)
+                .ConfigureAwait(false);
+
+            if (status != GattStatus.Success)
+                throw new InvalidOperationException($"BLE characteristic write failed with status {status}");
+        }
+        catch (TimeoutException)
+        {
+            Log.Debug(LogTag, "BLE write-without-response did not raise OnCharacteristicWrite before timeout");
+        }
+        finally
+        {
+            lock (_gate)
+            {
+                if (ReferenceEquals(_writeTcs, writeTcs))
+                    _writeTcs = null;
+            }
+        }
+    }
+
+    private void CompleteScan(bool canceled, CancellationToken token)
+    {
+        TaskCompletionSource<bool>? tcs;
+        BluetoothLeScanner? scanner;
+        DirectScanCallback? callback;
+
+        lock (_gate)
+        {
+            tcs = _scanTcs;
+            scanner = _scanner;
+            callback = _scanCallback;
+
+            _scanTcs = null;
+            _scanCallback = null;
+            _scanner = null;
+
+            try { _scanRegistration.Dispose(); } catch { }
+            _scanRegistration = default;
+            try { _scanCts?.Dispose(); } catch { }
+            _scanCts = null;
+        }
+
+        if (scanner is not null && callback is not null)
+        {
+            try { scanner.StopScan(callback); }
+            catch (Exception ex) { Log.Debug(LogTag, $"StopScan failed: {ex.Message}"); }
+        }
+
+        if (canceled)
+            tcs?.TrySetCanceled(token);
+        else
+            tcs?.TrySetResult(true);
+    }
+
+    private void OnScanDeviceDiscovered(BluetoothDevice? device, string? advertisedName, int rssi)
+    {
+        if (device is null)
+            return;
+
+        var name = advertisedName;
+#pragma warning disable CA1422
+        name ??= device.Name;
+        var address = device.Address;
+#pragma warning restore CA1422
+
+        if (string.IsNullOrWhiteSpace(address) || !IsHeyCyanName(name))
+            return;
+
+        if (!_discoveredMacs.TryAdd(address, true))
+            return;
+
+        Log.Info(LogTag, $"Discovered {name} {address} rssi={rssi}");
+        Raise(DeviceDiscovered, new Services.Glasses.HeyCyan.HeyCyanScanResult(name ?? "HeyCyan", address, rssi));
+    }
+
+    private void OnScanFailed(ScanFailure errorCode)
+    {
+        TaskCompletionSource<bool>? tcs;
+        lock (_gate)
+        {
+            tcs = _scanTcs;
+        }
+
+        tcs?.TrySetException(new InvalidOperationException($"HeyCyan BLE scan failed with code {errorCode}"));
+        CompleteScan(false, CancellationToken.None);
+    }
+
+    private void OnConnectionStateChange(BluetoothGatt? gatt, GattStatus status, ProfileState newState)
+    {
+        Log.Info(LogTag, $"Connection state change status={status} newState={newState}");
+
+        if (newState == ProfileState.Connected && status == GattStatus.Success)
+        {
+            Raise(ConnectionStateChanged, Services.Glasses.HeyCyan.HeyCyanConnectionState.Connecting);
+            try { gatt?.RequestMtu(247); } catch { }
+
+            if (gatt is null || !gatt.DiscoverServices())
+                FailConnect(new InvalidOperationException("BLE service discovery could not be started"));
+
+            return;
+        }
+
+        if (newState == ProfileState.Disconnected)
+        {
+            var wasConnecting = _connectTcs is not null;
+            CloseGatt();
+            if (wasConnecting)
+                FailConnect(new InvalidOperationException($"BLE disconnected while connecting, status={status}"));
+            else
+                Raise(ConnectionStateChanged, Services.Glasses.HeyCyan.HeyCyanConnectionState.Disconnected);
+        }
+    }
+
+    private void OnServicesDiscovered(BluetoothGatt? gatt, GattStatus status)
+    {
+        Log.Info(LogTag, $"Services discovered status={status}");
+
+        if (gatt is null || status != GattStatus.Success)
+        {
+            FailConnect(new InvalidOperationException($"BLE service discovery failed with status {status}"));
+            return;
+        }
+
+        var service = gatt.GetService(SerialPortServiceUuid);
+        var notify = service?.GetCharacteristic(SerialPortNotifyUuid);
+        var write = service?.GetCharacteristic(SerialPortWriteUuid);
+
+        if (service is null || notify is null || write is null)
+        {
+            LogKnownServices(gatt);
+            FailConnect(new InvalidOperationException("HeyCyan serial-port BLE service/characteristics were not found"));
+            return;
+        }
+
+        lock (_gate)
+        {
+            _gatt = gatt;
+            _notifyCharacteristic = notify;
+            _writeCharacteristic = write;
+        }
+
+        if (!gatt.SetCharacteristicNotification(notify, true))
+        {
+            FailConnect(new InvalidOperationException("Android rejected BLE notification enable"));
+            return;
+        }
+
+        var descriptor = notify.GetDescriptor(ClientCharacteristicConfigUuid);
+        if (descriptor is null)
+        {
+            CompleteConnect();
+            return;
+        }
+
+        descriptor.SetValue(BluetoothGattDescriptor.EnableNotificationValue.ToArray());
+        if (!gatt.WriteDescriptor(descriptor))
+            FailConnect(new InvalidOperationException("Android rejected BLE notification descriptor write"));
+    }
+
+    private void OnDescriptorWrite(BluetoothGattDescriptor? descriptor, GattStatus status)
+    {
+        if (descriptor?.Uuid?.Equals(ClientCharacteristicConfigUuid) != true)
+            return;
+
+        if (status != GattStatus.Success)
+        {
+            FailConnect(new InvalidOperationException($"BLE notification descriptor write failed with status {status}"));
+            return;
+        }
+
+        CompleteConnect();
+    }
+
+    private void OnCharacteristicWrite(GattStatus status)
+    {
+        TaskCompletionSource<GattStatus>? tcs;
+        lock (_gate)
+        {
+            tcs = _writeTcs;
+        }
+
+        tcs?.TrySetResult(status);
+    }
+
+    private void OnCharacteristicChanged(BluetoothGattCharacteristic? characteristic, byte[]? value)
+    {
+        if (value is null || value.Length == 0)
+            return;
+
+        var characteristicUuid = characteristic?.Uuid?.ToString() ?? "unknown";
+        Log.Verbose(LogTag, $"BLE notify {characteristicUuid} {value.Length} bytes {ToHex(value)}");
+
+        if (characteristic?.Uuid?.Equals(SerialPortNotifyUuid) != true)
+            return;
+
+        List<byte[]> completed = [];
+        lock (_receiveBuffer)
+        {
+            _receiveBuffer.AddRange(value);
+            while (Services.Glasses.HeyCyan.HeyCyanDirectBleProtocol.TryExtractCompleteFrame(
+                _receiveBuffer,
+                out var frame,
+                DateTimeOffset.UtcNow,
+                ref _receiveStartedAt))
+            {
+                completed.Add(frame);
+            }
+        }
+
+        foreach (var frame in completed)
+            ProcessFrame(frame);
+    }
+
+    private void ProcessFrame(byte[] frame)
+    {
+        if (!Services.Glasses.HeyCyan.HeyCyanDirectBleProtocol.TryDecodeFrame(
+            frame,
+            out var action,
+            out _))
+        {
+            return;
+        }
+
+        if (Services.Glasses.HeyCyan.HeyCyanDirectBleProtocol.TryBuildRawNotify(frame, out var loadData))
+            ProcessRawNotify(loadData);
+
+        var responsePayload = Services.Glasses.HeyCyan.HeyCyanDirectBleProtocol.BuildSessionPayload(frame);
+        if (_pending.TryGetValue(action, out var tcs))
+            tcs.TrySetResult(new Services.Glasses.HeyCyan.HeyCyanResponse(action, responsePayload));
+    }
+
+    private void ProcessRawNotify(byte[] loadData)
+    {
+        if (Services.Glasses.HeyCyan.HeyCyanDirectBleProtocol.TryBuildButtonEvent(loadData, out var gesture))
+        {
+            Raise(ButtonPressed, new Services.Glasses.HeyCyan.HeyCyanButtonEvent(
+                gesture,
+                DateTimeOffset.UtcNow));
+            return;
         }
 
         Raise(RawNotify, new Services.Glasses.HeyCyan.HeyCyanRawNotify(loadData));
     }
 
-    private void OnBleConnectionStateChanged(bool connected)
+    private void CompleteConnect()
     {
-        if (connected)
+        TaskCompletionSource<bool>? tcs;
+        lock (_gate)
         {
-            Raise(ConnectionStateChanged, Services.Glasses.HeyCyan.HeyCyanConnectionState.Connecting);
-        }
-        else
-        {
-            Raise(ConnectionStateChanged, Services.Glasses.HeyCyan.HeyCyanConnectionState.Disconnected);
-            _connectTcs?.TrySetException(new InvalidOperationException("BLE connection lost"));
+            tcs = _connectTcs;
             _connectTcs = null;
-            _connectingMac = null;
+            try { _connectRegistration.Dispose(); } catch { }
+            _connectRegistration = default;
+        }
+
+        Log.Info(LogTag, "HeyCyan BLE serial-port notifications enabled");
+        Raise(ConnectionStateChanged, Services.Glasses.HeyCyan.HeyCyanConnectionState.Connected);
+        tcs?.TrySetResult(true);
+    }
+
+    private void FailConnect(Exception ex)
+    {
+        TaskCompletionSource<bool>? tcs;
+        lock (_gate)
+        {
+            tcs = _connectTcs;
+            _connectTcs = null;
+            try { _connectRegistration.Dispose(); } catch { }
+            _connectRegistration = default;
+        }
+
+        Log.Warn(LogTag, $"BLE connect failed: {ex.Message}");
+        tcs?.TrySetException(ex);
+        CloseGatt();
+        Raise(ConnectionStateChanged, Services.Glasses.HeyCyan.HeyCyanConnectionState.Disconnected);
+    }
+
+    private void CloseGatt()
+    {
+        BluetoothGatt? gatt;
+        lock (_gate)
+        {
+            gatt = _gatt;
+            _gatt = null;
+            _gattCallback = null;
+            _notifyCharacteristic = null;
+            _writeCharacteristic = null;
+            _writeTcs?.TrySetException(new InvalidOperationException("BLE disconnected"));
+            _writeTcs = null;
+            _receiveBuffer.Clear();
+            _receiveStartedAt = null;
+        }
+
+        if (gatt is null)
+            return;
+
+        try { gatt.Disconnect(); } catch { }
+        try { gatt.Close(); } catch { }
+    }
+
+    private void LogKnownServices(BluetoothGatt gatt)
+    {
+        try
+        {
+            foreach (var service in gatt.Services ?? [])
+            {
+                Log.Warn(LogTag, $"GATT service {service.Uuid}");
+                foreach (var characteristic in service.Characteristics ?? [])
+                    Log.Warn(LogTag, $"  characteristic {characteristic.Uuid} props={characteristic.Properties}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Warn(LogTag, $"Could not log GATT services: {ex.Message}");
         }
     }
 
-    private void OnBleServiceDiscovered()
+    private static TimeSpan ResponseTimeoutFor(byte action) =>
+        action switch
+        {
+            Services.Glasses.HeyCyan.HeyCyanCommands.ActionBattery => TimeSpan.FromSeconds(2),
+            Services.Glasses.HeyCyan.HeyCyanCommands.ActionDeviceInfo => TimeSpan.FromSeconds(2),
+            Services.Glasses.HeyCyan.HeyCyanCommands.ActionDeviceConfig => TimeSpan.FromSeconds(2),
+            Services.Glasses.HeyCyan.HeyCyanCommands.ActionGlassesControl => TimeSpan.FromSeconds(5),
+            _ => TimeSpan.FromMilliseconds(500)
+        };
+
+    private static IEnumerable<byte[]> Chunk(byte[] payload, int length)
     {
-        // Connection is ready when GATT services are discovered.
-        Raise(ConnectionStateChanged, Services.Glasses.HeyCyan.HeyCyanConnectionState.Connected);
-        _connectTcs?.TrySetResult(true);
-        _connectTcs = null;
-        _connectingMac = null;
+        for (var offset = 0; offset < payload.Length; offset += length)
+        {
+            var count = Math.Min(length, payload.Length - offset);
+            var chunk = new byte[count];
+            Buffer.BlockCopy(payload, offset, chunk, 0, count);
+            yield return chunk;
+        }
     }
 
-    private void OnBleDeviceDiscovered(string name, string address, int rssi)
+    private static bool IsHeyCyanName(string? name) =>
+        !string.IsNullOrWhiteSpace(name)
+        && (name.StartsWith("QC", StringComparison.OrdinalIgnoreCase)
+            || name.StartsWith("O_", StringComparison.OrdinalIgnoreCase)
+            || name.StartsWith("M01", StringComparison.OrdinalIgnoreCase)
+            || name.Contains("Cyan", StringComparison.OrdinalIgnoreCase));
+
+    private static string ToHex(byte[] bytes) =>
+        Convert.ToHexString(bytes);
+
+    private void ThrowIfDisposed()
     {
-        // Filter by manufacturer name prefix (CyanBridge uses "QC" prefix).
-        if (string.IsNullOrWhiteSpace(name) || !name.StartsWith("QC", StringComparison.OrdinalIgnoreCase))
-            return;
-
-        // Deduplicate by MAC address.
-        if (!_discoveredMacs.TryAdd(address, true))
-            return;
-
-        Raise(DeviceDiscovered, new Services.Glasses.HeyCyan.HeyCyanScanResult(name, address, rssi));
+        if (_disposed)
+            throw new ObjectDisposedException(nameof(HeyCyanSdkBridge));
     }
 
-    /// <summary>
-    /// Trampoline every SDK callback off the BLE I/O thread before raising events.
-    /// BleOperateManager extends HandlerThread, and ILargeDataResponse.ParseData /
-    /// IBleListener.* fire on that thread (sdk-api-reference.md §E.2).
-    /// </summary>
     private void Raise<T>(EventHandler<T>? handler, T arg)
     {
-        if (handler is null) return;
+        if (handler is null)
+            return;
+
         _dispatcher.Post(_ => handler.Invoke(this, arg), null);
     }
-}
 
-/// <summary>
-/// C# adapter for IBleListener that forwards GATT lifecycle callbacks to delegates.
-/// </summary>
-internal sealed class BleListener : Java.Lang.Object, IBleListener
-{
-    private readonly Action<bool> _onConnectionStateChanged;
-    private readonly Action _onServiceDiscovered;
-    private readonly Action<string, string, int>? _onDeviceDiscovered;
-
-    public BleListener(
-        Action<bool> onConnectionStateChanged,
-        Action onServiceDiscovered,
-        Action<string, string, int>? onDeviceDiscovered = null)
+    private sealed class DirectScanCallback(
+        Action<BluetoothDevice?, string?, int> onDevice,
+        Action<ScanFailure> onFailed) : ScanCallback
     {
-        _onConnectionStateChanged = onConnectionStateChanged;
-        _onServiceDiscovered = onServiceDiscovered;
-        _onDeviceDiscovered = onDeviceDiscovered;
+        public override void OnScanResult(ScanCallbackType callbackType, ScanResult? result)
+        {
+            if (result is null)
+                return;
+
+            onDevice(result.Device, result.ScanRecord?.DeviceName, result.Rssi);
+        }
+
+        public override void OnBatchScanResults(IList<ScanResult>? results)
+        {
+            if (results is null)
+                return;
+
+            foreach (var result in results)
+            {
+                if (result is null)
+                    continue;
+
+                onDevice(result.Device, result.ScanRecord?.DeviceName, result.Rssi);
+            }
+        }
+
+        public override void OnScanFailed(ScanFailure errorCode)
+        {
+            onFailed(errorCode);
+        }
     }
 
-    public void BleGattConnected(global::Android.Bluetooth.BluetoothDevice? p0)
+    private sealed class DirectGattCallback(HeyCyanSdkBridge owner) : BluetoothGattCallback
     {
-        _onConnectionStateChanged(true);
+        public override void OnConnectionStateChange(BluetoothGatt? gatt, GattStatus status, ProfileState newState)
+            => owner.OnConnectionStateChange(gatt, status, newState);
+
+        public override void OnServicesDiscovered(BluetoothGatt? gatt, GattStatus status)
+            => owner.OnServicesDiscovered(gatt, status);
+
+        public override void OnDescriptorWrite(
+            BluetoothGatt? gatt,
+            BluetoothGattDescriptor? descriptor,
+            GattStatus status)
+            => owner.OnDescriptorWrite(descriptor, status);
+
+        public override void OnCharacteristicWrite(
+            BluetoothGatt? gatt,
+            BluetoothGattCharacteristic? characteristic,
+            GattStatus status)
+            => owner.OnCharacteristicWrite(status);
+
+        public override void OnCharacteristicChanged(
+            BluetoothGatt? gatt,
+            BluetoothGattCharacteristic? characteristic)
+            => owner.OnCharacteristicChanged(characteristic, characteristic?.GetValue());
+
+        public override void OnCharacteristicChanged(
+            BluetoothGatt? gatt,
+            BluetoothGattCharacteristic? characteristic,
+            byte[]? value)
+            => owner.OnCharacteristicChanged(characteristic, value);
     }
-
-    public void BleGattDisconnect(global::Android.Bluetooth.BluetoothDevice? p0)
-    {
-        _onConnectionStateChanged(false);
-    }
-
-    public void BleServiceDiscovered(int p0, string? p1)
-    {
-        _onServiceDiscovered();
-    }
-
-    public void BleStatus(int rssi, int p1)
-    {
-        // During scan, BleStatus is called with rssi and device state.
-        // Device discovery info comes through other mechanisms in BleBaseControl.
-        // For now, this is a no-op.
-    }
-
-    public bool IsConnected => _ops?.IsConnected ?? false;
-
-    private static BleOperateManager? _ops;
-    public static void SetOperateManager(BleOperateManager ops) => _ops = ops;
-
-    // Unused IBleListener methods — no-op.
-    public void BleCharacteristicChanged(string? p0, string? p1, byte[]? p2) { }
-    public void BleCharacteristicNotification() { }
-    public void BleCharacteristicRead(string? p0, string? p1, int p2, byte[]? p3) { }
-    public void BleCharacteristicWrite(string? p0, string? p1, int p2, byte[]? p3) { }
-    public void BleNoCallback() { }
-    public bool Execute(Com.Oudmon.Ble.Base.Request.BaseRequest? p0) => false;
-    public void OnDescriptorRead(global::Android.Bluetooth.BluetoothGatt? p0, global::Android.Bluetooth.BluetoothGattDescriptor? p1, int p2) { }
-    public void OnDescriptorWrite(global::Android.Bluetooth.BluetoothGatt? p0, global::Android.Bluetooth.BluetoothGattDescriptor? p1, int p2) { }
-    public void OnReadRemoteRssi(global::Android.Bluetooth.BluetoothGatt? p0, int p1, int p2) { }
-    public void StartConnect() { }
 }
 #endif

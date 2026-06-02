@@ -1,5 +1,6 @@
 using BodyCam.Models;
 using FluentAssertions;
+using Microsoft.Maui.Controls;
 
 namespace BodyCam.Tests.Models;
 
@@ -141,5 +142,75 @@ public class TranscriptEntryTests
         entry.IsThinking = true;
 
         changed.Should().Contain(nameof(TranscriptEntry.AccessibleText));
+    }
+
+    [Fact]
+    public void Text_WhenThinking_DoesNotNotifyAccessibleText()
+    {
+        var entry = new TranscriptEntry { Role = "AI", IsThinking = true };
+        var changed = new List<string?>();
+        entry.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+        entry.Text = ".";
+
+        changed.Should().Contain(nameof(TranscriptEntry.FormattedText));
+        changed.Should().NotContain(nameof(TranscriptEntry.AccessibleText));
+        entry.AccessibleText.Should().Be("AI is thinking");
+    }
+
+    [Fact]
+    public void AccessibleText_WithMarkdown_ReturnsPlainText()
+    {
+        var entry = new TranscriptEntry { Role = "AI" };
+
+        entry.Text = "**Bold** and [docs](https://example.com)";
+
+        entry.AccessibleText.Should().Be("AI: Bold and docs");
+    }
+
+    [Fact]
+    public void Text_NotifiesFormattedTextChange()
+    {
+        var entry = new TranscriptEntry { Role = "AI" };
+        var changed = new List<string?>();
+        entry.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+        entry.Text = "Hello";
+
+        changed.Should().Contain(nameof(TranscriptEntry.FormattedText));
+    }
+
+    [Fact]
+    public void FormattedText_WithMarkdown_RendersFormattingWithoutMarkdownSyntax()
+    {
+        var entry = new TranscriptEntry { Role = "AI" };
+
+        entry.Text = "Here is **bold** and *soft* with `code`.";
+
+        var runs = TranscriptMarkdownFormatter.ToTextRuns(entry.Role, entry.Text);
+        var text = string.Concat(runs.Select(run => run.Text));
+
+        text.Should().Be("AI: Here is bold and soft with code.");
+        runs.Should().Contain(run =>
+            run.Text == "bold" && run.FontAttributes.HasFlag(FontAttributes.Bold));
+        runs.Should().Contain(run =>
+            run.Text == "soft" && run.FontAttributes.HasFlag(FontAttributes.Italic));
+        runs.Should().Contain(run =>
+            run.Text == "code" && run.FontFamily == "Consolas");
+    }
+
+    [Fact]
+    public void FormattedText_WithMarkdownList_RendersListText()
+    {
+        var entry = new TranscriptEntry { Role = "AI" };
+
+        entry.Text = "- Alpha\n- **Beta**";
+
+        var text = string.Concat(TranscriptMarkdownFormatter
+            .ToTextRuns(entry.Role, entry.Text)
+            .Select(run => run.Text));
+
+        text.Should().Be("AI: - Alpha\n- Beta");
+        text.Should().NotContain("**");
     }
 }

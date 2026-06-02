@@ -1,3 +1,5 @@
+using BodyCam.Services.AiProviders;
+
 namespace BodyCam;
 
 public enum OpenAiProvider { OpenAi, Azure }
@@ -5,7 +7,14 @@ public enum OpenAiProvider { OpenAi, Azure }
 public class AppSettings
 {
     // Provider
-    public OpenAiProvider Provider { get; set; } = OpenAiProvider.OpenAi;
+    public string ProviderId { get; set; } = AiProviderIds.OpenAi;
+
+    [Obsolete("Use ProviderId instead.")]
+    public OpenAiProvider Provider
+    {
+        get => AiProviderIds.ToLegacyProvider(ProviderId);
+        set => ProviderId = AiProviderIds.FromLegacyProvider(value);
+    }
 
     // Models
     public string RealtimeModel { get; set; } = "gpt-realtime-1.5";
@@ -82,33 +91,13 @@ public class AppSettings
     // Microphone coordination
     public int MicReleaseDelayMs { get; set; } = 50;
 
-    private string AzureBase => AzureEndpoint?.TrimEnd('/') ?? string.Empty;
+    public Uri GetRealtimeUri() =>
+        AiProviderRegistry.Default.GetRequiredAdapter(ProviderId).GetRealtimeUri(this);
 
-    public Uri GetRealtimeUri() => Provider switch
-    {
-        OpenAiProvider.Azure =>
-            new Uri($"{AzureBase.Replace("https://", "wss://")}/openai/realtime"
-                  + $"?api-version={AzureApiVersion}&deployment={AzureRealtimeDeploymentName}"),
-        _ =>
-            new Uri($"{RealtimeApiEndpoint}?model={RealtimeModel}")
-    };
+    public Uri GetChatUri() =>
+        AiProviderRegistry.Default.GetRequiredAdapter(ProviderId).GetChatUri(this);
 
-    public Uri GetChatUri() => Provider switch
-    {
-        OpenAiProvider.Azure =>
-            new Uri($"{AzureBase}/openai/deployments/{AzureChatDeploymentName}"
-                  + $"/chat/completions?api-version={AzureApiVersion}"),
-        _ =>
-            new Uri(ChatApiEndpoint)
-    };
-
-    public Uri GetVisionUri() => Provider switch
-    {
-        OpenAiProvider.Azure =>
-            new Uri($"{AzureBase}/openai/deployments/{AzureVisionDeploymentName}"
-                  + $"/chat/completions?api-version={AzureApiVersion}"),
-        _ =>
-            new Uri(ChatApiEndpoint)
-    };
+    public Uri GetVisionUri() =>
+        AiProviderRegistry.Default.GetRequiredAdapter(ProviderId).GetVisionUri(this);
 
 }

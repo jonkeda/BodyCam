@@ -36,6 +36,7 @@ public sealed class WindowsHeyCyanRealFixture : IAsyncDisposable
 
     // WiFi + media transfer (null when created without transfer support)
     internal WindowsGlassesWiFiManager? WifiManager { get; }
+    internal WindowsWiFiDirectManager? WifiDirectManager { get; }
     public IHeyCyanMediaTransfer? Transfer { get; }
 
     // Settings
@@ -56,6 +57,7 @@ public sealed class WindowsHeyCyanRealFixture : IAsyncDisposable
         InMemorySettingsService settings,
         ILoggerFactory loggerFactory,
         WindowsGlassesWiFiManager? wifiManager = null,
+        WindowsWiFiDirectManager? wifiDirectManager = null,
         IHeyCyanMediaTransfer? transfer = null)
     {
         Session = session;
@@ -70,6 +72,7 @@ public sealed class WindowsHeyCyanRealFixture : IAsyncDisposable
         Settings = settings;
         _loggerFactory = loggerFactory;
         WifiManager = wifiManager;
+        WifiDirectManager = wifiDirectManager;
         Transfer = transfer;
     }
 
@@ -262,7 +265,7 @@ public sealed class WindowsHeyCyanRealFixture : IAsyncDisposable
             btEnum, btOutEnum,
             mic, speaker, settings,
             loggerFactory,
-            wifiManager, transfer);
+            wifiManager, wifiDirectManager, transfer);
     }
 
     /// <summary>

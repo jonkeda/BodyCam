@@ -3,6 +3,7 @@ using BodyCam.Agents;
 using BodyCam.Models;
 using BodyCam.Orchestration;
 using BodyCam.Services;
+using BodyCam.Services.AiProviders;
 using BodyCam.Services.Audio.WebRtcApm;
 using BodyCam.Services.Camera;
 using BodyCam.Services.Camera.Commands;
@@ -82,7 +83,7 @@ public class OrchestratorFixture : IAsyncLifetime
     public async Task InitializeAsync()
     {
         Settings = RealtimeFixture.LoadSettings();
-        var apiKey = RealtimeFixture.LoadApiKey(Settings.Provider);
+        var apiKey = RealtimeFixture.LoadApiKey(Settings.ProviderId);
 
         var realtimeClient = RealtimeFixture.BuildClient(apiKey, Settings);
 
@@ -244,7 +245,7 @@ public class OrchestratorFixture : IAsyncLifetime
 
     private static IChatClient BuildChatClient(string apiKey, AppSettings settings)
     {
-        if (settings.Provider == OpenAiProvider.Azure)
+        if (AiProviderIds.Normalize(settings.ProviderId) == AiProviderIds.AzureOpenAi)
         {
             var credential = new ApiKeyCredential(apiKey);
             var azureClient = new AzureOpenAIClient(new Uri(settings.AzureEndpoint!), credential);
@@ -322,10 +323,16 @@ public class OrchestratorFixture : IAsyncLifetime
 
         public string OutputMode { get; set; } = "Speak";
 
+        public string ProviderId
+        {
+            get => _settings.ProviderId;
+            set => _settings.ProviderId = value;
+        }
+
         public OpenAiProvider Provider
         {
-            get => _settings.Provider;
-            set => _settings.Provider = value;
+            get => AiProviderIds.ToLegacyProvider(_settings.ProviderId);
+            set => _settings.ProviderId = AiProviderIds.FromLegacyProvider(value);
         }
 
         public string? AzureEndpoint
@@ -370,7 +377,7 @@ public class OrchestratorFixture : IAsyncLifetime
 
         public string? ActiveCameraProvider { get; set; }
         public CameraCommandMode DefaultTouchCommandMode { get; set; } = CameraCommandMode.ManualAim;
-        public LookDetailLevel DefaultLookDetailLevel { get; set; } = LookDetailLevel.Summary;
+        public LookDetailLevel DefaultLookDetailLevel { get; set; } = LookDetailLevel.Overview;
         public ReadDetailLevel DefaultReadDetailLevel { get; set; } = ReadDetailLevel.Full;
         public bool ConfirmExternalScanActions { get; set; } = true;
         public string? ActiveAudioInputProvider { get; set; }

@@ -1,5 +1,6 @@
 using BodyCam.Models;
 using BodyCam.Services;
+using BodyCam.Services.AiProviders;
 using BodyCam.Services.Camera.Commands;
 
 namespace BodyCam.Tests.Services.Glasses.HeyCyan.Fakes;
@@ -23,7 +24,12 @@ public sealed class FakeSettingsService : ISettingsService
     public string OutputMode { get; set; } = "Speak";
 
     // Provider
-    public OpenAiProvider Provider { get; set; } = OpenAiProvider.OpenAi;
+    public string ProviderId { get; set; } = AiProviderIds.OpenAi;
+    public OpenAiProvider Provider
+    {
+        get => AiProviderIds.ToLegacyProvider(ProviderId);
+        set => ProviderId = AiProviderIds.FromLegacyProvider(value);
+    }
     public string? AzureEndpoint { get; set; }
     public string? AzureRealtimeDeploymentName { get; set; }
     public string? AzureChatDeploymentName { get; set; }
@@ -41,7 +47,7 @@ public sealed class FakeSettingsService : ISettingsService
     // Camera
     public string? ActiveCameraProvider { get; set; }
     public CameraCommandMode DefaultTouchCommandMode { get; set; } = CameraCommandMode.ManualAim;
-    public LookDetailLevel DefaultLookDetailLevel { get; set; } = LookDetailLevel.Summary;
+    public LookDetailLevel DefaultLookDetailLevel { get; set; } = LookDetailLevel.Overview;
     public ReadDetailLevel DefaultReadDetailLevel { get; set; } = ReadDetailLevel.Full;
     public bool ConfirmExternalScanActions { get; set; } = true;
 

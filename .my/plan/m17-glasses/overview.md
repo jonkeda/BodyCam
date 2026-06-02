@@ -6,13 +6,14 @@ peripheral devices, using the provider abstractions built in M11–M14.
 
 **Depends on:** M11 (camera), M12 (audio input), M13 (audio output), M14 (buttons).
 
-**Vendor SDK integration:** [M33 — HeyCyan Glasses SDK Integration](../m33-heycyan-sdk/overview.md)
-delivers the concrete provider implementations and `HeyCyanGlassesDeviceManager`.
-The Phase 1 "hardware investigation" portion of M17 is largely satisfied by the
-reverse-engineering work already in [`Alternative-HeyCyan-App-and-SDK/`](../../../Alternative-HeyCyan-App-and-SDK/)
+**HeyCyan implementation:** [M46 — HeyCyan C# WiFi Retry](../m46-heycyan-csharp-wifi-retry/overview.md)
+delivers the active Android HeyCyan provider path and supersedes the archived
+[M33 SDK plan](../archive/m33-heycyan-sdk/overview.md). The Phase 1 "hardware
+investigation" portion of M17 is largely satisfied by the reverse-engineering
+work already in [`Alternative-HeyCyan-App-and-SDK/`](../../../Alternative-HeyCyan-App-and-SDK/)
 — see `WIFI_TRANSFER_ARCHITECTURE.md` and `android/AGENTS.md`. M17 retains the
 abstract `GlassesDeviceManager` design and the cross-vendor connection UI; the
-HeyCyan-specific BLE/WiFi/transfer plumbing lives entirely in M33.
+HeyCyan-specific BLE/WiFi/transfer plumbing lives in M46.
 
 ---
 
@@ -109,7 +110,9 @@ public record GlassesBatteryInfo(int Percentage, bool IsCharging);
 - Storage: internal flash, exposed via WiFi-Direct hotspot in transfer mode
 - Vendor SDK: `glasses_sdk_20250723_v01.aar` (Android) + `QCSDK.framework` (iOS)
 
-**Resolved (see [M33](../m33-heycyan-sdk/overview.md) and `Alternative-HeyCyan-App-and-SDK/WIFI_TRANSFER_ARCHITECTURE.md`):**
+**Resolved (see [M46](../m46-heycyan-csharp-wifi-retry/overview.md), archived
+[M33](../archive/m33-heycyan-sdk/overview.md), and
+`Alternative-HeyCyan-App-and-SDK/WIFI_TRANSFER_ARCHITECTURE.md`):**
 
 | Question | Answer |
 |----------|--------|
@@ -127,7 +130,7 @@ public record GlassesBatteryInfo(int Percentage, bool IsCharging);
 Receive glasses, investigate all protocols, implement BT audio providers.
 For HeyCyan/QCSDK hardware the investigation is already complete — see
 [`Alternative-HeyCyan-App-and-SDK/`](../../../Alternative-HeyCyan-App-and-SDK/)
-and [M33](../m33-heycyan-sdk/overview.md). The remaining work is the generic
+and [M46](../m46-heycyan-csharp-wifi-retry/overview.md). The remaining work is the generic
 `GlassesDeviceManager` skeleton plus the generic `BluetoothAudio*Provider`
 implementations from M12/M13 Phase 2 (already done).
 

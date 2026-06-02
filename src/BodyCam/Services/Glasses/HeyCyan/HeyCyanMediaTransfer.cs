@@ -132,10 +132,13 @@ internal sealed class HeyCyanMediaTransfer : IHeyCyanMediaTransfer
 
             _log.LogInformation("Entering transfer mode (cold start)");
 
+            if (_httpFactory is IHeyCyanTransferPreparation preparation)
+                await preparation.PrepareForTransferAsync(ct).ConfigureAwait(false);
+
             // Enter transfer mode via the session (BLE + wait for IP notify).
             // The session sends:
             //   1) LargeDataHandler.GlassesControl(new byte[] { 0x02, 0x01, 0x04 }, callback)
-            //   2) Waits for GlassesDeviceNotifyRsp where LoadData[6] == 0x08 (IP octets at [7..10])
+            //   2) Polls 0x02,0x03 and prefers GlassesDeviceNotifyRsp where LoadData[6] == 0x08
             var transfer = await _session.EnterTransferModeAsync(ct).ConfigureAwait(false);
 
             // Create the platform-specific HTTP client (Android: WiFiP2pHttpClient with process binding).

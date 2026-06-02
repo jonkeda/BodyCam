@@ -24,6 +24,18 @@ public class QuickActionTests
     }
 
     [Fact]
+    public void LookDetailButton_Exists()
+    {
+        Page.LookDetailButton.AssertExists();
+    }
+
+    [Fact]
+    public void LookSummaryButton_Exists()
+    {
+        Page.LookSummaryButton.AssertExists();
+    }
+
+    [Fact]
     public void ReadButton_Exists()
     {
         Page.ReadButton.AssertExists();
@@ -54,6 +66,18 @@ public class QuickActionTests
     public void LookButton_IsEnabled()
     {
         Page.LookButton.AssertEnabled(true);
+    }
+
+    [Fact]
+    public void LookDetailButton_IsEnabled()
+    {
+        Page.LookDetailButton.AssertEnabled(true);
+    }
+
+    [Fact]
+    public void LookSummaryButton_IsEnabled()
+    {
+        Page.LookSummaryButton.AssertEnabled(true);
     }
 
     [Fact]

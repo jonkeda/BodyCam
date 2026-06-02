@@ -1,8 +1,10 @@
 using BodyCam;
 using BodyCam.Agents;
 using BodyCam.Services;
+using BodyCam.Services.AiProviders;
 using BodyCam.Services.Camera;
 using BodyCam.Services.Camera.Commands;
+using BodyCam.Tests.Services.AiProviders;
 using FluentAssertions;
 using Microsoft.Extensions.AI;
 using NSubstitute;
@@ -36,6 +38,29 @@ public class LookCommandTests
         prompt.Should().Contain("left, right, ahead");
         prompt.Should().Contain("door");
         prompt.Should().Contain("Is it open?");
+    }
+
+    [Fact]
+    public void PromptDefinitions_ExposeTextAndPrompt()
+    {
+        var command = CreateCommand(out _);
+
+        var overview = command.PromptDefinitions.Single(p => p.Key == nameof(LookDetailLevel.Overview));
+
+        overview.DisplayName.Should().Be("Look");
+        overview.Text.Should().Be("Look. Give an overview.");
+        overview.Prompt.Should().Contain("orientation-first overview");
+    }
+
+    [Fact]
+    public void ResolvePromptDefinition_NullDetail_UsesOverview()
+    {
+        var definition = LookCommand.ResolvePromptDefinition(new LookCommandOptions(
+            DetailLevel: null,
+            Focus: null,
+            Question: null));
+
+        definition.Key.Should().Be(nameof(LookDetailLevel.Overview));
     }
 
     [Fact]
@@ -76,7 +101,42 @@ public class LookCommandTests
 
         result.Success.Should().BeTrue();
         result.TranscriptText.Should().Be("A chair is ahead.");
+        result.TranscriptInput.Should().NotBeNull();
+        result.TranscriptInput!.Text.Should().Be("Look. Give an overview.");
+        result.TranscriptInput.ImageBytes.Should().BeEquivalentTo([0xFF, 0xD8]);
         captured.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_TextOnlyProvider_FailsBeforeCapturing()
+    {
+        var registry = new AiProviderRegistry([
+            new FakeProviderAdapter("text-only", AiProviderCapability.Chat)
+        ]);
+        var analytics = new RecordingAnalyticsService();
+        var command = CreateCommand(out _, registry, analytics);
+        var settings = CreateSettings();
+        settings.ProviderId.Returns("text-only");
+
+        var captured = 0;
+        var context = CreateContext(
+            settings,
+            options: new LookCommandOptions(LookDetailLevel.Overview, null, null),
+            captureFrame: _ =>
+            {
+                captured++;
+                return Task.FromResult<byte[]?>([0xFF, 0xD8]);
+            });
+
+        var result = await command.ExecuteAsync(context, CancellationToken.None);
+
+        result.Success.Should().BeFalse();
+        result.TranscriptText.Should().Contain("does not support image input");
+        captured.Should().Be(0);
+        analytics.HasEvent(
+            "ai.command.capability",
+            ("provider.id", "text-only"),
+            ("error.category", "unsupported_capability")).Should().BeTrue();
     }
 
     [Fact]
@@ -113,17 +173,23 @@ public class LookCommandTests
         manualCaptures.Should().Be(1);
     }
 
-    private static LookCommand CreateCommand(out IChatClient chatClient)
+    private static LookCommand CreateCommand(
+        out IChatClient chatClient,
+        IAiProviderRegistry? registry = null,
+        IAnalyticsService? analytics = null)
     {
         chatClient = Substitute.For<IChatClient>();
-        return new LookCommand(new VisionAgent(chatClient, new AppSettings()));
+        return new LookCommand(
+            new VisionAgent(chatClient, new AppSettings()),
+            registry ?? AiProviderRegistry.Default,
+            analytics ?? new NullAnalyticsService());
     }
 
     private static ISettingsService CreateSettings()
     {
         var settings = Substitute.For<ISettingsService>();
         settings.DefaultTouchCommandMode.Returns(CameraCommandMode.ManualAim);
-        settings.DefaultLookDetailLevel.Returns(LookDetailLevel.Summary);
+        settings.DefaultLookDetailLevel.Returns(LookDetailLevel.Overview);
         settings.DefaultReadDetailLevel.Returns(ReadDetailLevel.Full);
         settings.ConfirmExternalScanActions.Returns(true);
         return settings;

@@ -126,6 +126,41 @@ public class HeyCyanGlassesSessionCoreTests
     }
 
     [Fact]
+    public async Task StartVideoAsync_sends_video_recording_command()
+    {
+        var (s, fake) = Build();
+        fake.OnSend = _ => new HeyCyanResponse(0x41, []);
+
+        await s.StartVideoAsync(default);
+
+        fake.SentCommands.Should().ContainSingle();
+        fake.SentCommands[0][1].Should().Be(0x41);
+        fake.SentCommands[0].Skip(6).Should().Equal(0x02, 0x01, 0x02);
+    }
+
+    [Fact]
+    public async Task StopVideoAsync_sends_video_stop_command()
+    {
+        var (s, fake) = Build();
+        fake.OnSend = _ => new HeyCyanResponse(0x41, []);
+
+        await s.StopVideoAsync(default);
+
+        fake.SentCommands.Should().ContainSingle();
+        fake.SentCommands[0][1].Should().Be(0x41);
+        fake.SentCommands[0].Skip(6).Should().Equal(0x02, 0x01, 0x03);
+    }
+
+    [Fact]
+    public void GetDeviceConfig_uses_android_sdk_support_payload()
+    {
+        var command = HeyCyanCommands.GetDeviceConfig();
+
+        command[1].Should().Be(HeyCyanCommands.ActionDeviceConfig);
+        command.Skip(6).Should().Equal(0x01, 0x00);
+    }
+
+    [Fact]
     public void ButtonPressed_forwards_each_gesture_exactly_once()
     {
         var (s, fake) = Build();
@@ -161,5 +196,31 @@ public class HeyCyanGlassesSessionCoreTests
         await s.DisconnectAsync(default);
 
         s.State.Should().Be(HeyCyanState.Disconnected);
+    }
+
+    [Fact]
+    public async Task EnterTransferModeAsync_catches_transfer_ip_raised_during_send()
+    {
+        var (s, fake) = Build();
+        fake.ConnectGate.SetResult();
+        await s.ConnectAsync(new("M01 Pro", "AA:BB", -50), default);
+        fake.SentCommands.Clear();
+        fake.OnSend = _ =>
+        {
+            fake.RaiseRawNotify([0, 0, 0, 0, 0, 0, 0x08, 192, 168, 49, 183]);
+            return new HeyCyanResponse(0x41, []);
+        };
+
+        var transfer = await s.EnterTransferModeAsync(CancellationToken.None);
+
+        fake.SentCommands.Should().HaveCount(2);
+        fake.SentCommands[0][1].Should().Be(0x41);
+        fake.SentCommands[0].Skip(6).Should().Equal(0x02, 0x01, 0x04);
+        fake.SentCommands[1][1].Should().Be(0x47);
+        fake.SentCommands[1].Skip(6).Should().Equal(0x01, 0x00);
+        transfer.BaseUrl.Should().Be("http://192.168.49.183/");
+        s.State.Should().Be(HeyCyanState.TransferMode);
+
+        await s.ExitTransferModeAsync(CancellationToken.None);
     }
 }

@@ -3,6 +3,7 @@ using BodyCam.Agents;
 using BodyCam.Models;
 using BodyCam.Orchestration;
 using BodyCam.Services;
+using BodyCam.Services.AiProviders;
 using BodyCam.Services.Audio.WebRtcApm;
 using BodyCam.Services.Camera;
 using BodyCam.Services.Logging;
@@ -41,7 +42,7 @@ public class OrchestratorWakeWordTests
         settingsService.TurnDetection.Returns(ModelOptions.DefaultTurnDetection);
         settingsService.NoiseReduction.Returns(ModelOptions.DefaultNoiseReduction);
         settingsService.SystemInstructions.Returns("You are a helpful assistant.");
-        settingsService.Provider.Returns(OpenAiProvider.OpenAi);
+        settingsService.ProviderId.Returns(AiProviderIds.OpenAi);
         settingsService.AzureApiVersion.Returns("2025-04-01-preview");
 
         var descTool = new DescribeSceneTool(vision);

@@ -59,6 +59,9 @@ public class MainViewModel : ViewModelBase
     private string? _visionStatus;
     private CameraView? _cameraView;
     private bool _isTransitioning;
+    private bool _isCompletingManualCapture;
+    private TranscriptEntry? _activeCommandAiEntry;
+    private CancellationTokenSource? _aiBusyAnimationCts;
 
     internal TranscriptEntry? _currentAiEntry;
 
@@ -116,7 +119,7 @@ public class MainViewModel : ViewModelBase
         if (_manualCapture is not null)
         {
             _manualCapture.CaptureRequested += (_, _) =>
-                MainThread.BeginInvokeOnMainThread(async () => await RevealInlineCameraPreviewAsync());
+                DispatchOnMainThreadAsync(RevealInlineCameraPreviewAsync);
         }
 
         // Subscribe to glasses events for shell widget
@@ -175,7 +178,17 @@ public class MainViewModel : ViewModelBase
         LookCommand = new AsyncRelayCommand(async () =>
         {
             IsActionsDrawerExpanded = false;
-            await ExecuteCameraCommandAsync("look", CommandTriggerOrigin.ActionsDrawer);
+            await ExecuteLookCommandAsync(LookDetailLevel.Overview);
+        });
+        LookDetailCommand = new AsyncRelayCommand(async () =>
+        {
+            IsActionsDrawerExpanded = false;
+            await ExecuteLookCommandAsync(LookDetailLevel.Detailed);
+        });
+        LookSummaryCommand = new AsyncRelayCommand(async () =>
+        {
+            IsActionsDrawerExpanded = false;
+            await ExecuteLookCommandAsync(LookDetailLevel.Summary);
         });
         ReadCommand = new AsyncRelayCommand(async () =>
         {
@@ -192,7 +205,7 @@ public class MainViewModel : ViewModelBase
         });
         PhotoCommand = new AsyncRelayCommand(async () =>
         {
-            if (_manualCapture is not null && await _manualCapture.CompletePendingCaptureAsync())
+            if (await CompletePendingManualCaptureAsync())
                 return;
 
             await RevealInlineCameraPreviewAsync();
@@ -346,6 +359,8 @@ public class MainViewModel : ViewModelBase
     public ICommand ToggleDebugCommand { get; }
     public ICommand DismissSnapshotCommand { get; }
     public ICommand LookCommand { get; }
+    public ICommand LookDetailCommand { get; }
+    public ICommand LookSummaryCommand { get; }
     public ICommand ReadCommand { get; }
     public ICommand FindCommand { get; }
     public ICommand AskCommand { get; }
@@ -356,6 +371,25 @@ public class MainViewModel : ViewModelBase
     private static readonly Color InactiveBg = Colors.Transparent;
     private static readonly Color ActiveTextColor = Colors.White;
     private static readonly Color InactiveTextColor = Color.FromArgb("#999999");
+    private static readonly Color ActionInactiveBg = Color.FromArgb("#F2F2F2");
+    private static readonly Color ActionInactiveDarkBg = Color.FromArgb("#2D2D2D");
+
+    public Color LookOverviewButtonColor => LookVariantColor(LookDetailLevel.Overview);
+    public Color LookDetailButtonColor => LookVariantColor(LookDetailLevel.Detailed);
+    public Color LookSummaryButtonColor => LookVariantColor(LookDetailLevel.Summary);
+    public Color LookOverviewTextColor => LookVariantTextColor(LookDetailLevel.Overview);
+    public Color LookDetailTextColor => LookVariantTextColor(LookDetailLevel.Detailed);
+    public Color LookSummaryTextColor => LookVariantTextColor(LookDetailLevel.Summary);
+
+    private Color LookVariantColor(LookDetailLevel detail) =>
+        _settingsService.DefaultLookDetailLevel == detail
+            ? ActiveBg
+            : (Application.Current?.RequestedTheme == AppTheme.Dark ? ActionInactiveDarkBg : ActionInactiveBg);
+
+    private Color LookVariantTextColor(LookDetailLevel detail) =>
+        _settingsService.DefaultLookDetailLevel == detail
+            ? ActiveTextColor
+            : (Application.Current?.RequestedTheme == AppTheme.Dark ? Color.FromArgb("#F5F5F5") : Color.FromArgb("#222222"));
 
     public ListeningLayer CurrentLayer
     {
@@ -702,6 +736,24 @@ public class MainViewModel : ViewModelBase
         }
     }
 
+    private void DispatchOnMainThreadAsync(Func<Task> action)
+    {
+        try
+        {
+            if (Application.Current is null || MainThread.IsMainThread)
+            {
+                _ = action();
+                return;
+            }
+
+            MainThread.BeginInvokeOnMainThread(async () => await action());
+        }
+        catch
+        {
+            _ = action();
+        }
+    }
+
     public async Task HandleButtonActionAsync(ButtonActionEvent action)
     {
         switch (action.Action)
@@ -713,7 +765,7 @@ public class MainViewModel : ViewModelBase
                 await ExecuteCameraCommandAsync("read", CommandTriggerOrigin.PhysicalButton);
                 break;
             case ButtonAction.Photo:
-                if (_manualCapture is not null && await _manualCapture.CompletePendingCaptureAsync())
+                if (await CompletePendingManualCaptureAsync())
                     return;
 
                 await SendVisionCommandAsync("Take a photo of what you see.");
@@ -728,6 +780,12 @@ public class MainViewModel : ViewModelBase
                 break;
         }
     }
+
+    private Task ExecuteLookCommandAsync(LookDetailLevel detail) =>
+        ExecuteCameraCommandAsync(
+            "look",
+            CommandTriggerOrigin.ActionsDrawer,
+            new LookCommandOptions(detail, Focus: null, Question: null));
 
     private async Task ExecuteCameraCommandAsync(
         string commandId,
@@ -745,35 +803,155 @@ public class MainViewModel : ViewModelBase
         ShowTranscriptTab = true;
         var aiEntry = new TranscriptEntry { Role = "AI", IsThinking = true };
         Entries.Add(aiEntry);
+        _activeCommandAiEntry = aiEntry;
 
         try
         {
             var result = await _cameraCommands.ExecuteAsync(
                 new CameraCommandRequest(commandId, mode, origin, options, query));
 
-            aiEntry.IsThinking = false;
-            aiEntry.Text = result.TranscriptText;
+            AddCommandTranscriptInput(result, aiEntry);
+            CompleteAiBusyVisual(aiEntry, result.TranscriptText);
 
             TryShowScanResult(result);
 
             if (WasManualAim(result))
-            {
-                ShowInlineCameraPreview = false;
-                _cameraView?.StopCameraPreview();
-            }
+                HideInlineCameraPreview();
         }
         catch (OperationCanceledException)
         {
-            aiEntry.IsThinking = false;
-            aiEntry.Text = "Command canceled.";
+            CompleteAiBusyVisual(aiEntry, "Command canceled.");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Camera command {CommandId} error", commandId);
-            aiEntry.IsThinking = false;
-            aiEntry.Text = $"Command error: {ex.Message}";
+            CompleteAiBusyVisual(aiEntry, $"Command error: {ex.Message}");
+        }
+        finally
+        {
+            if (ReferenceEquals(_activeCommandAiEntry, aiEntry))
+                _activeCommandAiEntry = null;
         }
     }
+
+    private async Task<bool> CompletePendingManualCaptureAsync()
+    {
+        if (_manualCapture is null)
+            return false;
+
+        if (_isCompletingManualCapture)
+            return true;
+
+        _isCompletingManualCapture = true;
+        try
+        {
+            if (!await _manualCapture.CompletePendingCaptureAsync())
+                return false;
+
+            HideInlineCameraPreview();
+            ShowTranscriptTab = true;
+            StartAiBusyVisualIfNeeded();
+            return true;
+        }
+        finally
+        {
+            _isCompletingManualCapture = false;
+        }
+    }
+
+    private void HideInlineCameraPreview()
+    {
+        ShowInlineCameraPreview = false;
+        ShowSnapshot = false;
+        SnapshotImage = null;
+        SnapshotCaption = null;
+        _cameraView?.StopCameraPreview();
+    }
+
+    private void StartAiBusyVisualIfNeeded()
+    {
+        if (_activeCommandAiEntry is not { IsThinking: true } aiEntry)
+            return;
+
+        StartAiBusyVisual(aiEntry);
+    }
+
+    private void StartAiBusyVisual(TranscriptEntry aiEntry)
+    {
+        StopAiBusyAnimation();
+        aiEntry.IsThinking = true;
+
+        var cts = new CancellationTokenSource();
+        _aiBusyAnimationCts = cts;
+        _ = AnimateAiBusyVisualAsync(aiEntry, cts);
+    }
+
+    private async Task AnimateAiBusyVisualAsync(TranscriptEntry aiEntry, CancellationTokenSource cts)
+    {
+        var ct = cts.Token;
+        string[] frames = [".", "..", "..."];
+        var index = 0;
+
+        try
+        {
+            while (!ct.IsCancellationRequested && aiEntry.IsThinking)
+            {
+                aiEntry.Text = frames[index % frames.Length];
+                index++;
+                await Task.Delay(450, ct);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        finally
+        {
+            cts.Dispose();
+        }
+    }
+
+    private void CompleteAiBusyVisual(TranscriptEntry aiEntry, string text)
+    {
+        StopAiBusyAnimation();
+        aiEntry.Text = text;
+        aiEntry.IsThinking = false;
+    }
+
+    private void StopAiBusyAnimation()
+    {
+        var cts = _aiBusyAnimationCts;
+        if (cts is null)
+            return;
+
+        _aiBusyAnimationCts = null;
+        cts.Cancel();
+    }
+
+    private void AddCommandTranscriptInput(CameraCommandResult result, TranscriptEntry aiEntry)
+    {
+        var input = result.TranscriptInput;
+        if (input is null)
+            return;
+
+        var userEntry = new TranscriptEntry
+        {
+            Role = "You",
+            Text = input.Text,
+            Image = CreateImageSource(input.ImageBytes),
+            ImageCaption = input.ImageCaption
+        };
+
+        var aiIndex = Entries.IndexOf(aiEntry);
+        if (aiIndex >= 0)
+            Entries.Insert(aiIndex, userEntry);
+        else
+            Entries.Add(userEntry);
+    }
+
+    private static ImageSource? CreateImageSource(byte[]? imageBytes) =>
+        imageBytes is null
+            ? null
+            : ImageSource.FromStream(() => new MemoryStream(imageBytes));
 
     private async Task ExecuteLegacyCameraCommandAsync(string commandId)
     {

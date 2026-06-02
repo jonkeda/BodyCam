@@ -29,7 +29,7 @@ public class TranscriptDiagnosticTests
     public async Task SessionWithOrchestratorOptions_SendText_LogsAllMessages()
     {
         var settings = RealtimeFixture.LoadSettings();
-        var apiKey = RealtimeFixture.LoadApiKey(settings.Provider);
+        var apiKey = RealtimeFixture.LoadApiKey(settings.ProviderId);
         var client = RealtimeFixture.BuildClient(apiKey, settings);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
@@ -48,7 +48,7 @@ public class TranscriptDiagnosticTests
             },
         };
 
-        _output.WriteLine($"Provider: {settings.Provider}");
+        _output.WriteLine($"Provider: {settings.ProviderId}");
         _output.WriteLine($"TranscriptionModel: whisper-1");
 
         var session = await client.CreateSessionAsync(options, cts.Token);
@@ -150,7 +150,7 @@ public class TranscriptDiagnosticTests
     public async Task SessionWithoutOutputModalities_SendText_LogsAllMessages()
     {
         var settings = RealtimeFixture.LoadSettings();
-        var apiKey = RealtimeFixture.LoadApiKey(settings.Provider);
+        var apiKey = RealtimeFixture.LoadApiKey(settings.ProviderId);
         var client = RealtimeFixture.BuildClient(apiKey, settings);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
@@ -161,7 +161,7 @@ public class TranscriptDiagnosticTests
             // NO OutputModalities — what does the server default to?
         };
 
-        _output.WriteLine($"Provider: {settings.Provider}");
+        _output.WriteLine($"Provider: {settings.ProviderId}");
         _output.WriteLine($"OutputModalities: NOT SET (server default)");
 
         var session = await client.CreateSessionAsync(options, cts.Token);
@@ -226,7 +226,7 @@ public class TranscriptDiagnosticTests
     public async Task Orchestrator_SendText_TranscriptEventsAreFired()
     {
         var settings = RealtimeFixture.LoadSettings();
-        var apiKey = RealtimeFixture.LoadApiKey(settings.Provider);
+        var apiKey = RealtimeFixture.LoadApiKey(settings.ProviderId);
         var client = RealtimeFixture.BuildClient(apiKey, settings);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
@@ -345,7 +345,7 @@ public class TranscriptDiagnosticTests
     public async Task SendAudio_InputAudioTranscriptionCompleted_Fires()
     {
         var settings = RealtimeFixture.LoadSettings();
-        var apiKey = RealtimeFixture.LoadApiKey(settings.Provider);
+        var apiKey = RealtimeFixture.LoadApiKey(settings.ProviderId);
         var client = RealtimeFixture.BuildClient(apiKey, settings);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
@@ -361,7 +361,7 @@ public class TranscriptDiagnosticTests
             },
         };
 
-        _output.WriteLine($"Provider: {settings.Provider}");
+        _output.WriteLine($"Provider: {settings.ProviderId}");
         _output.WriteLine($"TranscriptionModel: whisper-1");
         _output.WriteLine($"AllowInterruption: false");
 

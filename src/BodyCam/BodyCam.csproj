@@ -62,6 +62,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<PackageReference Include="Markdig" Version="1.2.0" />
 		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.*" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.*" />
 		<PackageReference Include="Porcupine" Version="4.0.2" />
@@ -116,11 +117,6 @@
 		</ItemGroup>
 		<Message Importance="high" Text="Build #$(_NextBuild)" />
 	</Target>
-
-	<!-- HeyCyan Android Bindings (Android only) -->
-	<ItemGroup Condition="$(TargetFramework.Contains('-android'))">
-		<ProjectReference Include="..\BodyCam.HeyCyan.Android.Bindings\BodyCam.HeyCyan.Android.Bindings.csproj" />
-	</ItemGroup>
 
 	<!-- HeyCyan iOS Bindings (iOS only) -->
 	<ItemGroup Condition="$(TargetFramework.Contains('-ios'))">

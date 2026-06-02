@@ -110,6 +110,37 @@ internal static class HeyCyanFrameParser
     }
 
     /// <summary>
+    /// Normalizes IP text reported by the Android vendor SDK. M01 firmware
+    /// returns the real bytes as 192.168.49.x, but GlassModelControlResponse
+    /// reads the wrong offsets and exposes it as 49.x.0.0.
+    /// </summary>
+    public static bool TryNormalizeTransferIpText(string? text, out System.Net.IPAddress? ip)
+    {
+        ip = null;
+        if (string.IsNullOrWhiteSpace(text)
+            || !System.Net.IPAddress.TryParse(text, out var parsed))
+        {
+            return false;
+        }
+
+        var bytes = parsed.GetAddressBytes();
+        if (bytes.Length != 4)
+            return false;
+
+        if (bytes[2] == 0
+            && bytes[3] == 0
+            && bytes[0] is > 0 and < 255
+            && bytes[1] is > 0 and < 255)
+        {
+            ip = new System.Net.IPAddress([192, 168, bytes[0], bytes[1]]);
+            return true;
+        }
+
+        ip = parsed;
+        return true;
+    }
+
+    /// <summary>
     /// Classify P2P/Wi-Fi error severity.
     /// CyanBridge: loadData[6] == 0x09, loadData[7] = error code.
     /// Code 0xFF is transient noise; other codes need user-facing handling.

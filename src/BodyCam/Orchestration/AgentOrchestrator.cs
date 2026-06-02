@@ -1,6 +1,7 @@
 using BodyCam.Agents;
 using BodyCam.Models;
 using BodyCam.Services;
+using BodyCam.Services.AiProviders;
 using BodyCam.Services.Audio.WebRtcApm;
 using BodyCam.Services.Camera;
 using BodyCam.Services.Camera.Commands;
@@ -119,7 +120,7 @@ public class AgentOrchestrator
         // Azure Realtime only supports whisper-1 for input transcription;
         // gpt-4o-mini-transcribe is only available on direct OpenAI.
         var transcriptionModel = _settings.TranscriptionModel ?? "whisper-1";
-        if (_settings.Provider == OpenAiProvider.Azure
+        if (AiProviderIds.Normalize(_settings.ProviderId) == AiProviderIds.AzureOpenAi
             && transcriptionModel.Contains("transcribe", StringComparison.OrdinalIgnoreCase))
         {
             transcriptionModel = "whisper-1";
@@ -190,7 +191,7 @@ public class AgentOrchestrator
         _settings.SystemInstructions = _settingsService.SystemInstructions;
 
         // Provider & Azure settings
-        _settings.Provider = _settingsService.Provider;
+        _settings.ProviderId = _settingsService.ProviderId;
         _settings.AzureEndpoint = _settingsService.AzureEndpoint;
         _settings.AzureRealtimeDeploymentName = _settingsService.AzureRealtimeDeploymentName;
         _settings.AzureChatDeploymentName = _settingsService.AzureChatDeploymentName;

@@ -34,22 +34,32 @@
             <Label Text="Provider" FontSize="Subtitle" FontAttributes="Bold" Margin="0,8,0,0"
                    SemanticProperties.HeadingLevel="Level1" />
 
-            <HorizontalStackLayout Spacing="16">
-                <RadioButton AutomationId="ProviderOpenAiRadio"
-                             Content="OpenAI"
-                             IsChecked="{Binding IsOpenAi}"
-                             CheckedChanged="OnOpenAiChecked"
-                             SemanticProperties.Description="Use OpenAI provider" />
-                <RadioButton AutomationId="ProviderAzureRadio"
-                             Content="Azure"
-                             IsChecked="{Binding IsAzure}"
-                             CheckedChanged="OnAzureChecked"
-                             SemanticProperties.Description="Use Azure OpenAI provider" />
-            </HorizontalStackLayout>
+            <FlexLayout Wrap="Wrap"
+                        Direction="Row"
+                        AlignItems="Center"
+                        BindableLayout.ItemsSource="{Binding ProviderOptions}">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ProviderOptionViewModel">
+                        <RadioButton AutomationId="{Binding AutomationId}"
+                                     Content="{Binding DisplayName}"
+                                     GroupName="AiProvider"
+                                     IsEnabled="{Binding IsEnabled}"
+                                     IsChecked="{Binding IsSelected, Mode=OneWay}"
+                                     CheckedChanged="OnProviderChecked"
+                                     Margin="0,0,16,4"
+                                     SemanticProperties.Description="{Binding Description}" />
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </FlexLayout>
 
             <!-- API Key -->
-            <Label Text="API Key" FontSize="Subtitle" FontAttributes="Bold" Margin="0,8,0,0"
+            <Label Text="{Binding ApiKeySectionTitle}" FontSize="Subtitle" FontAttributes="Bold" Margin="0,8,0,0"
                    SemanticProperties.HeadingLevel="Level1" />
+            <Label AutomationId="CredentialNoticeLabel"
+                   Text="{Binding ApiKeyHelpText}"
+                   IsVisible="{Binding ShowCredentialNotice}"
+                   FontSize="Small"
+                   TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
             <Entry AutomationId="ApiKeyDisplay"
                    Text="{Binding ApiKeyDisplay}"
                    IsPassword="{Binding IsKeyVisible, Converter={StaticResource InvertBoolConverter}}"

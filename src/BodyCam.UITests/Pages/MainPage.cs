@@ -27,6 +27,8 @@ public class MainPage : PageObjectBase<MainPage>
     // Quick actions
     public Button<MainPage> ActionsDrawerButton => Button("ActionsDrawerButton");
     public Button<MainPage> LookButton => Button("LookButton");
+    public Button<MainPage> LookDetailButton => Button("LookDetailButton");
+    public Button<MainPage> LookSummaryButton => Button("LookSummaryButton");
     public Button<MainPage> ReadButton => Button("ReadButton");
     public Button<MainPage> ScanButton => Button("ScanButton");
 

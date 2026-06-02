@@ -11,6 +11,7 @@ internal sealed class FakeHeyCyanSdkBridge : IHeyCyanSdkBridge
 {
     public List<HeyCyanScanResult> ScriptedScan { get; } = new();
     public Func<byte[], HeyCyanResponse>? OnSend { get; set; }
+    public List<byte[]> SentCommands { get; } = new();
     public TaskCompletionSource ConnectGate { get; } =
         new(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -55,6 +56,7 @@ internal sealed class FakeHeyCyanSdkBridge : IHeyCyanSdkBridge
 
     public Task<HeyCyanResponse> SendAsync(byte[] payload, CancellationToken ct)
     {
+        SentCommands.Add(payload.ToArray());
         if (OnSend is null)
             throw new InvalidOperationException("OnSend not scripted");
         return Task.FromResult(OnSend(payload));

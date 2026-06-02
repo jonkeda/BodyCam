@@ -15,7 +15,8 @@ public class HeyCyanCameraProviderTests
         var provider = new HeyCyanCameraProvider(
             session,
             transfer,
-            NullLogger<HeyCyanCameraProvider>.Instance);
+            NullLogger<HeyCyanCameraProvider>.Instance,
+            photoSettleDelay: TimeSpan.Zero);
         return (provider, session, transfer);
     }
 
@@ -65,29 +66,34 @@ public class HeyCyanCameraProviderTests
 
         // Setup: media count will increment from 0 to 1
         session.SetMediaCount(new HeyCyanMediaCount(0, 0, 0));
-        
-        // Transfer will list these entries
-        transfer.Entries.Add(new HeyCyanMediaEntry(
-            "IMG_20260430_120000.jpg",
-            12345,
-            DateTimeOffset.UtcNow,
-            HeyCyanMediaKind.Photo));
 
         // Mock JPEG bytes (valid SOI marker)
         var jpegBytes = new byte[] { 0xFF, 0xD8, 0x01, 0x02, 0x03 };
         transfer.Files["IMG_20260430_120000.jpg"] = jpegBytes;
 
-        // Simulate photo capture: TakePhotoAsync will trigger MediaCountUpdated
+        var calls = new List<string>();
+        transfer.OnList = () => calls.Add("list");
+
+        // Simulate photo capture: TakePhotoAsync creates the media entry before listing.
         session.OnPhotoTrigger = () =>
+        {
+            calls.Add("photo");
             session.SetMediaCount(new HeyCyanMediaCount(1, 0, 0));
+            transfer.Entries.Add(new HeyCyanMediaEntry(
+                "IMG_20260430_120000.jpg",
+                12345,
+                DateTimeOffset.UtcNow,
+                HeyCyanMediaKind.Photo));
+        };
 
         var result = await provider.CaptureFrameAsync(CancellationToken.None);
 
         result.Should().NotBeNull();
         result.Should().BeEquivalentTo(jpegBytes);
         session.TakePhotoCallCount.Should().Be(1);
-        transfer.ListCallCount.Should().BeGreaterThanOrEqualTo(1);
+        transfer.ListCallCount.Should().Be(1);
         transfer.DownloadCallCount.Should().Be(1);
+        calls.Should().Equal("photo", "list");
     }
 
     [Fact]
@@ -99,7 +105,8 @@ public class HeyCyanCameraProviderTests
         var provider = new HeyCyanCameraProvider(
             session,
             transfer,
-            NullLogger<HeyCyanCameraProvider>.Instance);
+            NullLogger<HeyCyanCameraProvider>.Instance,
+            photoSettleDelay: TimeSpan.Zero);
 
         session.SetState(HeyCyanState.Connected);
 
@@ -114,7 +121,7 @@ public class HeyCyanCameraProviderTests
     }
 
     [Fact]
-    public async Task CaptureFrameAsync_when_media_count_notify_times_out_falls_back_to_newest_entry()
+    public async Task CaptureFrameAsync_after_capture_picks_newest_entry()
     {
         var (provider, session, transfer) = Build();
         session.SetState(HeyCyanState.Connected);
@@ -137,7 +144,7 @@ public class HeyCyanCameraProviderTests
         var jpegBytes = new byte[] { 0xFF, 0xD8, 0xAA, 0xBB };
         transfer.Files["IMG_20260430_120000.jpg"] = jpegBytes;
 
-        // DON'T trigger MediaCountUpdated — let it time out
+        // No media-count dependency: after capture the provider lists and picks newest.
         session.OnPhotoTrigger = null;
 
         var result = await provider.CaptureFrameAsync(CancellationToken.None);
@@ -263,7 +270,8 @@ public class HeyCyanCameraProviderTests
         var provider = new HeyCyanCameraProvider(
             session,
             transfer,
-            NullLogger<HeyCyanCameraProvider>.Instance);
+            NullLogger<HeyCyanCameraProvider>.Instance,
+            photoSettleDelay: TimeSpan.Zero);
 
         session.SetState(HeyCyanState.Connected);
         session.SetMediaCount(new HeyCyanMediaCount(0, 0, 0));
@@ -320,7 +328,8 @@ public class HeyCyanCameraProviderTests
         var provider = new HeyCyanCameraProvider(
             session,
             transfer,
-            NullLogger<HeyCyanCameraProvider>.Instance);
+            NullLogger<HeyCyanCameraProvider>.Instance,
+            photoSettleDelay: TimeSpan.Zero);
 
         session.SetState(HeyCyanState.Connected);
         session.SetMediaCount(new HeyCyanMediaCount(0, 0, 0));
@@ -438,12 +447,14 @@ public class HeyCyanCameraProviderTests
         public int ListCallCount { get; private set; }
         public int DownloadCallCount { get; private set; }
         public string? DownloadedFile { get; private set; }
+        public Action? OnList { get; set; }
 
         public bool IsWarm => false;
 
         public Task<IReadOnlyList<HeyCyanMediaEntry>> ListAsync(CancellationToken _)
         {
             ListCallCount++;
+            OnList?.Invoke();
             return Task.FromResult<IReadOnlyList<HeyCyanMediaEntry>>(Entries);
         }
 

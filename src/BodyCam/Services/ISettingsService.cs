@@ -18,6 +18,8 @@ public interface ISettingsService
     string OutputMode { get; set; }
 
     // Provider
+    string ProviderId { get; set; }
+    [Obsolete("Use ProviderId instead.")]
     OpenAiProvider Provider { get; set; }
     string? AzureEndpoint { get; set; }
     string? AzureRealtimeDeploymentName { get; set; }
