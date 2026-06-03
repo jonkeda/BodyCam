@@ -333,6 +333,20 @@ where useful, and deliberately not overengineered.
 
 - [x] Report — [Architecture Review And Improvement Proposal](m48-post-poc-app-architecture-review/report.md)
 
+### M49 — Read Action OCR
+
+**Plan:** [m49-read-action-ocr/](m49-read-action-ocr/)
+
+**Goal:** Move the existing Read action from vision-model OCR to native
+on-device OCR using `Plugin.Maui.OCR`, keeping `camera.read`, `read`,
+`read_text`, wake word, and detail-level UX stable.
+
+- [ ] Phase 1 — [Plugin Integration And Platform Setup](m49-read-action-ocr/phase-1-plugin-integration.md)
+- [ ] Phase 2 — [OCR Service Abstraction](m49-read-action-ocr/phase-2-ocr-service-abstraction.md)
+- [ ] Phase 3 — [Read Command Migration](m49-read-action-ocr/phase-3-read-command-migration.md)
+- [ ] Phase 4 — [Read Action Wiring](m49-read-action-ocr/phase-4-read-action-wiring.md)
+- [ ] Phase 5 — [Tests, Platform Validation, And Accessibility](m49-read-action-ocr/phase-5-tests-platform-validation-accessibility.md)
+
 ---
 
 ## Superseded
