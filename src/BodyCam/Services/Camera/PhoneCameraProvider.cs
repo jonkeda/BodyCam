@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using CommunityToolkit.Maui.Core;
 using CommunityToolkit.Maui.Views;
+using Microsoft.Extensions.Logging;
 
 namespace BodyCam.Services.Camera;
 
@@ -9,12 +10,19 @@ namespace BodyCam.Services.Camera;
 /// </summary>
 public sealed class PhoneCameraProvider : ICameraProvider
 {
+    private readonly ILogger<PhoneCameraProvider> _log;
     private CameraView? _cameraView;
     private bool _started;
+    private bool _cameraUnavailable;
+
+    public PhoneCameraProvider(ILogger<PhoneCameraProvider> log)
+    {
+        _log = log;
+    }
 
     public string DisplayName => "Phone Camera";
     public string ProviderId => "phone";
-    public bool IsAvailable => _cameraView is not null;
+    public bool IsAvailable => _cameraView is not null && !_cameraUnavailable;
     public bool SupportsVideoRecording => true;
 
     public event EventHandler? Disconnected;
@@ -25,14 +33,28 @@ public sealed class PhoneCameraProvider : ICameraProvider
     public void SetCameraView(CameraView view)
     {
         _cameraView = view;
+        _cameraUnavailable = false;
     }
 
     public async Task StartAsync(CancellationToken ct = default)
     {
         if (_started || _cameraView is null) return;
-        await MainThread.InvokeOnMainThreadAsync(async () =>
-            await _cameraView.StartCameraPreview(ct));
-        _started = true;
+
+        try
+        {
+            await MainThread.InvokeOnMainThreadAsync(async () =>
+                await _cameraView.StartCameraPreview(ct));
+            _started = true;
+            _cameraUnavailable = false;
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (CameraException ex)
+        {
+            MarkUnavailable(ex, "Phone camera preview could not be started");
+        }
     }
 
     public async Task StopAsync()
@@ -55,6 +77,7 @@ public sealed class PhoneCameraProvider : ICameraProvider
                 await MainThread.InvokeOnMainThreadAsync(async () =>
                     await _cameraView.StartCameraPreview(ct));
                 _started = true;
+                _cameraUnavailable = false;
                 await Task.Delay(500, ct); // camera warm-up
             }
 
@@ -72,8 +95,18 @@ public sealed class PhoneCameraProvider : ICameraProvider
                 }
             }
         }
-        catch
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
+            throw;
+        }
+        catch (CameraException ex)
+        {
+            MarkUnavailable(ex, "Phone camera capture could not start preview");
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _log.LogDebug(ex, "Phone camera capture failed");
             return null;
         }
     }
@@ -97,6 +130,7 @@ public sealed class PhoneCameraProvider : ICameraProvider
     {
         _cameraView = null;
         _started = false;
+        _cameraUnavailable = false;
         return ValueTask.CompletedTask;
     }
 
@@ -145,5 +179,13 @@ public sealed class PhoneCameraProvider : ICameraProvider
         {
             await MainThread.InvokeOnMainThreadAsync(() => view.MediaCaptured -= OnMediaCaptured);
         }
+    }
+
+    private void MarkUnavailable(CameraException ex, string message)
+    {
+        _started = false;
+        _cameraUnavailable = true;
+        _log.LogWarning(ex, "{Message}", message);
+        Disconnected?.Invoke(this, EventArgs.Empty);
     }
 }

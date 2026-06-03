@@ -61,9 +61,35 @@ public sealed class CameraManager
         }
 
         _active = provider;
-        _settings.ActiveCameraProvider = providerId;
         _active.Disconnected += OnProviderDisconnected;
-        await _active.StartAsync(ct);
+        try
+        {
+            await _active.StartAsync(ct);
+            _settings.ActiveCameraProvider = providerId;
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            _active.Disconnected -= OnProviderDisconnected;
+            _active = null;
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "Camera provider {ProviderId} failed to start; continuing without an active camera",
+                providerId);
+            _active.Disconnected -= OnProviderDisconnected;
+            _active = null;
+
+            try
+            {
+                await provider.StopAsync();
+            }
+            catch (Exception stopEx)
+            {
+                _log.LogDebug(stopEx, "Camera provider {ProviderId} failed to stop after start failure",
+                    providerId);
+            }
+        }
     }
 
     /// <summary>
