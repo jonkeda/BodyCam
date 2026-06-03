@@ -10,6 +10,8 @@ public class BodyCamFixture : MauiTestFixtureBase
     private readonly SettingsPage _settingsPage;
     private readonly SetupPage _setupPage;
     private readonly ConnectionSettingsPage _connectionSettingsPage;
+    private readonly LlmProvidersSettingsPage _llmProvidersSettingsPage;
+    private readonly LlmProviderSettingsPage _llmProviderSettingsPage;
     private readonly VoiceSettingsPage _voiceSettingsPage;
     private readonly DeviceSettingsPage _deviceSettingsPage;
     private readonly AddDevicesPage _addDevicesPage;
@@ -23,6 +25,8 @@ public class BodyCamFixture : MauiTestFixtureBase
         _settingsPage = new SettingsPage(Context);
         _setupPage = new SetupPage(Context);
         _connectionSettingsPage = new ConnectionSettingsPage(Context);
+        _llmProvidersSettingsPage = new LlmProvidersSettingsPage(Context);
+        _llmProviderSettingsPage = new LlmProviderSettingsPage(Context);
         _voiceSettingsPage = new VoiceSettingsPage(Context);
         _deviceSettingsPage = new DeviceSettingsPage(Context);
         _addDevicesPage = new AddDevicesPage(Context);
@@ -36,6 +40,8 @@ public class BodyCamFixture : MauiTestFixtureBase
     public SettingsPage SettingsPage => _settingsPage;
     public SetupPage SetupPage => _setupPage;
     public ConnectionSettingsPage ConnectionSettingsPage => _connectionSettingsPage;
+    public LlmProvidersSettingsPage LlmProvidersSettingsPage => _llmProvidersSettingsPage;
+    public LlmProviderSettingsPage LlmProviderSettingsPage => _llmProviderSettingsPage;
     public VoiceSettingsPage VoiceSettingsPage => _voiceSettingsPage;
     public DeviceSettingsPage DeviceSettingsPage => _deviceSettingsPage;
     public AddDevicesPage AddDevicesPage => _addDevicesPage;
@@ -85,6 +91,20 @@ public class BodyCamFixture : MauiTestFixtureBase
         NavigateToSettings();
         clickCard();
         subPage.WaitReady(10000);
+    }
+
+    public void NavigateToLlmProviders()
+    {
+        NavigateToSettingsSubPage(
+            () => _settingsPage.ConnectionSettingsCard.Click(),
+            _llmProvidersSettingsPage);
+    }
+
+    public void NavigateToLlmProviderDetail(Action clickProvider)
+    {
+        NavigateToLlmProviders();
+        clickProvider();
+        _llmProviderSettingsPage.WaitReady(10000);
     }
 
     /// <summary>

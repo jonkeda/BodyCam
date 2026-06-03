@@ -6,6 +6,7 @@ using BodyCam.Services.Audio.WebRtcApm;
 using BodyCam.Services.Camera;
 using BodyCam.Services.Camera.Commands;
 using BodyCam.Services.QrCode;
+using BodyCam.Services.Session;
 using BodyCam.Tools;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
@@ -22,7 +23,7 @@ using SdkRealtimeServerVadTurnDetection = OpenAI.Realtime.RealtimeServerVadTurnD
 
 namespace BodyCam.Orchestration;
 
-public class AgentOrchestrator
+public class AgentOrchestrator : ISessionRuntime
 {
     private readonly VoiceInputAgent _voiceIn;
     private readonly VoiceOutputAgent _voiceOut;

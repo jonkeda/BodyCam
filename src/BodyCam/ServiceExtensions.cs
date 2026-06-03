@@ -2,6 +2,7 @@ using BodyCam.Agents;
 using BodyCam.Orchestration;
 using BodyCam.Services;
 using BodyCam.Services.AiProviders;
+using BodyCam.Services.Actions;
 using BodyCam.Services.Audio;
 using BodyCam.Services.Audio.WebRtcApm;
 using BodyCam.Services.Camera;
@@ -9,10 +10,14 @@ using BodyCam.Services.Camera.A9;
 using BodyCam.Services.Camera.A9.Vue990;
 using BodyCam.Services.Camera.Commands;
 using BodyCam.Services.Camera.Usb;
+using BodyCam.Services.Devices;
 using BodyCam.Services.Input;
 using BodyCam.Services.Barcode;
 using BodyCam.Services.QrCode;
 using BodyCam.Services.QrCode.Handlers;
+using BodyCam.Services.Session;
+using BodyCam.Services.Settings;
+using BodyCam.Services.Transcript;
 using BodyCam.Services.Vision;
 using BodyCam.Services.WakeWord;
 using BodyCam.Tools;
@@ -177,6 +182,37 @@ public static class ServiceExtensions
 		services.AddSingleton<ICameraCommand, ScanCommand>();
 		services.AddSingleton<ICameraCommandRegistry, CameraCommandRegistry>();
 		services.AddSingleton<ICameraCommandService, CameraCommandService>();
+		services.AddSingleton<IAssistiveAction>(sp =>
+			new CameraAssistiveAction(
+				AssistiveActionIds.Look,
+				"Look",
+				"look",
+				sp.GetRequiredService<ICameraCommandService>()));
+		services.AddSingleton<IAssistiveAction>(sp =>
+			new CameraAssistiveAction(
+				AssistiveActionIds.Read,
+				"Read",
+				"read",
+				sp.GetRequiredService<ICameraCommandService>()));
+		services.AddSingleton<IAssistiveAction>(sp =>
+			new CameraAssistiveAction(
+				AssistiveActionIds.Scan,
+				"Scan",
+				"scan",
+				sp.GetRequiredService<ICameraCommandService>()));
+		services.AddSingleton<IAssistiveAction>(sp =>
+			new CameraAssistiveAction(
+				AssistiveActionIds.Find,
+				"Find",
+				"look",
+				sp.GetRequiredService<ICameraCommandService>(),
+				defaultOptions: new LookCommandOptions(
+					LookDetailLevel.Overview,
+					Focus: "objects the user may want to find",
+					Question: "What objects can you find?")));
+		services.AddSingleton<IAssistiveAction, PhotoAssistiveAction>();
+		services.AddSingleton<IAssistiveActionRegistry, AssistiveActionRegistry>();
+		services.AddSingleton<IAssistiveActionService, AssistiveActionService>();
 
 		return services;
 	}
@@ -279,6 +315,12 @@ public static class ServiceExtensions
 		services.AddSingleton<ISourceProfile, CustomSourceProfile>();
 		services.AddSingleton<SourceProfileManager>();
 		services.AddSingleton<KnownDeviceService>();
+		services.AddSingleton<IDeviceCapabilityRegistry, DeviceCapabilityRegistry>();
+		services.AddSingleton<SettingsStoreFacade>();
+		services.AddSingleton<IAppPreferencesStore>(sp => sp.GetRequiredService<SettingsStoreFacade>());
+		services.AddSingleton<IAiProviderSettingsStore>(sp => sp.GetRequiredService<SettingsStoreFacade>());
+		services.AddSingleton<IDeviceSettingsStore>(sp => sp.GetRequiredService<SettingsStoreFacade>());
+		services.AddSingleton<IDiagnosticsSettingsStore>(sp => sp.GetRequiredService<SettingsStoreFacade>());
 
 		// Button input
 #if WINDOWS
@@ -287,6 +329,8 @@ public static class ServiceExtensions
 		services.AddSingleton<ActionMap>();
 		services.AddSingleton<IButtonMappingStore, ButtonMappingStore>();
 		services.AddSingleton<ButtonInputManager>();
+		services.AddSingleton<IAppRuntimeCoordinator, AppRuntimeCoordinator>();
+		services.AddSingleton<ITranscriptStore, InMemoryTranscriptStore>();
 
 		services.AddSingleton<PorcupineWakeWordService>();
 		services.AddSingleton<IWakeWordService>(sp => sp.GetRequiredService<PorcupineWakeWordService>());
@@ -301,47 +345,24 @@ public static class ServiceExtensions
 		services.AddSingleton<IGrokEphemeralTokenBroker, GrokEphemeralTokenBroker>();
 		services.AddSingleton<IGrokRealtimeVoiceProvider, GrokRealtimeVoiceProvider>();
 
-		// MAF Realtime client — wraps the SDK's RealtimeClient with IRealtimeClient
-#pragma warning disable OPENAI002
-		services.AddSingleton<Microsoft.Extensions.AI.IRealtimeClient>(sp =>
-		{
-			var settings = sp.GetRequiredService<AppSettings>();
-			var apiKeyService = sp.GetRequiredService<IApiKeyService>();
-			var provider = sp.GetRequiredService<IAiProviderRegistry>().GetRequired(settings.ProviderId);
-
-			// Use Task.Run to avoid deadlocking Android's main thread on SecureStorage
-			var apiKey = Task.Run(() => apiKeyService.GetApiKeyAsync(settings.ProviderId)).GetAwaiter().GetResult()
-				?? throw new InvalidOperationException("API key not configured.");
-
-			if (provider.Id == AiProviderIds.AzureOpenAi)
-			{
-				var rtOptions = new OpenAI.Realtime.RealtimeClientOptions
-				{
-					Endpoint = new Uri($"{settings.AzureEndpoint!.TrimEnd('/')}/openai/v1/realtime")
-				};
-				var sdkClient = new Services.AzureRealtimeClient(apiKey, rtOptions);
-				return new Microsoft.Extensions.AI.OpenAIRealtimeClient(
-					sdkClient, settings.AzureRealtimeDeploymentName!);
-			}
-			else if (provider.Id == AiProviderIds.OpenAi)
-			{
-				return new Microsoft.Extensions.AI.OpenAIRealtimeClient(
-					apiKey, settings.RealtimeModel);
-			}
-			else if (provider.Id == AiProviderIds.XaiGrok)
-			{
-				var grokRealtime = sp.GetRequiredService<IGrokRealtimeVoiceProvider>()
-					.CreateSessionOptions(settings);
-				return new UnsupportedRealtimeClient(
-					$"Grok realtime voice is configured for {grokRealtime.WebSocketUri}; the Android realtime session still needs the device audio-route implementation.");
-			}
-
-			throw new InvalidOperationException(
-				$"Realtime client creation is not implemented for provider '{provider.DisplayName}'.");
-		});
-#pragma warning restore OPENAI002
+		// MAF Realtime client — builds provider-specific clients when a session starts.
+		services.AddSingleton<Microsoft.Extensions.AI.IRealtimeClient, AppRealtimeClient>();
 
 		services.AddSingleton<AgentOrchestrator>();
+		services.AddSingleton<ISessionRuntime>(sp => sp.GetRequiredService<AgentOrchestrator>());
+		services.AddSingleton<ISessionCoordinator, SessionCoordinator>();
+		services.AddSingleton<IAssistiveAction>(sp =>
+			new SessionAssistiveAction(
+				AssistiveActionIds.ToggleSession,
+				"Toggle session",
+				sp.GetRequiredService<ISessionCoordinator>(),
+				targetLayer: null));
+		services.AddSingleton<IAssistiveAction>(sp =>
+			new SessionAssistiveAction(
+				AssistiveActionIds.EndSession,
+				"End session",
+				sp.GetRequiredService<ISessionCoordinator>(),
+				SessionLayer.Sleep));
 
 		return services;
 	}

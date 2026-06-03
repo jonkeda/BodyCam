@@ -176,18 +176,6 @@ public static class MauiProgram
 		builder.Logging.AddDebug();
 #endif
 
-		var app = builder.Build();
-
-		// Load button mappings from storage
-		var store = app.Services.GetRequiredService<IButtonMappingStore>();
-		_ = store.LoadAsync();
-
-		// Initialize AEC bypass manager (subscribes to route changes)
-		_ = app.Services.GetRequiredService<Services.Audio.AecBypassManager>();
-
-		// Initialize HeyCyan audio router so it subscribes to session state changes
-		_ = app.Services.GetRequiredService<Services.Glasses.HeyCyan.HeyCyanAudioRouter>();
-
-		return app;
+		return builder.Build();
 	}
 }

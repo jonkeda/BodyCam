@@ -3,9 +3,7 @@ using BodyCam.UITests.Pages;
 namespace BodyCam.UITests.Tests.SettingsPage;
 
 /// <summary>
-/// Model pickers are only visible when OpenAI provider is active.
-/// FlaUI cannot reliably Select() MAUI RadioButtons on WinUI3,
-/// so these tests require OpenAI to be the persisted provider.
+/// Model pickers are visible on the OpenAI provider detail page.
 /// </summary>
 [Collection("BodyCam")]
 [Trait("Category", "UITest")]
@@ -13,44 +11,43 @@ namespace BodyCam.UITests.Tests.SettingsPage;
 public class ModelSelectionTests
 {
     private readonly BodyCamFixture _fixture;
-    private Pages.ConnectionSettingsPage Page => _fixture.ConnectionSettingsPage;
+    private Pages.LlmProviderSettingsPage Page => _fixture.LlmProviderSettingsPage;
 
     public ModelSelectionTests(BodyCamFixture fixture)
     {
         _fixture = fixture;
-        _fixture.NavigateToSettingsSubPage(
-            () => _fixture.SettingsPage.ConnectionSettingsCard.Click(),
-            _fixture.ConnectionSettingsPage);
+        _fixture.NavigateToLlmProviderDetail(
+            () => _fixture.LlmProvidersSettingsPage.EditOpenAiProviderButton.Click());
     }
 
-    [Fact(Skip = "FlaUI cannot Select() MAUI RadioButton on WinUI3 — requires OpenAI provider persisted")]
+    [Fact]
     public void VoiceModelPicker_Exists()
     {
-        Page.VoiceModelPicker.AssertExists();
+        Page.RealtimeModelPicker.AssertExists();
     }
 
-    [Fact(Skip = "FlaUI cannot Select() MAUI RadioButton on WinUI3 — requires OpenAI provider persisted")]
+    [Fact]
     public void ChatModelPicker_Exists()
     {
         Page.ChatModelPicker.AssertExists();
     }
 
-    [Fact(Skip = "FlaUI cannot Select() MAUI RadioButton on WinUI3 — requires OpenAI provider persisted")]
+    [Fact]
     public void VisionModelPicker_Exists()
     {
         Page.VisionModelPicker.AssertExists();
     }
 
-    [Fact(Skip = "FlaUI cannot Select() MAUI RadioButton on WinUI3 — requires OpenAI provider persisted")]
+    [Fact]
     public void TranscriptionModelPicker_Exists()
     {
         Page.TranscriptionModelPicker.AssertExists();
     }
 
-    [Fact(Skip = "FlaUI cannot Select() MAUI RadioButton on WinUI3 — requires OpenAI provider persisted")]
+    [Fact]
     public void VoiceModelPicker_HasSelectedValue()
     {
-        var selected = Page.VoiceModelPicker.GetSelectedText();
+        var selected = Page.RealtimeModelPicker.GetSelectedText();
         Assert.False(string.IsNullOrEmpty(selected));
     }
 }

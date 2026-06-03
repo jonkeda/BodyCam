@@ -16,7 +16,7 @@ public class ApiKeyService : IApiKeyService
             return cachedKey;
 
         // 1. Try MAUI SecureStorage (persisted from previous launch)
-        var key = await SecureStorage.Default.GetAsync(LegacyStorageKey);
+        var key = await TryGetSecureStorageAsync(LegacyStorageKey);
         if (key is not null)
         {
             _cachedKeys[LegacyStorageKey] = key;
@@ -28,7 +28,7 @@ public class ApiKeyService : IApiKeyService
            ?? DotEnvReader.Read("OPENAI_API_KEY");
         if (key is not null)
         {
-            await SecureStorage.Default.SetAsync(LegacyStorageKey, key);
+            await TrySetSecureStorageAsync(LegacyStorageKey, key);
             _cachedKeys[LegacyStorageKey] = key;
             return key;
         }
@@ -38,7 +38,7 @@ public class ApiKeyService : IApiKeyService
            ?? Environment.GetEnvironmentVariable("OPENAI_API_KEY");
         if (key is not null)
         {
-            await SecureStorage.Default.SetAsync(LegacyStorageKey, key);
+            await TrySetSecureStorageAsync(LegacyStorageKey, key);
             _cachedKeys[LegacyStorageKey] = key;
             return key;
         }
@@ -52,7 +52,7 @@ public class ApiKeyService : IApiKeyService
         if (_cachedKeys.TryGetValue(storageKey, out var cachedKey) && cachedKey is not null)
             return cachedKey;
 
-        var key = await SecureStorage.Default.GetAsync(storageKey);
+        var key = await TryGetSecureStorageAsync(storageKey);
         if (key is not null)
         {
             _cachedKeys[storageKey] = key;
@@ -62,7 +62,7 @@ public class ApiKeyService : IApiKeyService
         key = ReadFirstDotEnv(GetEnvironmentVariableNames(providerId));
         if (key is not null)
         {
-            await SecureStorage.Default.SetAsync(storageKey, key);
+            await TrySetSecureStorageAsync(storageKey, key);
             _cachedKeys[storageKey] = key;
             return key;
         }
@@ -70,7 +70,7 @@ public class ApiKeyService : IApiKeyService
         key = ReadFirstEnvironment(GetEnvironmentVariableNames(providerId));
         if (key is not null)
         {
-            await SecureStorage.Default.SetAsync(storageKey, key);
+            await TrySetSecureStorageAsync(storageKey, key);
             _cachedKeys[storageKey] = key;
             return key;
         }
@@ -80,20 +80,20 @@ public class ApiKeyService : IApiKeyService
 
     public async Task SetApiKeyAsync(string apiKey)
     {
-        await SecureStorage.Default.SetAsync(LegacyStorageKey, apiKey);
+        await TrySetSecureStorageAsync(LegacyStorageKey, apiKey);
         _cachedKeys[LegacyStorageKey] = apiKey;
     }
 
     public async Task SetApiKeyAsync(string providerId, string apiKey)
     {
         var storageKey = GetStorageKey(providerId);
-        await SecureStorage.Default.SetAsync(storageKey, apiKey);
+        await TrySetSecureStorageAsync(storageKey, apiKey);
         _cachedKeys[storageKey] = apiKey;
     }
 
     public Task ClearApiKeyAsync()
     {
-        SecureStorage.Default.Remove(LegacyStorageKey);
+        TryRemoveSecureStorage(LegacyStorageKey);
         _cachedKeys.Remove(LegacyStorageKey);
         return Task.CompletedTask;
     }
@@ -101,7 +101,7 @@ public class ApiKeyService : IApiKeyService
     public Task ClearApiKeyAsync(string providerId)
     {
         var storageKey = GetStorageKey(providerId);
-        SecureStorage.Default.Remove(storageKey);
+        TryRemoveSecureStorage(storageKey);
         _cachedKeys.Remove(storageKey);
         return Task.CompletedTask;
     }
@@ -143,5 +143,45 @@ public class ApiKeyService : IApiKeyService
         }
 
         return null;
+    }
+
+    private static async Task<string?> TryGetSecureStorageAsync(string storageKey)
+    {
+        try
+        {
+            return await SecureStorage.Default.GetAsync(storageKey);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"SecureStorage read failed for '{storageKey}': {ex.GetType().Name} {ex.Message}");
+            return null;
+        }
+    }
+
+    private static async Task TrySetSecureStorageAsync(string storageKey, string value)
+    {
+        try
+        {
+            await SecureStorage.Default.SetAsync(storageKey, value);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"SecureStorage write failed for '{storageKey}': {ex.GetType().Name} {ex.Message}");
+        }
+    }
+
+    private static void TryRemoveSecureStorage(string storageKey)
+    {
+        try
+        {
+            SecureStorage.Default.Remove(storageKey);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"SecureStorage remove failed for '{storageKey}': {ex.GetType().Name} {ex.Message}");
+        }
     }
 }

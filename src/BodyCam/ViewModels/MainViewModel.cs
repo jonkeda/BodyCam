@@ -4,6 +4,7 @@ using BodyCam.Models;
 using BodyCam.Mvvm;
 using BodyCam.Orchestration;
 using BodyCam.Services;
+using BodyCam.Services.Actions;
 using BodyCam.Services.Audio;
 using BodyCam.Services.Audio.WebRtcApm;
 using BodyCam.Services.Camera;
@@ -12,6 +13,8 @@ using BodyCam.Services.Glasses;
 using BodyCam.Services.Glasses.HeyCyan;
 using BodyCam.Services.Input;
 using BodyCam.Services.QrCode;
+using BodyCam.Services.Session;
+using BodyCam.Services.Transcript;
 using CommunityToolkit.Maui.Views;
 using Microsoft.Extensions.Logging;
 
@@ -44,6 +47,9 @@ public class MainViewModel : ViewModelBase
     private readonly QrContentResolver _contentResolver;
     private readonly ICameraCommandService? _cameraCommands;
     private readonly IManualCameraCaptureCoordinator? _manualCapture;
+    private readonly ISessionCoordinator? _sessionCoordinator;
+    private readonly IAssistiveActionService? _assistiveActions;
+    private readonly ITranscriptStore? _transcriptStore;
     private readonly HeyCyanGlassesDeviceManager _glasses;
     private readonly ILogger<MainViewModel> _logger;
     private readonly IAecProcessor? _aec;
@@ -62,6 +68,7 @@ public class MainViewModel : ViewModelBase
     private bool _isCompletingManualCapture;
     private TranscriptEntry? _activeCommandAiEntry;
     private CancellationTokenSource? _aiBusyAnimationCts;
+    private string _uiSessionId = Guid.NewGuid().ToString("N");
 
     internal TranscriptEntry? _currentAiEntry;
 
@@ -84,7 +91,7 @@ public class MainViewModel : ViewModelBase
     private Dictionary<string, object>? _lastScanParsed;
     private string? _lastScanRawContent;
 
-    public MainViewModel(AgentOrchestrator orchestrator, IApiKeyService apiKeyService, ISettingsService settingsService, CameraManager cameraManager, IQrCodeScanner qrScanner, QrCodeService qrCodeService, QrContentResolver contentResolver, HeyCyanGlassesDeviceManager glasses, ILogger<MainViewModel> logger, IAecProcessor? aec = null, IAudioRoutePolicyService? audioPolicy = null, ICameraCommandService? cameraCommands = null, IManualCameraCaptureCoordinator? manualCapture = null)
+    public MainViewModel(AgentOrchestrator orchestrator, IApiKeyService apiKeyService, ISettingsService settingsService, CameraManager cameraManager, IQrCodeScanner qrScanner, QrCodeService qrCodeService, QrContentResolver contentResolver, HeyCyanGlassesDeviceManager glasses, ILogger<MainViewModel> logger, IAecProcessor? aec = null, IAudioRoutePolicyService? audioPolicy = null, ICameraCommandService? cameraCommands = null, IManualCameraCaptureCoordinator? manualCapture = null, ISessionCoordinator? sessionCoordinator = null, IAssistiveActionService? assistiveActions = null, ITranscriptStore? transcriptStore = null)
     {
         _orchestrator = orchestrator;
         _apiKeyService = apiKeyService;
@@ -95,6 +102,9 @@ public class MainViewModel : ViewModelBase
         _contentResolver = contentResolver;
         _cameraCommands = cameraCommands;
         _manualCapture = manualCapture;
+        _sessionCoordinator = sessionCoordinator;
+        _assistiveActions = assistiveActions;
+        _transcriptStore = transcriptStore;
         _glasses = glasses;
         _logger = logger;
         _aec = aec;
@@ -122,6 +132,11 @@ public class MainViewModel : ViewModelBase
                 DispatchOnMainThreadAsync(RevealInlineCameraPreviewAsync);
         }
 
+        if (_sessionCoordinator is not null)
+        {
+            _sessionCoordinator.StateChanged += OnSessionCoordinatorStateChanged;
+        }
+
         // Subscribe to glasses events for shell widget
         _glasses.StateChanged += (_, _) => RefreshGlasses();
         _glasses.StatusChanged += (_, _) => RefreshGlasses();
@@ -134,6 +149,7 @@ public class MainViewModel : ViewModelBase
         {
             Entries.Clear();
             _currentAiEntry = null;
+            _ = ClearTranscriptSessionAsync();
         });
 
         SetStateCommand = new AsyncRelayCommand(async (object? param) =>
@@ -256,16 +272,21 @@ public class MainViewModel : ViewModelBase
                         if (aiIndex >= 0)
                         {
                             Entries.Insert(aiIndex, userEntry);
+                            TrackTranscriptEntry(userEntry);
                             return; // Don't touch _currentAiEntry — AI is still streaming
                         }
                     }
 
-                    Entries.Add(userEntry);
+                    AddTranscriptEntry(userEntry);
                 }
                 else if (msg.StartsWith("AI:"))
                 {
                     if (_currentAiEntry is not null)
+                    {
                         _currentAiEntry.Text = msg[3..].Trim();
+                        _currentAiEntry.IsThinking = false;
+                        TrackTranscriptEntry(_currentAiEntry);
+                    }
                     _currentAiEntry = null;
                 }
             });
@@ -603,6 +624,12 @@ public class MainViewModel : ViewModelBase
     {
         DebugVisible = _settingsService.DebugMode;
 
+        if (_sessionCoordinator is not null)
+        {
+            await SetLayerWithCoordinatorAsync(IsRunning ? SessionLayer.Sleep : SessionLayer.ActiveSession);
+            return;
+        }
+
         if (IsRunning)
             await SetLayerAsync("Off");
         else
@@ -611,6 +638,12 @@ public class MainViewModel : ViewModelBase
 
     private async Task SetLayerAsync(string segment)
     {
+        if (_sessionCoordinator is not null)
+        {
+            await SetLayerWithCoordinatorAsync(ParseSessionLayer(segment));
+            return;
+        }
+
         if (_isTransitioning)
         {
             _logger.LogWarning("SetLayerAsync({Segment}) skipped — already transitioning", segment);
@@ -705,6 +738,108 @@ public class MainViewModel : ViewModelBase
         finally { _isTransitioning = false; }
     }
 
+    private async Task SetLayerWithCoordinatorAsync(SessionLayer target)
+    {
+        if (_isTransitioning)
+        {
+            _logger.LogWarning("Session transition to {Target} skipped — already transitioning", target);
+            return;
+        }
+
+        _isTransitioning = true;
+        try
+        {
+            if (target == SessionLayer.Sleep)
+            {
+                ShowInlineCameraPreview = false;
+                _cameraView?.StopCameraPreview();
+            }
+
+            if (target < ToSessionLayer(CurrentLayer) && CurrentLayer == ListeningLayer.ActiveSession)
+            {
+                _cameraView?.StopCameraPreview();
+                VisionStatus = null;
+            }
+
+            if (target == SessionLayer.ActiveSession)
+            {
+                ToggleButtonText = "Stop";
+                StatusText = "Connecting...";
+            }
+
+            var result = await _sessionCoordinator!.SetLayerAsync(
+                target,
+                new SessionTransitionOptions(
+                    PromptForApiKeyAsync,
+                    CaptureFrameFromCameraViewAsync));
+
+            ApplySessionTransitionResult(result);
+
+            if (result.Success && result.CurrentLayer == SessionLayer.ActiveSession)
+            {
+                _logger.LogInformation("Active session ready, CameraView={HasCamera}", _cameraView is not null);
+                if (_cameraView is not null)
+                    await _cameraView.StartCameraPreview(CancellationToken.None);
+            }
+
+            if (!result.Success && !string.IsNullOrWhiteSpace(result.Error)
+                && !string.Equals(result.Error, "API key required", StringComparison.OrdinalIgnoreCase))
+            {
+                DebugLog += $"[{DateTime.Now:HH:mm:ss}] {result.Error}{Environment.NewLine}";
+            }
+        }
+        finally
+        {
+            _isTransitioning = false;
+        }
+    }
+
+    private void OnSessionCoordinatorStateChanged(object? sender, SessionStateChangedEventArgs e)
+    {
+        MainThread.BeginInvokeOnMainThread(() =>
+            ApplySessionTransitionResult(new SessionTransitionResult(
+                Success: true,
+                e.Layer,
+                e.IsRunning,
+                e.StatusText,
+                e.ToggleButtonText)));
+    }
+
+    private void ApplySessionTransitionResult(SessionTransitionResult result)
+    {
+        CurrentLayer = ToListeningLayer(result.CurrentLayer);
+        IsRunning = result.IsRunning;
+        ToggleButtonText = result.ToggleButtonText;
+        StatusText = result.StatusText;
+    }
+
+    private static SessionLayer ParseSessionLayer(string segment) =>
+        segment switch
+        {
+            "Off" or "Sleep" => SessionLayer.Sleep,
+            "On" or "Listen" => SessionLayer.WakeWord,
+            "Listening" or "Active" => SessionLayer.ActiveSession,
+            _ => SessionLayer.Sleep,
+        };
+
+    private static SessionLayer ToSessionLayer(ListeningLayer layer) =>
+        layer switch
+        {
+            ListeningLayer.Sleep => SessionLayer.Sleep,
+            ListeningLayer.WakeWord => SessionLayer.WakeWord,
+            ListeningLayer.ActiveSession => SessionLayer.ActiveSession,
+            _ => SessionLayer.Sleep,
+        };
+
+    private static ListeningLayer ToListeningLayer(SessionLayer layer) =>
+        layer switch
+        {
+            SessionLayer.Sleep => ListeningLayer.Sleep,
+            SessionLayer.WakeWord => ListeningLayer.WakeWord,
+            SessionLayer.ActiveSession => ListeningLayer.ActiveSession,
+            _ => ListeningLayer.Sleep,
+        };
+
     private async Task SetOutputModeAsync(string outputMode)
     {
         var normalized = OutputModes.Normalize(outputMode);
@@ -716,7 +851,12 @@ public class MainViewModel : ViewModelBase
         _audioPolicy?.Recompute();
 
         if (normalized == OutputModes.Silent)
-            await _orchestrator.StopSpeakingAsync();
+        {
+            if (_sessionCoordinator is not null)
+                await _sessionCoordinator.StopSpeakingAsync();
+            else
+                await _orchestrator.StopSpeakingAsync();
+        }
     }
 
     private async Task RevealInlineCameraPreviewAsync()
@@ -756,6 +896,12 @@ public class MainViewModel : ViewModelBase
 
     public async Task HandleButtonActionAsync(ButtonActionEvent action)
     {
+        if (_assistiveActions is not null)
+        {
+            await ExecuteAssistiveButtonActionAsync(action);
+            return;
+        }
+
         switch (action.Action)
         {
             case ButtonAction.Look:
@@ -780,6 +926,124 @@ public class MainViewModel : ViewModelBase
                 break;
         }
     }
+
+    private async Task ExecuteAssistiveButtonActionAsync(ButtonActionEvent action)
+    {
+        if (action.Action == ButtonAction.Photo && await CompletePendingManualCaptureAsync())
+            return;
+
+        if (IsSessionStopAction(action.Action))
+        {
+            ShowInlineCameraPreview = false;
+            _cameraView?.StopCameraPreview();
+        }
+
+        if (IsSessionStartAction(action.Action) && !IsRunning)
+        {
+            ToggleButtonText = "Stop";
+            StatusText = "Connecting...";
+        }
+
+        var aiEntry = CreateBusyEntryForButtonAction(action.Action);
+        try
+        {
+            var result = await _assistiveActions!.ExecuteButtonActionAsync(
+                action,
+                CreateAssistiveActionContext());
+
+            await ApplyAssistiveActionResultAsync(result, aiEntry);
+        }
+        catch (OperationCanceledException)
+        {
+            if (aiEntry is not null)
+                CompleteAiBusyVisual(aiEntry, "Command canceled.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Button action {Action} failed", action.Action);
+            if (aiEntry is not null)
+                CompleteAiBusyVisual(aiEntry, $"Command error: {ex.Message}");
+        }
+        finally
+        {
+            if (ReferenceEquals(_activeCommandAiEntry, aiEntry))
+                _activeCommandAiEntry = null;
+        }
+    }
+
+    private TranscriptEntry? CreateBusyEntryForButtonAction(ButtonAction action)
+    {
+        if (!IsCameraCommandButtonAction(action))
+            return null;
+
+        ShowTranscriptTab = true;
+        var aiEntry = new TranscriptEntry { Role = "AI", IsThinking = true };
+        Entries.Add(aiEntry);
+        _activeCommandAiEntry = aiEntry;
+        return aiEntry;
+    }
+
+    private async Task ApplyAssistiveActionResultAsync(
+        AssistiveActionResult result,
+        TranscriptEntry? aiEntry)
+    {
+        if (result.Kind == AssistiveActionResultKind.CameraCommand
+            && result.CameraCommandResult is not null
+            && aiEntry is not null)
+        {
+            ApplyCameraCommandResult(result.CameraCommandResult, aiEntry);
+            return;
+        }
+
+        if (result.Kind == AssistiveActionResultKind.Session)
+        {
+            if (result.Data is SessionTransitionResult transition)
+            {
+                ApplySessionTransitionResult(transition);
+
+                if (transition.Success && transition.CurrentLayer == SessionLayer.ActiveSession)
+                {
+                    _logger.LogInformation("Active session ready, CameraView={HasCamera}", _cameraView is not null);
+                    if (_cameraView is not null)
+                        await _cameraView.StartCameraPreview(CancellationToken.None);
+                }
+
+                if (!transition.Success
+                    && !string.IsNullOrWhiteSpace(transition.Error)
+                    && !string.Equals(transition.Error, "API key required", StringComparison.OrdinalIgnoreCase))
+                {
+                    DebugLog += $"[{DateTime.Now:HH:mm:ss}] {transition.Error}{Environment.NewLine}";
+                }
+            }
+            return;
+        }
+
+        if (result.Kind == AssistiveActionResultKind.Photo)
+        {
+            await RevealInlineCameraPreviewAsync();
+            await SendVisionCommandAsync("Take a photo of what you see.");
+            return;
+        }
+
+        if (!result.Success && aiEntry is not null)
+            CompleteAiBusyVisual(aiEntry, result.Error ?? "Action failed.");
+    }
+
+    private AssistiveActionContext CreateAssistiveActionContext() =>
+        new(PromptForApiKeyAsync, CaptureFrameFromCameraViewAsync);
+
+    private static bool IsCameraCommandButtonAction(ButtonAction action) =>
+        action is ButtonAction.Look or ButtonAction.Read or ButtonAction.Find;
+
+    private bool IsSessionStartAction(ButtonAction action) =>
+        action is ButtonAction.ToggleSession or ButtonAction.ToggleConversation or ButtonAction.ToggleSleepActive
+        && !IsRunning;
+
+    private static bool IsSessionStopAction(ButtonAction action) =>
+        action is ButtonAction.EndSession
+            or ButtonAction.ToggleSession
+            or ButtonAction.ToggleConversation
+            or ButtonAction.ToggleSleepActive;
 
     private Task ExecuteLookCommandAsync(LookDetailLevel detail) =>
         ExecuteCameraCommandAsync(
@@ -810,28 +1074,33 @@ public class MainViewModel : ViewModelBase
             var result = await _cameraCommands.ExecuteAsync(
                 new CameraCommandRequest(commandId, mode, origin, options, query));
 
-            AddCommandTranscriptInput(result, aiEntry);
-            CompleteAiBusyVisual(aiEntry, result.TranscriptText);
-
-            TryShowScanResult(result);
-
-            if (WasManualAim(result))
-                HideInlineCameraPreview();
+            ApplyCameraCommandResult(result, aiEntry);
         }
         catch (OperationCanceledException)
         {
-            CompleteAiBusyVisual(aiEntry, "Command canceled.");
+            CompleteAiBusyVisual(aiEntry, "Command canceled.", ToCameraActionId(commandId));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Camera command {CommandId} error", commandId);
-            CompleteAiBusyVisual(aiEntry, $"Command error: {ex.Message}");
+            CompleteAiBusyVisual(aiEntry, $"Command error: {ex.Message}", ToCameraActionId(commandId));
         }
         finally
         {
             if (ReferenceEquals(_activeCommandAiEntry, aiEntry))
                 _activeCommandAiEntry = null;
         }
+    }
+
+    private void ApplyCameraCommandResult(CameraCommandResult result, TranscriptEntry aiEntry)
+    {
+        AddCommandTranscriptInput(result, aiEntry);
+        CompleteAiBusyVisual(aiEntry, result.TranscriptText, ToCameraActionId(result.CommandId));
+
+        TryShowScanResult(result);
+
+        if (WasManualAim(result))
+            HideInlineCameraPreview();
     }
 
     private async Task<bool> CompletePendingManualCaptureAsync()
@@ -910,11 +1179,16 @@ public class MainViewModel : ViewModelBase
         }
     }
 
-    private void CompleteAiBusyVisual(TranscriptEntry aiEntry, string text)
+    private void CompleteAiBusyVisual(
+        TranscriptEntry aiEntry,
+        string text,
+        string? actionId = null,
+        ActionTriggerOrigin? triggerOrigin = null)
     {
         StopAiBusyAnimation();
         aiEntry.Text = text;
         aiEntry.IsThinking = false;
+        TrackTranscriptEntry(aiEntry, actionId, triggerOrigin);
     }
 
     private void StopAiBusyAnimation()
@@ -946,7 +1220,71 @@ public class MainViewModel : ViewModelBase
             Entries.Insert(aiIndex, userEntry);
         else
             Entries.Add(userEntry);
+
+        TrackTranscriptEntry(
+            userEntry,
+            ToCameraActionId(result.CommandId),
+            null,
+            input.ImageBytes is null
+                ? []
+                : [new TranscriptMediaReference(
+                    "image",
+                    input.ImageCaption,
+                    "image/jpeg",
+                    ByteLength: input.ImageBytes.Length)]);
     }
+
+    private void AddTranscriptEntry(
+        TranscriptEntry entry,
+        string? actionId = null,
+        ActionTriggerOrigin? triggerOrigin = null,
+        IReadOnlyList<TranscriptMediaReference>? media = null)
+    {
+        Entries.Add(entry);
+        TrackTranscriptEntry(entry, actionId, triggerOrigin, media);
+    }
+
+    private void TrackTranscriptEntry(
+        TranscriptEntry entry,
+        string? actionId = null,
+        ActionTriggerOrigin? triggerOrigin = null,
+        IReadOnlyList<TranscriptMediaReference>? media = null)
+    {
+        if (_transcriptStore is null || entry.IsThinking || string.IsNullOrWhiteSpace(entry.Text))
+            return;
+
+        var record = new TranscriptRecord(
+            _uiSessionId,
+            DateTimeOffset.UtcNow,
+            entry.Role,
+            entry.Text,
+            media ?? [],
+            actionId,
+            triggerOrigin,
+            SourceProfileId: _settingsService.DeviceSettings.ActiveProfileId,
+            ProviderId: _settingsService.ProviderId,
+            ModelId: _settingsService.ChatModel);
+
+        _ = _transcriptStore.AppendAsync(record);
+    }
+
+    private async Task ClearTranscriptSessionAsync()
+    {
+        var sessionId = _uiSessionId;
+        _uiSessionId = Guid.NewGuid().ToString("N");
+
+        if (_transcriptStore is not null)
+            await _transcriptStore.ClearSessionAsync(sessionId);
+    }
+
+    private static string ToCameraActionId(string commandId) =>
+        commandId switch
+        {
+            "look" => AssistiveActionIds.Look,
+            "read" => AssistiveActionIds.Read,
+            "scan" => AssistiveActionIds.Scan,
+            _ => $"camera.{commandId}",
+        };
 
     private static ImageSource? CreateImageSource(byte[]? imageBytes) =>
         imageBytes is null
@@ -1019,7 +1357,7 @@ public class MainViewModel : ViewModelBase
         var frame = await _cameraManager.CaptureFrameAsync();
         if (frame is null)
         {
-            Entries.Add(new TranscriptEntry { Role = "AI", Text = "Camera not available or no frame captured." });
+            AddTranscriptEntry(new TranscriptEntry { Role = "AI", Text = "Camera not available or no frame captured." });
             return;
         }
 
@@ -1033,6 +1371,7 @@ public class MainViewModel : ViewModelBase
             {
                 aiEntry.IsThinking = false;
                 aiEntry.Text = "No QR code or barcode detected.";
+                TrackTranscriptEntry(aiEntry, AssistiveActionIds.Scan);
                 return;
             }
 
@@ -1043,6 +1382,7 @@ public class MainViewModel : ViewModelBase
 
             aiEntry.IsThinking = false;
             aiEntry.Text = $"{handler.Icon} {handler.DisplayName}: {handler.Summarize(parsed)}";
+            TrackTranscriptEntry(aiEntry, AssistiveActionIds.Scan);
 
             ShowScanResultCard(handler, parsed, result.Content);
         }
@@ -1051,6 +1391,7 @@ public class MainViewModel : ViewModelBase
             _logger.LogError(ex, "QR scan error");
             aiEntry.IsThinking = false;
             aiEntry.Text = $"Scan error: {ex.Message}";
+            TrackTranscriptEntry(aiEntry, AssistiveActionIds.Scan);
         }
     }
 
@@ -1059,7 +1400,7 @@ public class MainViewModel : ViewModelBase
         var frame = await _cameraManager.CaptureFrameAsync();
         if (frame is null)
         {
-            Entries.Add(new TranscriptEntry { Role = "AI", Text = "Camera not available or no frame captured." });
+            AddTranscriptEntry(new TranscriptEntry { Role = "AI", Text = "Camera not available or no frame captured." });
             return;
         }
 
@@ -1085,17 +1426,21 @@ public class MainViewModel : ViewModelBase
             {
                 aiEntry.Text = text;
             }
+
+            TrackTranscriptEntry(aiEntry, AssistiveActionIds.Read);
         }
         catch (OperationCanceledException)
         {
             aiEntry.IsThinking = false;
             aiEntry.Text = "Text reading timed out. Check your network connection and try again.";
+            TrackTranscriptEntry(aiEntry, AssistiveActionIds.Read);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Text reading error");
             aiEntry.IsThinking = false;
             aiEntry.Text = $"Read error: {ex.Message}";
+            TrackTranscriptEntry(aiEntry, AssistiveActionIds.Read);
         }
     }
 
@@ -1107,7 +1452,10 @@ public class MainViewModel : ViewModelBase
             _currentAiEntry = new TranscriptEntry { Role = "AI", IsThinking = true };
             Entries.Add(_currentAiEntry);
 
-            await _orchestrator.SendTextInputAsync(prompt);
+            if (_sessionCoordinator is not null)
+                await _sessionCoordinator.SendTextInputAsync(prompt);
+            else
+                await _orchestrator.SendTextInputAsync(prompt);
             return;
         }
 
@@ -1118,17 +1466,24 @@ public class MainViewModel : ViewModelBase
         if (frame is not null)
             imageSource = ImageSource.FromStream(() => new MemoryStream(frame));
 
-        Entries.Add(new TranscriptEntry
+        AddTranscriptEntry(new TranscriptEntry
         {
             Role = "You",
             Text = prompt,
             Image = imageSource,
             ImageCaption = "Captured frame"
-        });
+        },
+        media: frame is null
+            ? []
+            : [new TranscriptMediaReference(
+                "image",
+                "Captured frame",
+                "image/jpeg",
+                ByteLength: frame.Length)]);
 
         if (frame is null)
         {
-            Entries.Add(new TranscriptEntry { Role = "AI", Text = "Camera not available or no frame captured." });
+            AddTranscriptEntry(new TranscriptEntry { Role = "AI", Text = "Camera not available or no frame captured." });
             return;
         }
 
@@ -1143,17 +1498,20 @@ public class MainViewModel : ViewModelBase
             var description = await _orchestrator.Vision.DescribeFrameAsync(frame, prompt, cts.Token);
             aiEntry.IsThinking = false;
             aiEntry.Text = description;
+            TrackTranscriptEntry(aiEntry, AssistiveActionIds.Look);
         }
         catch (OperationCanceledException)
         {
             aiEntry.IsThinking = false;
             aiEntry.Text = "Vision request timed out. Check your network connection and try again.";
+            TrackTranscriptEntry(aiEntry, AssistiveActionIds.Look);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Vision API error");
             aiEntry.IsThinking = false;
             aiEntry.Text = $"Vision error: {ex.Message}";
+            TrackTranscriptEntry(aiEntry, AssistiveActionIds.Look);
         }
     }
 
@@ -1165,11 +1523,11 @@ public class MainViewModel : ViewModelBase
 
         MessageText = string.Empty;
         ShowTranscriptTab = true;
-        Entries.Add(new TranscriptEntry { Role = "You", Text = message });
+        AddTranscriptEntry(new TranscriptEntry { Role = "You", Text = message });
 
         if (!IsRunning)
         {
-            Entries.Add(new TranscriptEntry
+            AddTranscriptEntry(new TranscriptEntry
             {
                 Role = "AI",
                 Text = "Switch to Active mode to send a live message."
@@ -1182,7 +1540,10 @@ public class MainViewModel : ViewModelBase
 
         try
         {
-            await _orchestrator.SendTextInputAsync(message);
+            if (_sessionCoordinator is not null)
+                await _sessionCoordinator.SendTextInputAsync(message);
+            else
+                await _orchestrator.SendTextInputAsync(message);
         }
         catch (Exception ex)
         {
@@ -1336,7 +1697,7 @@ public class MainViewModel : ViewModelBase
                 Command = new RelayCommand(ReopenScanResultCard)
             });
             entry.NotifyActionsChanged();
-            Entries.Add(entry);
+            AddTranscriptEntry(entry, AssistiveActionIds.Scan);
         });
     }
 
@@ -1353,7 +1714,9 @@ public class MainViewModel : ViewModelBase
         if (IsRunning)
         {
             var prompt = $"The user chose \"{action}\" for the scanned {handler.ContentType}: {rawContent}";
-            _ = _orchestrator.SendTextInputAsync(prompt);
+            _ = _sessionCoordinator is not null
+                ? _sessionCoordinator.SendTextInputAsync(prompt)
+                : _orchestrator.SendTextInputAsync(prompt);
         }
     }
 

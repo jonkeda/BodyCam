@@ -8,14 +8,13 @@ namespace BodyCam.UITests.Tests.SettingsPage;
 public class ApiKeyTests
 {
     private readonly BodyCamFixture _fixture;
-    private Pages.ConnectionSettingsPage Page => _fixture.ConnectionSettingsPage;
+    private Pages.LlmProviderSettingsPage Page => _fixture.LlmProviderSettingsPage;
 
     public ApiKeyTests(BodyCamFixture fixture)
     {
         _fixture = fixture;
-        _fixture.NavigateToSettingsSubPage(
-            () => _fixture.SettingsPage.ConnectionSettingsCard.Click(),
-            _fixture.ConnectionSettingsPage);
+        _fixture.NavigateToLlmProviderDetail(
+            () => _fixture.LlmProvidersSettingsPage.EditOpenAiProviderButton.Click());
     }
 
     [Fact]

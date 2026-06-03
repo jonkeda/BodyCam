@@ -45,8 +45,7 @@ public class UsbCameraSettingsTests
     [Fact]
     public void DeviceMatchEntry_EnterVidPid_SetsValue()
     {
-        Page.DeviceMatchEntry.Clear();
-        Page.DeviceMatchEntry.Enter("VID_349C&PID_0411");
+        Page.DeviceMatchEntry.SetText("VID_349C&PID_0411");
 
         Assert.Equal("VID_349C&PID_0411", Page.DeviceMatchEntry.GetText());
     }

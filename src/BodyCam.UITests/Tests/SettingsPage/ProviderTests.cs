@@ -8,45 +8,46 @@ namespace BodyCam.UITests.Tests.SettingsPage;
 public class ProviderTests
 {
     private readonly BodyCamFixture _fixture;
-    private Pages.ConnectionSettingsPage Page => _fixture.ConnectionSettingsPage;
+    private Pages.LlmProvidersSettingsPage Page => _fixture.LlmProvidersSettingsPage;
+    private Pages.LlmProviderSettingsPage DetailPage => _fixture.LlmProviderSettingsPage;
 
     public ProviderTests(BodyCamFixture fixture)
     {
         _fixture = fixture;
-        _fixture.NavigateToSettingsSubPage(
-            () => _fixture.SettingsPage.ConnectionSettingsCard.Click(),
-            _fixture.ConnectionSettingsPage);
+        _fixture.NavigateToLlmProviders();
     }
 
     [Fact]
-    public void ProviderOpenAiRadio_Exists()
+    public void OpenAiProviderEditButton_Exists()
     {
-        Page.ProviderOpenAiRadio.AssertExists();
+        Page.EditOpenAiProviderButton.AssertExists();
     }
 
     [Fact]
-    public void ProviderAzureRadio_Exists()
+    public void AzureProviderEditButton_Exists()
     {
-        Page.ProviderAzureRadio.AssertExists();
+        Page.EditAzureProviderButton.AssertExists();
     }
 
     [Fact]
-    public void SelectAzure_ShowsAzureFields()
+    public void AzureProviderDetail_ShowsAzureFields()
     {
-        Page.ProviderAzureRadio.Select();
-        Page.AzureEndpointEntry.AssertExists();
-        Page.AzureApiVersionEntry.AssertExists();
-        // Restore to OpenAI
-        Page.ProviderOpenAiRadio.Select();
+        Page.EditAzureProviderButton.Click();
+        DetailPage.WaitReady(10000);
+
+        DetailPage.AzureEndpointEntry.AssertExists();
+        DetailPage.AzureApiVersionEntry.AssertExists();
     }
 
-    [Fact(Skip = "FlaUI cannot reliably Select() MAUI RadioButton on WinUI3")]
-    public void SelectOpenAi_ShowsModelPickers()
+    [Fact]
+    public void OpenAiProviderDetail_ShowsModelPickers()
     {
-        Page.ProviderOpenAiRadio.Select();
-        Page.VoiceModelPicker.AssertExists();
-        Page.ChatModelPicker.AssertExists();
-        Page.VisionModelPicker.AssertExists();
-        Page.TranscriptionModelPicker.AssertExists();
+        Page.EditOpenAiProviderButton.Click();
+        DetailPage.WaitReady(10000);
+
+        DetailPage.RealtimeModelPicker.AssertExists();
+        DetailPage.ChatModelPicker.AssertExists();
+        DetailPage.VisionModelPicker.AssertExists();
+        DetailPage.TranscriptionModelPicker.AssertExists();
     }
 }

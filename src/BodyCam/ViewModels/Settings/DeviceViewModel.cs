@@ -756,18 +756,14 @@ public class DeviceViewModel : ViewModelBase, IDisposable
 
             if (state == GlassesConnectionState.Connected)
             {
-                if (_profileManager is not null)
-                    await _profileManager.HandleDeviceConnectedAsync();
-                else
+                if (_profileManager is null)
                     await AutoSelectGlassesProvidersAsync();
                 if (_audioEndpointActivation.IsSupported)
                     await RefreshHeyCyanAudioStatusAsync();
             }
             else if (state == GlassesConnectionState.Disconnected)
             {
-                if (_profileManager is not null)
-                    await _profileManager.HandleDeviceDisconnectedAsync();
-                else
+                if (_profileManager is null)
                     await RevertToDefaultProvidersAsync();
             }
         });

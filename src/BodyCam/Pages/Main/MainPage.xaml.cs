@@ -1,5 +1,5 @@
 ﻿using BodyCam.Helpers;
-using BodyCam.Services.Audio;
+using BodyCam.Services;
 using BodyCam.Services.Input;
 using BodyCam.Services.Camera;
 using BodyCam.ViewModels;
@@ -11,7 +11,11 @@ public partial class MainPage : ContentPage
 {
 	private bool _isNearBottom = true;
 
-	public MainPage(MainViewModel viewModel, PhoneCameraProvider phoneCamera, AudioInputManager audioInputManager, AudioOutputManager audioOutputManager, ButtonInputManager buttonInput, IServiceProvider services)
+	public MainPage(
+		MainViewModel viewModel,
+		PhoneCameraProvider phoneCamera,
+		ButtonInputManager buttonInput,
+		IAppRuntimeCoordinator runtimeCoordinator)
 	{
 		InitializeComponent();
 		BindingContext = viewModel;
@@ -26,45 +30,7 @@ public partial class MainPage : ContentPage
 
 		Loaded += async (_, _) =>
 		{
-			await audioInputManager.InitializeAsync();
-			await audioOutputManager.InitializeAsync();
-			await buttonInput.StartAsync();
-
-			// Scan for Bluetooth audio devices after audio manager is ready
-#if WINDOWS
-			var btEnum = services.GetService<BodyCam.Platforms.Windows.Audio.WindowsBluetoothEnumerator>();
-			btEnum?.ScanAndRegister();
-			btEnum?.StartListening();
-
-			var btOutEnum = services.GetService<BodyCam.Platforms.Windows.Audio.WindowsBluetoothOutputEnumerator>();
-			btOutEnum?.ScanAndRegister();
-			btOutEnum?.StartListening();
-
-			// Wire BT enumerator events to HeyCyan audio router for reactive auto-selection
-			var audioRouter = services.GetService<BodyCam.Services.Glasses.HeyCyan.HeyCyanAudioRouter>();
-			if (audioRouter is not null)
-			{
-				if (btEnum is not null) btEnum.EndpointRegistered += audioRouter.OnBtEndpointRegistered;
-				if (btOutEnum is not null) btOutEnum.EndpointRegistered += audioRouter.OnBtEndpointRegistered;
-			}
-#elif ANDROID
-			var btStatus = await Permissions.CheckStatusAsync<Permissions.Bluetooth>();
-			if (btStatus == PermissionStatus.Granted)
-			{
-				var btEnum = services.GetService<BodyCam.Platforms.Android.Audio.AndroidBluetoothEnumerator>();
-				btEnum?.ScanAndRegister();
-				btEnum?.StartListening();
-
-				var btOutEnum = services.GetService<BodyCam.Platforms.Android.Audio.AndroidBluetoothOutputEnumerator>();
-				btOutEnum?.ScanAndRegister();
-				btOutEnum?.StartListening();
-			}
-#endif
-
-			// Auto-reconnect to last-known HeyCyan glasses if enabled
-			var glassesManager = services.GetService<BodyCam.Services.Glasses.HeyCyan.HeyCyanGlassesDeviceManager>();
-			if (glassesManager is not null)
-				_ = glassesManager.TryAutoReconnectAsync();
+			await runtimeCoordinator.StartAsync();
 		};
 
 		if (BindingContext is MainViewModel vm)

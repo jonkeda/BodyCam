@@ -74,10 +74,7 @@ public sealed class SourceProfileManager
         _activeProfile = profile;
         _lastSwitchWasManual = true;
 
-        // Persist
-        var ds = _settings.DeviceSettings;
-        ds.ActiveProfileId = profile.Id;
-        _settings.DeviceSettings = ds;
+        PersistActiveProfile(profile.Id);
 
         ProfileChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -219,11 +216,19 @@ public sealed class SourceProfileManager
         _activeProfile = target;
         _lastSwitchWasManual = false;
 
-        var ds = _settings.DeviceSettings;
-        ds.ActiveProfileId = target.Id;
-        _settings.DeviceSettings = ds;
+        PersistActiveProfile(target.Id);
 
         ProfileChanged?.Invoke(this, EventArgs.Empty);
         AutoSwitched?.Invoke(this, notification);
+    }
+
+    private void PersistActiveProfile(string profileId)
+    {
+        var ds = _settings.DeviceSettings;
+        ds.ActiveProfileId = profileId;
+        ds.Active.CameraProviderId = _camera?.Active?.ProviderId;
+        ds.Active.AudioInputProviderId = _mic?.ActiveProviderId;
+        ds.Active.AudioOutputProviderId = _speaker?.ActiveProviderId;
+        _settings.DeviceSettings = ds;
     }
 }

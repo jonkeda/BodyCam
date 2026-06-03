@@ -46,10 +46,10 @@ public class SettingsHubTests
     }
 
     [Fact]
-    public void ConnectionSettingsCard_Click_OpensConnectionPage()
+    public void ConnectionSettingsCard_Click_OpensLlmProvidersPage()
     {
         _fixture.SettingsPage.ConnectionSettingsCard.Click();
-        Assert.True(_fixture.ConnectionSettingsPage.IsLoaded(10000));
+        Assert.True(_fixture.LlmProvidersSettingsPage.IsLoaded(10000));
     }
 
     [Fact]

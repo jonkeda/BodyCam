@@ -8,31 +8,26 @@ namespace BodyCam.UITests.Tests.SettingsPage;
 public class AzureSettingsTests
 {
     private readonly BodyCamFixture _fixture;
-    private Pages.ConnectionSettingsPage Page => _fixture.ConnectionSettingsPage;
+    private Pages.LlmProviderSettingsPage Page => _fixture.LlmProviderSettingsPage;
 
     public AzureSettingsTests(BodyCamFixture fixture)
     {
         _fixture = fixture;
-        _fixture.NavigateToSettingsSubPage(
-            () => _fixture.SettingsPage.ConnectionSettingsCard.Click(),
-            _fixture.ConnectionSettingsPage);
-        // Switch to Azure to make fields visible
-        Page.ProviderAzureRadio.Select();
+        _fixture.NavigateToLlmProviderDetail(
+            () => _fixture.LlmProvidersSettingsPage.EditAzureProviderButton.Click());
     }
 
     [Fact]
     public void AzureEndpointEntry_EnterUrl_SetsValue()
     {
-        Page.AzureEndpointEntry.Clear();
-        Page.AzureEndpointEntry.Enter("https://test.cognitiveservices.azure.com");
+        Page.AzureEndpointEntry.SetText("https://test.cognitiveservices.azure.com");
         Assert.Equal("https://test.cognitiveservices.azure.com", Page.AzureEndpointEntry.GetText());
     }
 
     [Fact]
     public void AzureApiVersionEntry_EnterVersion_SetsValue()
     {
-        Page.AzureApiVersionEntry.Clear();
-        Page.AzureApiVersionEntry.Enter("2025-04-01-preview");
+        Page.AzureApiVersionEntry.SetText("2025-04-01-preview");
         Assert.Equal("2025-04-01-preview", Page.AzureApiVersionEntry.GetText());
     }
 

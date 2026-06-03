@@ -12,13 +12,9 @@
                              BindableLayout.ItemsSource="{Binding ProviderChoices}">
             <BindableLayout.ItemTemplate>
                 <DataTemplate x:DataType="vm:AddLlmProviderChoiceViewModel">
-                    <Grid AutomationId="{Binding AutomationId}"
-                          Padding="0,12"
+                    <Grid Padding="0,12"
                           RowDefinitions="Auto,Auto"
                           RowSpacing="4">
-                        <Grid.GestureRecognizers>
-                            <TapGestureRecognizer Tapped="OnProviderTapped" />
-                        </Grid.GestureRecognizers>
                         <Label Text="{Binding DisplayName}"
                                FontAttributes="Bold"
                                FontSize="16" />
@@ -26,6 +22,11 @@
                                Text="{Binding Detail}"
                                FontSize="13"
                                TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+                        <Button Grid.RowSpan="2"
+                                AutomationId="{Binding AutomationId}"
+                                Clicked="OnProviderTapped"
+                                BackgroundColor="Transparent"
+                                Opacity="0.01" />
                     </Grid>
                 </DataTemplate>
             </BindableLayout.ItemTemplate>
