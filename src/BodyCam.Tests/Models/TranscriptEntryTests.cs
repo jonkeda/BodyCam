@@ -145,6 +145,28 @@ public class TranscriptEntryTests
     }
 
     [Fact]
+    public void IsActionsOnly_HidesTextAndNotifiesDisplayProperties()
+    {
+        var entry = new TranscriptEntry { Role = "Product", Text = "Mineral Water" };
+        var changed = new List<string?>();
+        entry.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+        entry.IsActionsOnly = true;
+
+        entry.ShowText.Should().BeFalse();
+        changed.Should().Contain(nameof(TranscriptEntry.ShowText));
+        changed.Should().Contain(nameof(TranscriptEntry.AccessibleText));
+    }
+
+    [Fact]
+    public void AutomationId_Product_UsesProductTranscriptLabel()
+    {
+        var entry = new TranscriptEntry { Role = "Product" };
+
+        entry.AutomationId.Should().Be("TranscriptProductEntryLabel");
+    }
+
+    [Fact]
     public void Text_WhenThinking_DoesNotNotifyAccessibleText()
     {
         var entry = new TranscriptEntry { Role = "AI", IsThinking = true };

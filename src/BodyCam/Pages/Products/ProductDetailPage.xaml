@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:BodyCam.ViewModels"
+             x:Class="BodyCam.Pages.Products.ProductDetailPage"
+             x:DataType="vm:ProductDetailViewModel"
+             Title="{Binding Title}"
+             BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="16">
+            <Label Text="No product selected."
+                   IsVisible="{Binding HasNoProduct}"
+                   HorizontalOptions="Center"
+                   VerticalOptions="Center"
+                   FontSize="16"
+                   TextColor="{AppThemeBinding Light={StaticResource TextMuted}, Dark={StaticResource TextMutedDark}}" />
+
+            <VerticalStackLayout IsVisible="{Binding HasProduct}" Spacing="16">
+                <Image Source="{Binding ImageUrl}"
+                       IsVisible="{Binding HasImage}"
+                       HeightRequest="220"
+                       Aspect="AspectFit"
+                       BackgroundColor="{AppThemeBinding Light={StaticResource CardSurface}, Dark={StaticResource CardSurfaceDark}}" />
+
+                <VerticalStackLayout Spacing="4">
+                    <Label Text="{Binding ProductName}"
+                           FontSize="24"
+                           FontAttributes="Bold"
+                           TextColor="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource TextPrimaryDark}}" />
+                    <Label Text="{Binding BrandLine}"
+                           IsVisible="{Binding HasBrandLine}"
+                           FontSize="14"
+                           TextColor="{AppThemeBinding Light={StaticResource TextMuted}, Dark={StaticResource TextMutedDark}}" />
+                </VerticalStackLayout>
+
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Sections}"
+                                     Spacing="12">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ProductDetailSectionViewModel">
+                            <Border StrokeShape="RoundRectangle 8"
+                                    Stroke="{AppThemeBinding Light={StaticResource BorderDefault}, Dark={StaticResource BorderDefaultDark}}"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource CardSurface}, Dark={StaticResource CardSurfaceDark}}"
+                                    Padding="12">
+                                <VerticalStackLayout Spacing="8">
+                                    <Label Text="{Binding Title}"
+                                           FontSize="16"
+                                           FontAttributes="Bold"
+                                           TextColor="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource TextPrimaryDark}}" />
+
+                                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Rows}"
+                                                         Spacing="6">
+                                        <BindableLayout.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:ProductDetailRowViewModel">
+                                                <Grid ColumnDefinitions="120,*" ColumnSpacing="12">
+                                                    <Label Text="{Binding Label}"
+                                                           FontSize="13"
+                                                           TextColor="{AppThemeBinding Light={StaticResource TextMuted}, Dark={StaticResource TextMutedDark}}" />
+                                                    <Label Grid.Column="1"
+                                                           Text="{Binding Value}"
+                                                           FontSize="13"
+                                                           LineBreakMode="WordWrap"
+                                                           TextColor="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource TextPrimaryDark}}" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </BindableLayout.ItemTemplate>
+                                    </VerticalStackLayout>
+                                </VerticalStackLayout>
+                            </Border>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

@@ -18,6 +18,7 @@
                     <VerticalStackLayout Padding="4,2"
                                          SemanticProperties.Description="{Binding AccessibleText}">
                         <Label AutomationId="{Binding AutomationId}"
+                               IsVisible="{Binding ShowText}"
                                FormattedText="{Binding FormattedText}"
                                FontSize="14"
                                FontFamily="OpenSansRegular"

@@ -1,129 +1,133 @@
-# M18 — QR Code Scanning
+# M18 - QR Code Scanning
 
-**Status:** PLANNING  
-**Goal:** Scan QR codes from the camera feed on demand, read the content aloud via AI, then ask the user what to do with it (open URL, save to memory, etc.).
+**Status:** IMPLEMENTED / DOCS UPDATED TO CURRENT CODE
 
-**Depends on:** M11 (camera abstraction), M3 (vision pipeline), M13 (audio output).
+**Goal:** Scan QR codes and barcodes from the active camera, classify the decoded content, show post-scan actions, and let the AI offer the same actions by voice.
+
+**Depends on:** camera command infrastructure (`CameraManager`, `ICameraCommandService`), QR services, Realtime tool dispatch, and audio output. It does **not** depend on `VisionPipeline` for Phase 5.
 
 ---
 
 ## Why This Matters
 
-Smart glasses see QR codes everywhere — restaurant menus, product labels, event tickets, WiFi credentials, business cards. Today the user has to pull out their phone, open a camera app, and squint at the screen. With BodyCam, a button tap or voice command ("scan that") captures the frame, decodes any QR/barcode, reads the content aloud, and asks what to do next.
-
-This is a concrete, high-value "glasses moment" — the kind of thing that makes smart glasses feel useful in daily life.
+Smart glasses see QR codes everywhere: restaurant menus, product labels, event tickets, WiFi credentials, business cards. BodyCam lets the user trigger a scan from the Actions drawer, a tool call, or a scan wake word, then turns the result into a readable summary and contextual actions.
 
 ---
 
-## User Flow
+## Current User Flow
 
 ```
-1. User sees QR code on a menu, package, poster, etc.
-2. User says "scan that" or taps the Scan button
-3. BodyCam captures a frame via CameraManager
-4. QR decoder extracts content from the frame
-5. AI reads content aloud: "I found a QR code with a URL: example.com/menu"
-6. AI asks: "Would you like me to open it, save it, or ignore it?"
-7. User responds by voice → action is taken
+1. User sees QR code or barcode.
+2. User taps Actions -> Scan, or the Realtime model calls scan_qr_code.
+3. CameraCommandService executes the "scan" camera command.
+4. ScanCommand captures one frame from CameraManager or waits for manual aim.
+5. ZXingQrScanner decodes QR/barcode formats from the JPEG.
+6. QrContentResolver classifies the content and suggests actions.
+7. The transcript and ScanResultOverlay show a summary and action buttons.
+8. If the Realtime tool path was used, the AI also announces the result and asks what to do.
 ```
 
 ---
 
-## Architecture
+## Current Architecture
 
 ```
-User trigger (button/voice)
-     │
-     ▼
-CameraManager.CaptureFrameAsync()
-     │
-     ▼
-IQrCodeScanner.ScanAsync(byte[] jpeg)
-     │
-     ├─ Found → QrScanResult { Content, Format, BoundingBox }
-     │            │
-     │            ▼
-     │       AI announces content + asks what to do
-     │            │
-     │            ▼
-     │       User responds → action dispatched
-     │
-     └─ Not found → AI says "I didn't find a QR code"
+Actions drawer / Realtime tool / wake word
+        |
+        v
+scan_qr_code tool OR MainViewModel.ScanCommand
+        |
+        v
+CameraCommandService.ExecuteAsync("scan")
+        |
+        v
+ScanCommand
+        |
+        +--> capture frame via CameraManager / manual capture coordinator
+        |
+        +--> IQrCodeScanner.ScanAsync(byte[] jpeg)
+        |       |
+        |       +--> null: found=false, "No QR code or barcode detected."
+        |       |
+        |       +--> QrScanResult { Content, Format, ScannedAt }
+        |
+        +--> QrCodeService.Add(result)
+        |
+        +--> QrContentResolver.Resolve(content)
+        |
+        +--> CameraCommandResult.Data:
+              found, content, format, content_type,
+              suggested_actions, details, requires_confirmation
 ```
 
-### Key Components
+### Post-Scan UI Wiring
+
+There are two reliable overlay paths in the current code:
+
+| Trigger | UI path |
+|---------|---------|
+| Actions drawer `Scan` | `MainViewModel.ExecuteCameraCommandAsync("scan")` -> `TryShowScanResult` -> `ShowScanResultCard` |
+| Realtime `scan_qr_code` tool call | `AgentOrchestrator.TryFireScanResult` -> `ScanResultReady` -> `ShowScanResultCard` |
+
+The direct wake-word `InvokeTool` branch executes the tool, but it does not currently raise `ScanResultReady`.
+
+---
+
+## Key Components
 
 | Component | Responsibility |
-|-----------|---------------|
-| `IQrCodeScanner` | Decode QR/barcode from JPEG frame |
-| `QrScanResult` | Content string, barcode format, confidence |
-| `ScanQrCodeTool` | Realtime API function-call tool (capture + decode + announce) |
-| `QrCodeService` | Orchestrates scan flow, manages result history |
-
-### Library Options
-
-| Library | Platform | License | Notes |
-|---------|----------|---------|-------|
-| **ZXing.Net** | All (pure .NET) | Apache 2.0 | Mature, wide format support, no native deps |
-| **ZXing.Net.Maui** | MAUI | MIT | MAUI-specific wrapper, camera integration |
-| **IronBarcode** | All | Commercial | Not suitable (license cost) |
-| **SkiaSharp + ZXing** | All | Apache 2.0 | If we already have SkiaSharp for image processing |
-
-**Recommendation:** `ZXing.Net` (pure .NET, no platform dependencies). We already capture JPEG frames through `CameraManager` — we just need the decoder, not a camera view.
+|-----------|----------------|
+| `IQrCodeScanner` | Decode QR/barcode content from JPEG bytes |
+| `ZXingQrScanner` | ZXing.Net + SkiaSharp scanner for QR, EAN-13, UPC-A, Code 128, Data Matrix |
+| `QrScanResult` | `Content`, `Format`, `ScannedAt` |
+| `QrCodeService` | In-memory last-20 scan history |
+| `IQrContentHandler` | Content classifier, parser, summary, icon, and suggested actions |
+| `QrContentResolver` | Ordered handler resolution with plain-text fallback |
+| `ScanCommand` | Reusable camera command for the scan flow |
+| `ScanQrCodeTool` | Realtime tool wrapper around `CameraCommandService.ExecuteAsync("scan")` |
+| `RecallLastScanTool` | Recalls the most recent scan from history |
+| `LookupBarcodeTool` | Product-barcode lookup via external product databases |
+| `ScanResultOverlay` | Visual post-scan action card |
 
 ---
 
 ## Supported Formats
 
-| Format | Priority | Use Case |
-|--------|----------|----------|
-| QR Code | P0 | URLs, WiFi, vCards, text |
-| EAN-13 / UPC-A | P1 | Product barcodes |
-| Code 128 | P2 | Shipping labels |
-| Data Matrix | P2 | Industrial labels |
-
-Phase 1 focuses on QR codes only. Barcode support is Phase 2.
+| Format | Status | Use Case |
+|--------|--------|----------|
+| QR Code | Implemented | URLs, WiFi, vCards, email, phone, text |
+| EAN-13 | Implemented | Product barcodes |
+| UPC-A | Implemented | Product barcodes |
+| Code 128 | Implemented | Shipping/product labels |
+| Data Matrix | Implemented | Industrial labels |
 
 ---
 
 ## Phases
 
-### Phase 1: Core QR Scanning
+### Phase 1: Core Scanning
 
-- `IQrCodeScanner` interface + `ZXingQrScanner` implementation
-- `QrScanResult` model (content, format, raw bytes)
-- `ScanQrCodeTool` (`ToolBase<ScanQrCodeArgs>`) — captures frame, decodes, returns content to AI
-- AI reads content aloud and asks what to do
-- Unit tests (decode from test images)
-- DI registration (`services.AddSingleton<ITool, ScanQrCodeTool>()`)
+Implemented. `IQrCodeScanner`, `QrScanResult`, `SKBitmapLuminanceSource`, and `ZXingQrScanner` exist. `ScanQrCodeTool` now delegates to the camera command layer rather than scanning directly.
 
 ### Phase 2: Scan UI
 
-- Add a **Scan** button to `QuickActionsView` (6th button, row 1 col 2)
-- `ScanCommand` on `MainViewModel` — fires `SendVisionCommandAsync("Scan for QR codes in front of me and tell me what you find.")`
-- Button enabled only when a session is connected
-- No new tools — reuses `ScanQrCodeTool` via the AI tool-call flow
+Implemented. The visible entry point is `ActionsDrawerView` with a `ScanButton`; `QuickActionsView` only toggles the Actions drawer. `MainViewModel.ScanCommand` directly executes camera command `"scan"` instead of sending a prompt and relying on tool selection.
 
 ### Phase 3: Barcode Support + History
 
-- Extend scanner for EAN-13, UPC-A, Code 128, Data Matrix
-- `QrCodeService` with scan history (last N results)
-- `RecallLastScanTool` — "what was that QR code again?"
-- Save-to-memory integration (auto-save scanned URLs/contacts)
+Implemented. ZXing scans QR, EAN-13, UPC-A, Code 128, and Data Matrix. `QrCodeService` stores the last 20 results in memory. `RecallLastScanTool` returns the most recent scan.
 
 ### Phase 4: Content-Aware Actions
 
-- URL detection → offer to open in browser
-- WiFi QR → offer to connect to network
-- vCard → offer to save contact
-- Plain text → offer to save to memory
-- Action dispatch through AI conversation (user chooses by voice)
+Implemented. Content handlers classify URL, WiFi, vCard, email, phone, and plain text. Scan results include `content_type`, `details`, and `suggested_actions`.
 
-### Phase 5: iOS Platform Support
+### Phase 5: Post-Scan UI & Voice Actions
 
-- Verify ZXing.Net works on iOS (.NET AOT)
-- Test with iOS camera provider
-- Platform-specific permission handling if needed
+Implemented. `ScanResultOverlay` renders the content summary and action buttons; scan transcript entries include a "Show actions" button. This phase uses `ScanCommand`, `ScanResultReady`, and `MainViewModel.ShowScanResultCard`. `VisionPipeline` is not required.
+
+### Phase 6: Vision Pipeline
+
+Not required for M18 Phase 5. Some `Services/Vision` pipeline classes are present and registered, but current `LookTool` delegates to `CameraCommandService` and `LookCommand`, not to `VisionPipeline`. Treat the phase 6 document as legacy/experimental unless the code is changed to use it.
 
 ---
 
@@ -132,20 +136,20 @@ Phase 1 focuses on QR codes only. Barcode support is Phase 2.
 ```json
 {
   "name": "scan_qr_code",
-  "description": "Capture a photo and scan it for QR codes or barcodes. Returns the decoded content.",
+  "description": "Capture a photo and scan for QR codes or barcodes. Returns decoded content with type classification and suggested actions.",
   "parameters": {
     "type": "object",
     "properties": {
       "query": {
         "type": "string",
-        "description": "Optional: what the user is looking for (e.g., 'menu', 'WiFi password')"
+        "description": "Optional question about the QR code content"
       }
     }
   }
 }
 ```
 
-**Wake word binding:** `"scan that"` → QuickAction → `scan_qr_code`
+**Wake word binding:** `wakewords/bodycam-scan_en_windows.ppn` -> `scan_qr_code`.
 
 ---
 
@@ -153,19 +157,23 @@ Phase 1 focuses on QR codes only. Barcode support is Phase 2.
 
 | System | Integration |
 |--------|-------------|
-| **CameraManager** | `CaptureFrameAsync()` for frame capture |
-| **AgentOrchestrator** | Tool registered via `AIFunctionFactory.Create()`, dispatched manually via `RawRepresentation` |
-| **IRealtimeClientSession** | AI reads result aloud, asks for action |
-| **MemoryStore** | Optional save of scanned content |
-| **QuickActionsView** | Scan button triggers `ScanCommand` on `MainViewModel` |
-| **WakeWordService** | "scan that" keyword binding |
+| `CameraManager` | Captures the JPEG frame |
+| `IManualCameraCaptureCoordinator` | Used when touch commands resolve to manual aim |
+| `CameraCommandService` | Executes `ScanCommand` from UI and tool wrappers |
+| `ToolDispatcher` | Dispatches `scan_qr_code`, `recall_last_scan`, and `lookup_barcode` |
+| `AgentOrchestrator` | Fires `ScanResultReady` after Realtime `scan_qr_code` tool results |
+| `MainViewModel` | Executes scan action, shows overlay, adds transcript entries |
+| `ScanResultOverlay` | Displays summary and actions |
+| `ISettingsService` | Controls default touch command mode and external-action confirmation |
 
 ---
 
-## Success Criteria
+## Current Success Criteria
 
-1. User says "scan that" or taps button → QR code content read aloud within 2 seconds
-2. AI asks what to do with the content → user responds by voice
-3. Works with phone camera and glasses camera
-4. Handles "no QR found" gracefully
-5. Unit tests decode QR from test JPEG images
+1. Actions -> Scan captures a frame and returns a transcript result.
+2. Successful scans show `ScanResultOverlay` with summary and suggested actions.
+3. Realtime `scan_qr_code` tool calls return enriched JSON and raise the overlay event.
+4. QR and barcode formats decode through `ZXingQrScanner`.
+5. Last-scan recall works through `RecallLastScanTool`.
+6. Product barcode lookup works through `LookupBarcodeTool`.
+7. No-QR, camera-unavailable, invalid-image, and unsupported-provider paths are handled gracefully.

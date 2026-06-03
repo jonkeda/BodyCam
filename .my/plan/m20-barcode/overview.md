@@ -11,6 +11,8 @@ Depends on M18 Phase 3 (barcode format decoding via ZXing.Net).
 - **Phase 1 — API Clients & Lookup Service:** `ProductInfo` model, `OpenFoodFactsClient`, `UpcItemDbClient`, `OpenGtinDbClient`, `BarcodeLookupService` aggregator with in-memory cache
 - **Phase 2 — Lookup Tool & DI Registration:** `LookupBarcodeTool`, `IHttpClientFactory` setup, system prompt update
 - **Phase 3 — Unit Tests:** Mock-based tests for all clients, aggregator, and tool
+- **Phase 4 — Real API Integration Tests:** Network-backed checks against known stable barcodes and live APIs
+- **Phase 5 — Product Lookup UI:** Start product barcode lookup from a button/UI action, register the outcome in the transcript as a product-name button, and open a detailed product page when tapped
 
 ---
 
@@ -267,6 +269,16 @@ Services/
 
 Tools/
     LookupBarcodeTool.cs          ← ITool — scan + lookup + speak
+
+Pages/
+  Main/Views/
+    ActionsDrawerView.xaml        ← Product/Barcode lookup button (Phase 5)
+  Products/
+    ProductDetailPage.xaml        ← Detailed product result page (Phase 5)
+
+ViewModels/
+    MainViewModel.cs              ← Product lookup command + transcript entry (Phase 5)
+    ProductDetailViewModel.cs     ← Product detail display model (Phase 5)
 ```
 
 Each API client implements:
@@ -332,6 +344,21 @@ When a product is found, the AI summarizes concisely for spoken output:
 
 ---
 
+## UI Response Template
+
+When product lookup is started from the UI, the transcript stays compact:
+
+```
+Product:
+  [Thai Peanut Noodle Kit]
+```
+
+The button label is the product name only. Tapping it opens a product detail page
+with barcode, source, brand, category, quantity, nutrition, allergens,
+ingredients, pricing, and image when available.
+
+---
+
 ## Open Questions
 
 1. **UPCitemdb paid plan?** Free tier is 100 req/day. Enough for personal use.
@@ -340,3 +367,6 @@ When a product is found, the AI summarizes concisely for spoken output:
    skip initially and add later if European coverage gaps appear.
 3. **Offline cache?** Could cache lookups to SQLite for offline re-scan. Deferred
    to Phase 3.
+4. **UI detail persistence?** Phase 5 can pass `ProductInfo` through Shell
+   navigation in memory. Persisting product detail pages across app restarts is
+   deferred unless a product history store is added.

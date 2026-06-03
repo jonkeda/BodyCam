@@ -1,83 +1,110 @@
-# M18 Phase 2 — Scan UI
+# M18 Phase 2 - Scan UI
 
-**Status:** NOT STARTED  
-**Depends on:** M18 Phase 1
+**Status:** IMPLEMENTED
+**Depends on:** M18 Phase 1, camera commands
 
 ---
 
 ## Goal
 
-Add a **Scan** button to the quick-actions grid so the user can trigger a QR code scan with a single tap, without needing to use a voice command.
+Expose a touch path for scanning QR codes and barcodes without relying on the Realtime model to choose the right tool.
 
 ---
 
-## Changes
+## Current UI
 
-### 1. QuickActionsView — Add Scan Button
+The old plan expected a sixth button in `QuickActionsView`. Current code uses a different layout:
+
+| View | Current role |
+|------|--------------|
+| `QuickActionsView.xaml` | Shows the bottom `Actions` toggle button |
+| `ActionsDrawerView.xaml` | Shows `Look`, `Detail`, `Summary`, `Read`, and `Scan` actions |
+| `MainPage.xaml` | Hosts `ActionsDrawerView` and `ScanResultOverlay` as page overlays |
+
+`ScanButton` lives here:
 
 ```
-Pages/Main/Views/QuickActionsView.xaml
+src/BodyCam/Pages/Main/Views/ActionsDrawerView.xaml
 ```
-
-Add a 6th button in row 1, column 2 of the existing 3×2 grid:
 
 ```xml
-<Button Grid.Row="1" Grid.Column="2" AutomationId="ScanButton"
-        Text="📷 Scan"
+<Button AutomationId="ScanButton"
+        Text="Scan"
         Command="{Binding ScanCommand}"
+        SemanticProperties.Description="Scan"
+        SemanticProperties.Hint="Scans a QR code or barcode"
         Style="{StaticResource ActionButton}" />
 ```
 
-The grid already has `ColumnDefinitions="*,*,*"` and `RowDefinitions="Auto,Auto"`. The new button fills the empty slot at row 1, col 2 (next to the Photo button).
+---
 
-### 2. MainViewModel — ScanCommand
+## Current ViewModel Flow
 
 ```
-ViewModels/MainViewModel.cs
+src/BodyCam/ViewModels/MainViewModel.cs
 ```
 
-Add a new `AsyncRelayCommand` following the same pattern as `LookCommand`, `ReadCommand`, etc.:
+`MainViewModel.ScanCommand` now executes the camera command directly:
 
 ```csharp
 ScanCommand = new AsyncRelayCommand(async () =>
 {
-    await SendVisionCommandAsync("Scan for QR codes in front of me and tell me what you find.");
+    IsActionsDrawerExpanded = false;
+    await ExecuteCameraCommandAsync("scan", CommandTriggerOrigin.ActionsDrawer);
 });
 ```
 
-Expose the property:
-
-```csharp
-public ICommand ScanCommand { get; }
-```
-
-This sends a vision prompt to the AI, which triggers the `scan_qr_code` tool call through the normal tool-dispatch flow. No direct tool invocation needed — the AI decides to call the tool based on the prompt.
-
-### 3. UI Tests
+This is intentionally different from the original plan. It does not send a prompt such as "Scan for QR codes..." and wait for tool routing. The UI path is deterministic:
 
 ```
-BodyCam.UITests/Tests/MainPage/QuickActionsTests.cs
+ActionsDrawerView ScanButton
+    -> MainViewModel.ScanCommand
+    -> ExecuteCameraCommandAsync("scan", ActionsDrawer)
+    -> CameraCommandService
+    -> ScanCommand
+    -> TryShowScanResult
 ```
-
-| Test | Asserts |
-|------|---------|
-| `ScanButton_Exists` | Button found by AutomationId |
-| `ScanButton_IsClickable` | Visible and enabled |
 
 ---
 
-## Design Notes
+## Command Mode
 
-- The Scan button uses the same `ActionButton` style as all other quick-action buttons.
-- The prompt wording ("Scan for QR codes in front of me…") is designed to trigger the `scan_qr_code` tool via the AI's function-calling behavior.
-- The button is always visible regardless of layer state — same as Look, Read, Find, Ask, Photo.
-- On platforms without a camera, the tool returns a "Camera not available" message and the AI reports it to the user.
+For `CommandTriggerOrigin.ActionsDrawer`, `CameraCommandBase.ResolveMode` uses:
+
+```csharp
+context.Settings.DefaultTouchCommandMode
+```
+
+That setting lets touch actions run in either:
+
+| Mode | Behavior |
+|------|----------|
+| `FullAuto` | capture immediately |
+| `ManualAim` | reveal/coordinate a manual capture before running the command |
+
+`ScanCommand` supports both modes.
+
+---
+
+## No-AI Routing Requirement
+
+The scan button no longer depends on the LLM selecting `scan_qr_code`. That makes the touch path faster and more reliable, and keeps the Realtime tool path as a separate voice/model-triggered path.
+
+---
+
+## Tests
+
+| Area | Current test files |
+|------|--------------------|
+| Scan button command behavior | `src/BodyCam.Tests/ViewModels/MainViewModel*Tests.cs` |
+| Camera command behavior | `src/BodyCam.Tests/Services/Camera/Commands/ScanCommandTests.cs` |
+| UI action surface | `src/BodyCam.UITests/Tests/MainPage/QuickActionTests.cs` |
 
 ---
 
 ## Exit Criteria
 
-1. Scan button visible in the quick-actions grid
-2. Tapping Scan sends the vision command and triggers QR scanning
-3. AI reads the scan result aloud and asks what to do
-4. UI tests pass for ScanButton existence and clickability
+1. Actions drawer exposes a visible `ScanButton`.
+2. Tapping Scan executes camera command `"scan"` directly.
+3. A successful scan creates a transcript result and shows `ScanResultOverlay`.
+4. No-code and camera-unavailable cases are reported gracefully.

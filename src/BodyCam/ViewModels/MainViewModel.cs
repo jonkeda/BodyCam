@@ -7,6 +7,7 @@ using BodyCam.Services;
 using BodyCam.Services.Actions;
 using BodyCam.Services.Audio;
 using BodyCam.Services.Audio.WebRtcApm;
+using BodyCam.Services.Barcode;
 using BodyCam.Services.Camera;
 using BodyCam.Services.Camera.Commands;
 using BodyCam.Services.Glasses;
@@ -50,6 +51,8 @@ public class MainViewModel : ViewModelBase
     private readonly ISessionCoordinator? _sessionCoordinator;
     private readonly IAssistiveActionService? _assistiveActions;
     private readonly ITranscriptStore? _transcriptStore;
+    private readonly IProductBarcodeLookupWorkflow? _productLookupWorkflow;
+    private readonly Func<ProductInfo, Task> _openProductDetailsAsync;
     private readonly HeyCyanGlassesDeviceManager _glasses;
     private readonly ILogger<MainViewModel> _logger;
     private readonly IAecProcessor? _aec;
@@ -91,7 +94,7 @@ public class MainViewModel : ViewModelBase
     private Dictionary<string, object>? _lastScanParsed;
     private string? _lastScanRawContent;
 
-    public MainViewModel(AgentOrchestrator orchestrator, IApiKeyService apiKeyService, ISettingsService settingsService, CameraManager cameraManager, IQrCodeScanner qrScanner, QrCodeService qrCodeService, QrContentResolver contentResolver, HeyCyanGlassesDeviceManager glasses, ILogger<MainViewModel> logger, IAecProcessor? aec = null, IAudioRoutePolicyService? audioPolicy = null, ICameraCommandService? cameraCommands = null, IManualCameraCaptureCoordinator? manualCapture = null, ISessionCoordinator? sessionCoordinator = null, IAssistiveActionService? assistiveActions = null, ITranscriptStore? transcriptStore = null)
+    public MainViewModel(AgentOrchestrator orchestrator, IApiKeyService apiKeyService, ISettingsService settingsService, CameraManager cameraManager, IQrCodeScanner qrScanner, QrCodeService qrCodeService, QrContentResolver contentResolver, HeyCyanGlassesDeviceManager glasses, ILogger<MainViewModel> logger, IAecProcessor? aec = null, IAudioRoutePolicyService? audioPolicy = null, ICameraCommandService? cameraCommands = null, IManualCameraCaptureCoordinator? manualCapture = null, ISessionCoordinator? sessionCoordinator = null, IAssistiveActionService? assistiveActions = null, ITranscriptStore? transcriptStore = null, IProductBarcodeLookupWorkflow? productLookupWorkflow = null, Func<ProductInfo, Task>? openProductDetailsAsync = null)
     {
         _orchestrator = orchestrator;
         _apiKeyService = apiKeyService;
@@ -105,6 +108,8 @@ public class MainViewModel : ViewModelBase
         _sessionCoordinator = sessionCoordinator;
         _assistiveActions = assistiveActions;
         _transcriptStore = transcriptStore;
+        _productLookupWorkflow = productLookupWorkflow;
+        _openProductDetailsAsync = openProductDetailsAsync ?? OpenProductDetailPageAsync;
         _glasses = glasses;
         _logger = logger;
         _aec = aec;
@@ -231,6 +236,11 @@ public class MainViewModel : ViewModelBase
         {
             IsActionsDrawerExpanded = false;
             await ExecuteCameraCommandAsync("scan", CommandTriggerOrigin.ActionsDrawer);
+        });
+        ProductLookupCommand = new AsyncRelayCommand(async () =>
+        {
+            IsActionsDrawerExpanded = false;
+            await LookupProductFromUiAsync();
         });
 
         _orchestrator.TranscriptDelta += (_, delta) =>
@@ -387,6 +397,7 @@ public class MainViewModel : ViewModelBase
     public ICommand AskCommand { get; }
     public ICommand PhotoCommand { get; }
     public ICommand ScanCommand { get; }
+    public ICommand ProductLookupCommand { get; }
 
     private static readonly Color ActiveBg = Color.FromArgb("#512BD4");
     private static readonly Color InactiveBg = Colors.Transparent;
@@ -1050,6 +1061,103 @@ public class MainViewModel : ViewModelBase
             "look",
             CommandTriggerOrigin.ActionsDrawer,
             new LookCommandOptions(detail, Focus: null, Question: null));
+
+    internal async Task LookupProductFromUiAsync(CancellationToken ct = default)
+    {
+        ShowTranscriptTab = true;
+
+        var entry = new TranscriptEntry
+        {
+            Role = "Product",
+            Text = "Looking up product...",
+            IsThinking = true
+        };
+        Entries.Add(entry);
+
+        if (_productLookupWorkflow is null)
+        {
+            CompleteProductLookupEntry(entry, "Product lookup is unavailable.");
+            return;
+        }
+
+        ProductBarcodeLookupResult result;
+        try
+        {
+            result = await _productLookupWorkflow.LookupAsync(
+                _cameraManager.CaptureFrameAsync,
+                barcode: null,
+                ct);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            CompleteProductLookupEntry(entry, "Product lookup canceled.");
+            return;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Product lookup UI command failed");
+            CompleteProductLookupEntry(entry, $"Product lookup error: {ex.Message}");
+            return;
+        }
+
+        if (!result.Found)
+        {
+            CompleteProductLookupEntry(entry, ProductLookupTranscriptMessage(result));
+            return;
+        }
+
+        var product = result.Product!;
+        var label = ProductBarcodeLookupWorkflow.ProductDisplayName(product);
+
+        entry.IsThinking = false;
+        entry.Text = label;
+        entry.IsActionsOnly = true;
+        entry.Actions.Clear();
+        entry.Actions.Add(new ContentAction
+        {
+            Label = label,
+            Icon = "",
+            Command = new AsyncRelayCommand(() => _openProductDetailsAsync(product))
+        });
+        entry.NotifyActionsChanged();
+        TrackTranscriptEntry(entry, AssistiveActionIds.ProductLookup, ActionTriggerOrigin.ActionsDrawer);
+    }
+
+    private void CompleteProductLookupEntry(TranscriptEntry entry, string text)
+    {
+        entry.Actions.Clear();
+        entry.NotifyActionsChanged();
+        entry.IsActionsOnly = false;
+        entry.Text = text;
+        entry.IsThinking = false;
+        TrackTranscriptEntry(entry, AssistiveActionIds.ProductLookup, ActionTriggerOrigin.ActionsDrawer);
+    }
+
+    private static string ProductLookupTranscriptMessage(ProductBarcodeLookupResult result) =>
+        result.Status switch
+        {
+            ProductBarcodeLookupStatus.CameraUnavailable => "Product lookup: camera not available.",
+            ProductBarcodeLookupStatus.NoBarcodeDetected => "Product lookup: no product barcode detected.",
+            ProductBarcodeLookupStatus.UnsupportedFormat => result.Format is null
+                ? "Product lookup: detected a non-product code; use Scan for QR codes."
+                : $"Product lookup: detected {result.Format}; use Scan for QR codes.",
+            ProductBarcodeLookupStatus.NotFound => result.Barcode is null
+                ? "Product not found."
+                : $"Product not found: {result.Barcode}",
+            ProductBarcodeLookupStatus.Error => string.IsNullOrWhiteSpace(result.Error)
+                ? "Product lookup error."
+                : $"Product lookup error: {result.Error}",
+            _ => result.Message,
+        };
+
+    private static Task OpenProductDetailPageAsync(ProductInfo product) =>
+        MainThread.InvokeOnMainThreadAsync(() =>
+            Shell.Current.GoToAsync(
+                Pages.Products.ProductDetailPage.Route,
+                new Dictionary<string, object>
+                {
+                    ["product"] = product
+                }));
 
     private async Task ExecuteCameraCommandAsync(
         string commandId,

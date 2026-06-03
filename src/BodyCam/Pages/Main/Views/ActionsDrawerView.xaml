@@ -68,6 +68,12 @@
                     SemanticProperties.Description="Scan"
                     SemanticProperties.Hint="Scans a QR code or barcode"
                     Style="{StaticResource ActionButton}" />
+            <Button AutomationId="ProductLookupButton"
+                    Text="Product"
+                    Command="{Binding ProductLookupCommand}"
+                    SemanticProperties.Description="Product lookup"
+                    SemanticProperties.Hint="Scans a product barcode and opens product details"
+                    Style="{StaticResource ActionButton}" />
         </VerticalStackLayout>
     </Border>
 </ContentView>

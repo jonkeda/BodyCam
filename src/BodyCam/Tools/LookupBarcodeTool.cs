@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using BodyCam.Models;
 using BodyCam.Services.Barcode;
 using BodyCam.Services.QrCode;
 
@@ -13,8 +12,7 @@ public class LookupBarcodeArgs
 
 public class LookupBarcodeTool : ToolBase<LookupBarcodeArgs>
 {
-    private readonly IQrCodeScanner _scanner;
-    private readonly IBarcodeLookupService _lookup;
+    private readonly IProductBarcodeLookupWorkflow _workflow;
 
     public override string Name => "lookup_barcode";
     public override string Description =>
@@ -22,56 +20,36 @@ public class LookupBarcodeTool : ToolBase<LookupBarcodeArgs>
         "name, brand, nutrition, allergens, and pricing. " +
         "Use when the user asks about a product or wants to know what something is.";
 
-    public LookupBarcodeTool(IQrCodeScanner scanner, IBarcodeLookupService lookup)
+    public LookupBarcodeTool(IProductBarcodeLookupWorkflow workflow)
     {
-        _scanner = scanner;
-        _lookup = lookup;
+        _workflow = workflow;
     }
 
-    private static readonly HashSet<QrCodeFormat> ProductFormats =
-    [
-        QrCodeFormat.Ean13,
-        QrCodeFormat.UpcA,
-        QrCodeFormat.Code128
-    ];
+    public LookupBarcodeTool(IQrCodeScanner scanner, IBarcodeLookupService lookup)
+        : this(new ProductBarcodeLookupWorkflow(scanner, lookup))
+    {
+    }
 
     protected override async Task<ToolResult> ExecuteAsync(
         LookupBarcodeArgs args, ToolContext context, CancellationToken ct)
     {
-        string barcode;
-
-        if (!string.IsNullOrWhiteSpace(args.Barcode))
+        var lookup = await _workflow.LookupAsync(context.CaptureFrame, args.Barcode, ct);
+        if (!lookup.Found)
         {
-            barcode = args.Barcode;
-        }
-        else
-        {
-            var frame = await context.CaptureFrame(ct);
-            if (frame is null)
-                return ToolResult.Fail("Camera not available.");
-
-            var scan = await _scanner.ScanAsync(frame, ct);
-            if (scan is null)
-                return ToolResult.Fail("No barcode detected in the image.");
-
-            if (!ProductFormats.Contains(scan.Format))
-                return ToolResult.Fail(
-                    $"Detected a {scan.Format} code, not a product barcode. " +
-                    "Use scan_qr_code for QR codes.");
-
-            barcode = scan.Content;
-        }
-
-        var product = await _lookup.LookupAsync(barcode, ct);
-
-        if (product is null)
-            return ToolResult.Success(new
+            if (lookup.Status is ProductBarcodeLookupStatus.NotFound)
             {
-                found = false,
-                barcode,
-                message = $"Product not found in any database. Barcode: {barcode}"
-            });
+                return ToolResult.Success(new
+                {
+                    found = false,
+                    barcode = lookup.Barcode,
+                    message = lookup.Message
+                });
+            }
 
+            return ToolResult.Fail(lookup.Message);
+        }
+
+        var product = lookup.Product!;
         var result = new Dictionary<string, object?>
         {
             ["found"] = true,

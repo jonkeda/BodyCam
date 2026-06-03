@@ -244,7 +244,8 @@ public static class ServiceExtensions
 		services.AddSingleton<ITool, StartSceneWatchTool>();
 		services.AddSingleton<ITool, ScanQrCodeTool>();
 		services.AddSingleton<ITool, RecallLastScanTool>();
-		services.AddSingleton<ITool, LookupBarcodeTool>();
+		services.AddSingleton<ITool>(sp =>
+			new LookupBarcodeTool(sp.GetRequiredService<IProductBarcodeLookupWorkflow>()));
 		services.AddSingleton<ITool, LookTool>();
 		services.AddSingleton<ToolDispatcher>();
 
@@ -271,6 +272,7 @@ public static class ServiceExtensions
 		services.AddSingleton<IBarcodeApiClient>(sp => sp.GetRequiredService<UpcItemDbClient>());
 		services.AddSingleton<IBarcodeApiClient>(sp => sp.GetRequiredService<OpenGtinDbClient>());
 		services.AddSingleton<IBarcodeLookupService, BarcodeLookupService>();
+		services.AddSingleton<IProductBarcodeLookupWorkflow, ProductBarcodeLookupWorkflow>();
 
 		return services;
 	}
@@ -453,6 +455,7 @@ public static class ServiceExtensions
 		services.AddTransient<ViewModels.Settings.GlassesCameraSectionViewModel>();
 		services.AddTransient<MediaGalleryViewModel>();
 		services.AddTransient<GlassesViewModel>();
+		services.AddTransient<ProductDetailViewModel>();
 		services.AddTransient<Pages.Setup.SetupPage>();
 		services.AddTransient<Pages.Main.MainPage>();
 		services.AddTransient<Pages.Settings.SettingsPage>();
@@ -475,11 +478,13 @@ public static class ServiceExtensions
 		services.AddTransient<Pages.ImageViewerPage>();
 		services.AddTransient<Pages.AudioPlayerPage>();
 		services.AddTransient<Pages.GlassesPage>();
+		services.AddTransient<Pages.Products.ProductDetailPage>();
 
 		Routing.RegisterRoute("media-gallery", typeof(Pages.MediaGalleryPage));
 		Routing.RegisterRoute("image-viewer", typeof(Pages.ImageViewerPage));
 		Routing.RegisterRoute("audio-player", typeof(Pages.AudioPlayerPage));
 		Routing.RegisterRoute("glasses", typeof(Pages.GlassesPage));
+		Routing.RegisterRoute(Pages.Products.ProductDetailPage.Route, typeof(Pages.Products.ProductDetailPage));
 
 		return services;
 	}

@@ -1,76 +1,143 @@
-# M18 Phase 3 — Barcode Support + Scan History
+# M18 Phase 3 - Barcode Support + Scan History
 
-**Status:** NOT STARTED  
+**Status:** IMPLEMENTED
 **Depends on:** M18 Phase 1
 
 ---
 
 ## Goal
 
-Extend the scanner to support common barcode formats (EAN-13, UPC-A, Code 128, Data Matrix). Add a scan history service so the user can recall previous scans by voice.
+Decode common barcode formats in addition to QR codes and keep a short in-memory scan history for recall.
 
 ---
 
-## Changes
+## Current Scanner Formats
 
-### 1. Extend ZXingQrScanner
-
-Add barcode formats to the reader configuration:
+`ZXingQrScanner` currently configures:
 
 ```csharp
-reader.Options.PossibleFormats = [
-    BarcodeFormat.QR_CODE,
-    BarcodeFormat.EAN_13,
-    BarcodeFormat.UPC_A,
-    BarcodeFormat.CODE_128,
-    BarcodeFormat.DATA_MATRIX
-];
+BarcodeFormat.QR_CODE,
+BarcodeFormat.EAN_13,
+BarcodeFormat.UPC_A,
+BarcodeFormat.CODE_128,
+BarcodeFormat.DATA_MATRIX
 ```
 
-Map ZXing `BarcodeFormat` → `QrCodeFormat` enum (already defined in Phase 1).
+Mapping:
 
-### 2. QrCodeService
+| ZXing format | BodyCam format |
+|--------------|----------------|
+| `QR_CODE` | `QrCodeFormat.QrCode` |
+| `EAN_13` | `QrCodeFormat.Ean13` |
+| `UPC_A` | `QrCodeFormat.UpcA` |
+| `CODE_128` | `QrCodeFormat.Code128` |
+| `DATA_MATRIX` | `QrCodeFormat.DataMatrix` |
+| anything else | `QrCodeFormat.Unknown` |
+
+---
+
+## `QrCodeService`
 
 ```
-Services/QrCode/QrCodeService.cs
+src/BodyCam/Services/QrCode/QrCodeService.cs
 ```
 
-- Maintains a circular buffer of last 20 scan results
-- Provides `LastResult` property
-- Provides `SearchHistory(query)` — substring match on content
-- Auto-saves URL and vCard scans to `MemoryStore` (category: "scans")
+Current behavior:
 
-### 3. RecallLastScanTool
+| Capability | Status |
+|------------|--------|
+| Store scan result | Implemented |
+| Max history size | 20 |
+| Thread safety | lock-protected list |
+| `LastResult` | Implemented |
+| `SearchHistory(query)` | Implemented, case-insensitive content search |
+| `GetHistory()` | Implemented |
+| Persistence | Not implemented |
+| Auto-save to `MemoryStore` | Not implemented |
+
+The earlier idea of auto-saving URLs/vCards to memory is not in the current code.
+
+---
+
+## `RecallLastScanTool`
 
 ```
-Tools/RecallLastScanTool.cs
+src/BodyCam/Tools/RecallLastScanTool.cs
 ```
 
-Realtime API tool: "what was that QR code?" → returns last scan result from `QrCodeService`.
+Tool metadata:
 
 ```json
 {
   "name": "recall_last_scan",
-  "description": "Recall the most recent QR code or barcode scan result.",
-  "parameters": { "type": "object", "properties": {} }
+  "description": "Recall the most recent QR code or barcode scan result. Use when the user asks 'what was that QR code?' or 'what did we scan?'"
 }
 ```
 
-### 4. Tests
+If history is empty:
 
-| Test | File |
-|------|------|
-| Decode EAN-13 barcode | `ZXingQrScannerTests.cs` |
-| Decode Code 128 barcode | `ZXingQrScannerTests.cs` |
-| History stores last 20 | `QrCodeServiceTests.cs` |
-| History search by content | `QrCodeServiceTests.cs` |
-| RecallLastScan returns last | `RecallLastScanToolTests.cs` |
-| RecallLastScan empty history | `RecallLastScanToolTests.cs` |
+```json
+{
+  "found": false,
+  "message": "No previous scan results."
+}
+```
+
+If history has a result, the tool returns:
+
+```json
+{
+  "found": true,
+  "content": "...",
+  "format": "QrCode",
+  "content_type": "url",
+  "scanned_at": "2026-06-03T...",
+  "details": {}
+}
+```
+
+---
+
+## Product Barcode Lookup
+
+Product lookup is implemented separately from scan history:
+
+```
+src/BodyCam/Tools/LookupBarcodeTool.cs
+src/BodyCam/Services/Barcode/
+```
+
+`LookupBarcodeTool` can either:
+
+1. Use a provided barcode string.
+2. Capture a frame and scan for a product barcode.
+
+It accepts EAN-13, UPC-A, and Code 128 as product formats. QR codes are rejected with guidance to use `scan_qr_code`.
+
+`BarcodeLookupService` queries registered clients:
+
+| Client | Source |
+|--------|--------|
+| `OpenFoodFactsClient` | food products |
+| `UpcItemDbClient` | general UPC data |
+| `OpenGtinDbClient` | GTIN fallback |
+
+---
+
+## Tests
+
+| Area | Current test files |
+|------|--------------------|
+| Barcode decode formats | `src/BodyCam.Tests/Services/ZXingQrScannerTests.cs` |
+| History behavior | `src/BodyCam.Tests/Services/QrCodeServiceTests.cs` |
+| Last scan recall | `src/BodyCam.Tests/Tools/RecallLastScanToolTests.cs` |
+| Product lookup | `src/BodyCam.Tests/Tools/LookupBarcodeToolTests.cs`, `src/BodyCam.Tests/Services/BarcodeLookupServiceTests.cs` |
 
 ---
 
 ## Exit Criteria
 
-1. Scanner decodes EAN-13, UPC-A, Code 128, Data Matrix
-2. Scan history persists across scans within a session
-3. User can ask "what was that barcode?" and get the answer
+1. Scanner decodes QR, EAN-13, UPC-A, Code 128, and Data Matrix.
+2. Successful scan commands add results to `QrCodeService`.
+3. `recall_last_scan` returns the latest scan with content classification.
+4. `lookup_barcode` handles product lookups separately from general QR scans.
