@@ -347,6 +347,19 @@ on-device OCR using `Plugin.Maui.OCR`, keeping `camera.read`, `read`,
 - [ ] Phase 4 — [Read Action Wiring](m49-read-action-ocr/phase-4-read-action-wiring.md)
 - [ ] Phase 5 — [Tests, Platform Validation, And Accessibility](m49-read-action-ocr/phase-5-tests-platform-validation-accessibility.md)
 
+### M50 — Camera Buttons
+
+**Plan:** [m50-camera-buttons/](m50-camera-buttons/)
+
+**Goal:** Move registered camera action buttons under the video, show generated
+sub-buttons for the selected action, and add the captured picture to the
+transcript after the user selects a sub-button.
+
+- [x] Phase 1 — [State And Interaction Model](m50-camera-buttons/phase-1-state-and-interaction-model.md)
+- [x] Phase 2 — [Camera Layout And Button Rail](m50-camera-buttons/phase-2-camera-layout-and-button-rail.md)
+- [x] Phase 3 — [Capture And Snapshot Flow](m50-camera-buttons/phase-3-capture-and-snapshot-flow.md)
+- [x] Phase 4 — [Tests And Accessibility](m50-camera-buttons/phase-4-tests-and-accessibility.md)
+
 ---
 
 ## Superseded
