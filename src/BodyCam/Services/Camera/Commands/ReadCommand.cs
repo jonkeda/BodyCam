@@ -69,7 +69,7 @@ public sealed class ReadCommandPrompts
     };
 }
 
-public sealed class ReadCommand : CameraCommandBase<ReadCommandOptions>, ICommandPromptProvider
+public sealed class ReadCommand : CameraCommandBase<ReadCommandOptions>, ICommandPromptProvider, ICameraActionVariantProvider
 {
     private readonly VisionAgent _vision;
     private readonly IAiProviderRegistry _providerRegistry;
@@ -111,6 +111,13 @@ public sealed class ReadCommand : CameraCommandBase<ReadCommandOptions>, IComman
     public ReadCommandPrompts Prompts { get; } = new();
 
     public IReadOnlyList<CommandPromptDefinition> PromptDefinitions => Prompts.All;
+
+    public IReadOnlyList<CameraActionVariantDefinition> CameraActionVariants =>
+    [
+        ToActionVariant(Prompts.Summary, ReadDetailLevel.Summary),
+        ToActionVariant(Prompts.Overview, ReadDetailLevel.Overview),
+        ToActionVariant(Prompts.Full, ReadDetailLevel.Full, isDefault: true),
+    ];
 
     public override async Task<CameraCommandResult> ExecuteAsync(
         CameraCommandContext context,
@@ -226,6 +233,17 @@ public sealed class ReadCommand : CameraCommandBase<ReadCommandOptions>, IComman
 
     public static CommandPromptDefinition ResolvePromptDefinition(ReadCommandOptions options) =>
         DefaultPrompts.Get(options.DetailLevel ?? ReadDetailLevel.Full);
+
+    private static CameraActionVariantDefinition ToActionVariant(
+        CommandPromptDefinition prompt,
+        ReadDetailLevel detail,
+        bool isDefault = false) =>
+        new(
+            prompt.Key,
+            prompt.DisplayName,
+            prompt.Text,
+            new ReadCommandOptions(detail, Focus: null),
+            IsDefault: isDefault);
 
     private static bool IsNoText(string text) =>
         string.IsNullOrWhiteSpace(text)

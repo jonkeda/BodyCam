@@ -24,6 +24,7 @@ public sealed class PhoneCameraProvider : ICameraProvider
     public string ProviderId => "phone";
     public bool IsAvailable => _cameraView is not null && !_cameraUnavailable;
     public bool SupportsVideoRecording => true;
+    public bool IsStarted => _started;
 
     public event EventHandler? Disconnected;
 
@@ -42,6 +43,9 @@ public sealed class PhoneCameraProvider : ICameraProvider
 
         try
         {
+            if (!await WaitForPlatformViewAsync(_cameraView, ct).ConfigureAwait(false))
+                return;
+
             await MainThread.InvokeOnMainThreadAsync(async () =>
                 await _cameraView.StartCameraPreview(ct));
             _started = true;
@@ -60,8 +64,7 @@ public sealed class PhoneCameraProvider : ICameraProvider
     public async Task StopAsync()
     {
         if (!_started || _cameraView is null) return;
-        await MainThread.InvokeOnMainThreadAsync(() =>
-            _cameraView.StopCameraPreview());
+        await StopPreviewIfReadyAsync(_cameraView);
         _started = false;
     }
 
@@ -74,6 +77,9 @@ public sealed class PhoneCameraProvider : ICameraProvider
             bool needsHeadlessCapture = !_started;
             if (needsHeadlessCapture)
             {
+                if (!await WaitForPlatformViewAsync(_cameraView, ct).ConfigureAwait(false))
+                    return null;
+
                 await MainThread.InvokeOnMainThreadAsync(async () =>
                     await _cameraView.StartCameraPreview(ct));
                 _started = true;
@@ -89,8 +95,7 @@ public sealed class PhoneCameraProvider : ICameraProvider
             {
                 if (needsHeadlessCapture)
                 {
-                    await MainThread.InvokeOnMainThreadAsync(() =>
-                        _cameraView.StopCameraPreview());
+                    await StopPreviewIfReadyAsync(_cameraView);
                     _started = false;
                 }
             }
@@ -141,6 +146,8 @@ public sealed class PhoneCameraProvider : ICameraProvider
     {
         var view = _cameraView;
         if (view is null) return null;
+        if (!await WaitForPlatformViewAsync(view, ct).ConfigureAwait(false))
+            return null;
 
         var tcs = new TaskCompletionSource<byte[]?>();
 
@@ -178,6 +185,42 @@ public sealed class PhoneCameraProvider : ICameraProvider
         finally
         {
             await MainThread.InvokeOnMainThreadAsync(() => view.MediaCaptured -= OnMediaCaptured);
+        }
+    }
+
+    private async Task<bool> WaitForPlatformViewAsync(CameraView view, CancellationToken ct)
+    {
+        const int attempts = 10;
+
+        for (var i = 0; i < attempts; i++)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            var isReady = await MainThread.InvokeOnMainThreadAsync(() =>
+                view.Handler?.PlatformView is not null);
+            if (isReady)
+                return true;
+
+            await Task.Delay(50, ct).ConfigureAwait(false);
+        }
+
+        _log.LogDebug("Phone camera view platform handler is not ready");
+        return false;
+    }
+
+    private async Task StopPreviewIfReadyAsync(CameraView view)
+    {
+        try
+        {
+            await MainThread.InvokeOnMainThreadAsync(() =>
+            {
+                if (view.Handler?.PlatformView is not null)
+                    view.StopCameraPreview();
+            });
+        }
+        catch (Exception ex)
+        {
+            _log.LogDebug(ex, "Phone camera preview stop failed");
         }
     }
 

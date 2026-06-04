@@ -11,6 +11,20 @@ namespace BodyCam.Tests.Services.Camera.Commands;
 public class ScanCommandTests
 {
     [Fact]
+    public void CameraActionVariants_ExposeDefaultScanAction()
+    {
+        var command = new ScanCommand(
+            Substitute.For<IQrCodeScanner>(),
+            new QrCodeService(),
+            CreateResolver());
+
+        command.CameraActionVariants.Select(variant => variant.DisplayName)
+            .Should()
+            .Equal("Scan");
+        command.CameraActionVariants.Single().IsDefault.Should().BeTrue();
+    }
+
+    [Fact]
     public async Task ExecuteAsync_WithQrFrame_ReturnsClassifiedContent()
     {
         var scanner = Substitute.For<IQrCodeScanner>();

@@ -26,7 +26,10 @@ public sealed record AssistiveActionDescriptor(
     string Id,
     string DisplayName,
     bool RequiresCamera,
-    bool StartsOrStopsSession);
+    bool StartsOrStopsSession,
+    string? CameraCommandId = null,
+    object? DefaultOptions = null,
+    string? DefaultQuery = null);
 
 public sealed record AssistiveActionContext(
     Func<Task<string?>>? PromptForApiKeyAsync = null,

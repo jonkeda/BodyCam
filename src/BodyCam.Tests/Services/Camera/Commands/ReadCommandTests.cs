@@ -26,6 +26,20 @@ public class ReadCommandTests
     }
 
     [Fact]
+    public void CameraActionVariants_ExposeSummaryOverviewAndFull()
+    {
+        var command = CreateCommand(out _);
+
+        command.CameraActionVariants.Select(variant => variant.DisplayName)
+            .Should()
+            .Equal("Summary", "Overview", "Full");
+        command.CameraActionVariants.Single(variant => variant.DisplayName == "Full")
+            .IsDefault
+            .Should()
+            .BeTrue();
+    }
+
+    [Fact]
     public void ResolveOptions_UsesSettingsDefaultDetail()
     {
         var command = CreateCommand(out _);

@@ -21,7 +21,10 @@ public sealed class CameraAssistiveAction : IAssistiveAction
             id,
             displayName,
             RequiresCamera: true,
-            StartsOrStopsSession: false);
+            StartsOrStopsSession: false,
+            CameraCommandId: commandId,
+            DefaultOptions: defaultOptions,
+            DefaultQuery: defaultQuery);
         _commandId = commandId;
         _cameraCommands = cameraCommands;
         _defaultOptions = defaultOptions;

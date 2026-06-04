@@ -8,36 +8,77 @@
 
     <Grid x:Name="CameraPreviewPanel"
           AutomationId="CameraPreviewPanel"
-          IsVisible="{Binding ShowInlineCameraPreview}"
+          IsVisible="{Binding ShowCameraActionsSection}"
           Padding="8,0,8,8"
-          SemanticProperties.Description="Camera preview">
+          SemanticProperties.Description="Camera preview and camera actions">
         <Border StrokeShape="RoundRectangle 8"
                 Stroke="{AppThemeBinding Light={StaticResource BorderDefault}, Dark={StaticResource BorderDefaultDark}}"
                 BackgroundColor="{AppThemeBinding Light={StaticResource CardSurface}, Dark={StaticResource CardSurfaceDark}}"
                 Padding="8">
-            <Grid RowDefinitions="220,Auto"
+            <Grid RowDefinitions="Auto,Auto,Auto"
                   RowSpacing="8">
                 <toolkit:CameraView x:Name="CameraPreview"
                                     AutomationId="CameraPreview"
+                                    IsVisible="{Binding ShowInlineCameraPreview}"
                                     HeightRequest="220"
                                     HorizontalOptions="Fill"
                                     VerticalOptions="Fill"
                                     SemanticProperties.Description="Camera preview" />
 
-                <Button Grid.Row="1"
-                        AutomationId="CaptureFrameButton"
-                        Text="●"
-                        Command="{Binding PhotoCommand}"
-                        WidthRequest="56"
-                        HeightRequest="56"
-                        CornerRadius="28"
-                        FontSize="28"
-                        Padding="0"
-                        HorizontalOptions="Center"
-                        BackgroundColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}"
-                        TextColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource PrimaryDarkText}}"
-                        SemanticProperties.Description="Capture frame"
-                        SemanticProperties.Hint="Captures a camera frame and adds it to the transcript" />
+                <FlexLayout Grid.Row="1"
+                            AutomationId="CameraActionRail"
+                            IsVisible="{Binding ShowCameraActionRail}"
+                            BindableLayout.ItemsSource="{Binding CameraActions}"
+                            Direction="Row"
+                            Wrap="Wrap"
+                            JustifyContent="Center"
+                            AlignItems="Stretch">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="vm:CameraActionItemViewModel">
+                            <Button AutomationId="{Binding AutomationId}"
+                                    Text="{Binding Label}"
+                                    Command="{Binding ActivateCommand}"
+                                    HeightRequest="56"
+                                    MinimumWidthRequest="112"
+                                    Margin="4"
+                                    Padding="12,0"
+                                    CornerRadius="8"
+                                    FontSize="16"
+                                    BackgroundColor="{Binding ButtonColor}"
+                                    TextColor="{Binding TextColor}"
+                                    SemanticProperties.Description="{Binding SemanticDescription}"
+                                    SemanticProperties.Hint="{Binding SemanticHint}" />
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </FlexLayout>
+
+                <FlexLayout Grid.Row="2"
+                            AutomationId="CameraActionVariantRail"
+                            IsVisible="{Binding HasActiveCameraActionVariants}"
+                            BindableLayout.ItemsSource="{Binding ActiveCameraActionVariants}"
+                            Direction="Row"
+                            Wrap="Wrap"
+                            JustifyContent="Center"
+                            AlignItems="Stretch">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="vm:CameraActionVariantViewModel">
+                            <Button AutomationId="{Binding AutomationId}"
+                                    Text="{Binding Label}"
+                                    Command="{Binding ExecuteCommand}"
+                                    HeightRequest="56"
+                                    MinimumWidthRequest="112"
+                                    Margin="4"
+                                    Padding="12,0"
+                                    CornerRadius="8"
+                                    FontSize="16"
+                                    BackgroundColor="{Binding ButtonColor}"
+                                    TextColor="{Binding TextColor}"
+                                    SemanticProperties.Description="{Binding SemanticDescription}"
+                                    SemanticProperties.Hint="{Binding SemanticHint}" />
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </FlexLayout>
+
             </Grid>
         </Border>
 

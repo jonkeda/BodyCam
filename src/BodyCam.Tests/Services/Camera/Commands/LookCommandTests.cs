@@ -47,9 +47,23 @@ public class LookCommandTests
 
         var overview = command.PromptDefinitions.Single(p => p.Key == nameof(LookDetailLevel.Overview));
 
-        overview.DisplayName.Should().Be("Look");
+        overview.DisplayName.Should().Be("Overview");
         overview.Text.Should().Be("Look. Give an overview.");
         overview.Prompt.Should().Contain("orientation-first overview");
+    }
+
+    [Fact]
+    public void CameraActionVariants_ExposeOverviewSummaryAndDetail()
+    {
+        var command = CreateCommand(out _);
+
+        command.CameraActionVariants.Select(variant => variant.DisplayName)
+            .Should()
+            .Equal("Overview", "Summary", "Detail");
+        command.CameraActionVariants.Single(variant => variant.DisplayName == "Overview")
+            .IsDefault
+            .Should()
+            .BeTrue();
     }
 
     [Fact]

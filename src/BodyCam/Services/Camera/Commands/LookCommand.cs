@@ -39,7 +39,7 @@ public sealed class LookCommandPrompts
 
     public CommandPromptDefinition Overview { get; init; } = new(
         nameof(LookDetailLevel.Overview),
-        "Look",
+        "Overview",
         "Look. Give an overview.",
         """
         You are helping a blind or visually impaired user understand a camera frame.
@@ -97,7 +97,7 @@ public sealed class LookCommandPrompts
     };
 }
 
-public sealed class LookCommand : CameraCommandBase<LookCommandOptions>, ICommandPromptProvider
+public sealed class LookCommand : CameraCommandBase<LookCommandOptions>, ICommandPromptProvider, ICameraActionVariantProvider
 {
     private readonly VisionAgent _vision;
     private readonly IAiProviderRegistry _providerRegistry;
@@ -140,6 +140,13 @@ public sealed class LookCommand : CameraCommandBase<LookCommandOptions>, IComman
     public LookCommandPrompts Prompts { get; } = new();
 
     public IReadOnlyList<CommandPromptDefinition> PromptDefinitions => Prompts.All;
+
+    public IReadOnlyList<CameraActionVariantDefinition> CameraActionVariants =>
+    [
+        ToActionVariant(Prompts.Overview, LookDetailLevel.Overview, isDefault: true),
+        ToActionVariant(Prompts.Summary, LookDetailLevel.Summary),
+        ToActionVariant(Prompts.Detailed, LookDetailLevel.Detailed),
+    ];
 
     public override async Task<CameraCommandResult> ExecuteAsync(
         CameraCommandContext context,
@@ -259,6 +266,17 @@ public sealed class LookCommand : CameraCommandBase<LookCommandOptions>, IComman
 
     public static CommandPromptDefinition ResolvePromptDefinition(LookCommandOptions options) =>
         DefaultPrompts.Get(options.DetailLevel ?? LookDetailLevel.Overview);
+
+    private static CameraActionVariantDefinition ToActionVariant(
+        CommandPromptDefinition prompt,
+        LookDetailLevel detail,
+        bool isDefault = false) =>
+        new(
+            prompt.Key,
+            prompt.DisplayName,
+            prompt.Text,
+            new LookCommandOptions(detail, Focus: null, Question: null),
+            IsDefault: isDefault);
 
     private static string? Normalize(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();

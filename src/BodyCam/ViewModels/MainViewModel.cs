@@ -39,6 +39,9 @@ public static class OutputModes
 
 public class MainViewModel : ViewModelBase
 {
+    private const string CameraActionCaptureFailedMessage = "Camera capture failed.";
+    private const string CameraActionCommandFailedMessage = "Camera action failed.";
+
     private readonly AgentOrchestrator _orchestrator;
     private readonly IApiKeyService _apiKeyService;
     private readonly ISettingsService _settingsService;
@@ -47,12 +50,15 @@ public class MainViewModel : ViewModelBase
     private readonly QrCodeService _qrCodeService;
     private readonly QrContentResolver _contentResolver;
     private readonly ICameraCommandService? _cameraCommands;
+    private readonly ICameraCommandRegistry? _cameraCommandRegistry;
     private readonly IManualCameraCaptureCoordinator? _manualCapture;
     private readonly ISessionCoordinator? _sessionCoordinator;
+    private readonly IAssistiveActionRegistry? _assistiveActionRegistry;
     private readonly IAssistiveActionService? _assistiveActions;
     private readonly ITranscriptStore? _transcriptStore;
     private readonly IProductBarcodeLookupWorkflow? _productLookupWorkflow;
     private readonly Func<ProductInfo, Task> _openProductDetailsAsync;
+    private readonly Func<CancellationToken, Task<byte[]?>>? _cameraActionFrameCapture;
     private readonly HeyCyanGlassesDeviceManager _glasses;
     private readonly ILogger<MainViewModel> _logger;
     private readonly IAecProcessor? _aec;
@@ -84,6 +90,8 @@ public class MainViewModel : ViewModelBase
     private ImageSource? _snapshotImage;
     private string? _snapshotCaption;
     private bool _showSnapshot;
+    private CameraActionItemViewModel? _activeCameraAction;
+    private bool _isExecutingCameraActionVariant;
 
     // Scan result overlay state
     private bool _showScanResult;
@@ -94,7 +102,7 @@ public class MainViewModel : ViewModelBase
     private Dictionary<string, object>? _lastScanParsed;
     private string? _lastScanRawContent;
 
-    public MainViewModel(AgentOrchestrator orchestrator, IApiKeyService apiKeyService, ISettingsService settingsService, CameraManager cameraManager, IQrCodeScanner qrScanner, QrCodeService qrCodeService, QrContentResolver contentResolver, HeyCyanGlassesDeviceManager glasses, ILogger<MainViewModel> logger, IAecProcessor? aec = null, IAudioRoutePolicyService? audioPolicy = null, ICameraCommandService? cameraCommands = null, IManualCameraCaptureCoordinator? manualCapture = null, ISessionCoordinator? sessionCoordinator = null, IAssistiveActionService? assistiveActions = null, ITranscriptStore? transcriptStore = null, IProductBarcodeLookupWorkflow? productLookupWorkflow = null, Func<ProductInfo, Task>? openProductDetailsAsync = null)
+    public MainViewModel(AgentOrchestrator orchestrator, IApiKeyService apiKeyService, ISettingsService settingsService, CameraManager cameraManager, IQrCodeScanner qrScanner, QrCodeService qrCodeService, QrContentResolver contentResolver, HeyCyanGlassesDeviceManager glasses, ILogger<MainViewModel> logger, IAecProcessor? aec = null, IAudioRoutePolicyService? audioPolicy = null, ICameraCommandService? cameraCommands = null, ICameraCommandRegistry? cameraCommandRegistry = null, IManualCameraCaptureCoordinator? manualCapture = null, ISessionCoordinator? sessionCoordinator = null, IAssistiveActionRegistry? assistiveActionRegistry = null, IAssistiveActionService? assistiveActions = null, ITranscriptStore? transcriptStore = null, IProductBarcodeLookupWorkflow? productLookupWorkflow = null, Func<ProductInfo, Task>? openProductDetailsAsync = null, Func<CancellationToken, Task<byte[]?>>? cameraActionFrameCapture = null)
     {
         _orchestrator = orchestrator;
         _apiKeyService = apiKeyService;
@@ -104,8 +112,11 @@ public class MainViewModel : ViewModelBase
         _qrCodeService = qrCodeService;
         _contentResolver = contentResolver;
         _cameraCommands = cameraCommands;
+        _cameraCommandRegistry = cameraCommandRegistry;
+        _cameraActionFrameCapture = cameraActionFrameCapture;
         _manualCapture = manualCapture;
         _sessionCoordinator = sessionCoordinator;
+        _assistiveActionRegistry = assistiveActionRegistry;
         _assistiveActions = assistiveActions;
         _transcriptStore = transcriptStore;
         _productLookupWorkflow = productLookupWorkflow;
@@ -134,7 +145,11 @@ public class MainViewModel : ViewModelBase
         if (_manualCapture is not null)
         {
             _manualCapture.CaptureRequested += (_, _) =>
-                DispatchOnMainThreadAsync(RevealInlineCameraPreviewAsync);
+                DispatchOnMainThreadAsync(async () =>
+                {
+                    await RevealInlineCameraPreviewAsync();
+                    OnPropertyChanged(nameof(ShowManualCaptureButton));
+                });
         }
 
         if (_sessionCoordinator is not null)
@@ -198,8 +213,9 @@ public class MainViewModel : ViewModelBase
 
         LookCommand = new AsyncRelayCommand(async () =>
         {
-            IsActionsDrawerExpanded = false;
-            await ExecuteLookCommandAsync(LookDetailLevel.Overview);
+            await SelectCameraActionFromUiAsync(
+                AssistiveActionIds.Look,
+                () => ExecuteLookCommandAsync(LookDetailLevel.Overview));
         });
         LookDetailCommand = new AsyncRelayCommand(async () =>
         {
@@ -213,12 +229,15 @@ public class MainViewModel : ViewModelBase
         });
         ReadCommand = new AsyncRelayCommand(async () =>
         {
-            IsActionsDrawerExpanded = false;
-            await ExecuteCameraCommandAsync("read", CommandTriggerOrigin.ActionsDrawer);
+            await SelectCameraActionFromUiAsync(
+                AssistiveActionIds.Read,
+                () => ExecuteCameraCommandAsync("read", CommandTriggerOrigin.ActionsDrawer));
         });
         FindCommand = new AsyncRelayCommand(async () =>
         {
-            await SendVisionCommandAsync("Look around and tell me what objects you can find.");
+            await SelectCameraActionFromUiAsync(
+                AssistiveActionIds.Find,
+                () => SendVisionCommandAsync("Look around and tell me what objects you can find."));
         });
         AskCommand = new AsyncRelayCommand(async () =>
         {
@@ -234,14 +253,17 @@ public class MainViewModel : ViewModelBase
         });
         ScanCommand = new AsyncRelayCommand(async () =>
         {
-            IsActionsDrawerExpanded = false;
-            await ExecuteCameraCommandAsync("scan", CommandTriggerOrigin.ActionsDrawer);
+            await SelectCameraActionFromUiAsync(
+                AssistiveActionIds.Scan,
+                () => ExecuteCameraCommandAsync("scan", CommandTriggerOrigin.ActionsDrawer));
         });
         ProductLookupCommand = new AsyncRelayCommand(async () =>
         {
             IsActionsDrawerExpanded = false;
             await LookupProductFromUiAsync();
         });
+
+        InitializeCameraActions();
 
         _orchestrator.TranscriptDelta += (_, delta) =>
         {
@@ -314,6 +336,33 @@ public class MainViewModel : ViewModelBase
     }
 
     public ObservableCollection<TranscriptEntry> Entries { get; } = [];
+    public ObservableCollection<CameraActionItemViewModel> CameraActions { get; } = [];
+    public ObservableCollection<CameraActionVariantViewModel> ActiveCameraActionVariants { get; } = [];
+
+    public CameraActionItemViewModel? ActiveCameraAction
+    {
+        get => _activeCameraAction;
+        private set
+        {
+            if (SetProperty(ref _activeCameraAction, value))
+            {
+                OnPropertyChanged(nameof(HasActiveCameraAction));
+                OnPropertyChanged(nameof(HasActiveCameraActionVariants));
+                OnPropertyChanged(nameof(ShowCameraActionRail));
+            }
+        }
+    }
+
+    public bool HasCameraActions => CameraActions.Count > 0;
+    public bool ShowCameraActionRail =>
+        HasCameraActions
+        && ShowInlineCameraPreview
+        && ActiveCameraAction is null
+        && !_isExecutingCameraActionVariant;
+    public bool ShowCameraActionsSection => ShowInlineCameraPreview || ShowSnapshot;
+    public bool HasActiveCameraAction => ActiveCameraAction is not null;
+    public bool HasActiveCameraActionVariants => ActiveCameraActionVariants.Count > 0;
+    public bool ShowManualCaptureButton => _manualCapture?.IsCapturePending ?? false;
 
     public string DebugLog
     {
@@ -472,7 +521,14 @@ public class MainViewModel : ViewModelBase
     public bool ShowInlineCameraPreview
     {
         get => _showInlineCameraPreview;
-        set => SetProperty(ref _showInlineCameraPreview, value);
+        set
+        {
+            if (SetProperty(ref _showInlineCameraPreview, value))
+            {
+                OnPropertyChanged(nameof(ShowCameraActionRail));
+                OnPropertyChanged(nameof(ShowCameraActionsSection));
+            }
+        }
     }
 
     public bool IsActionsDrawerExpanded
@@ -538,7 +594,11 @@ public class MainViewModel : ViewModelBase
     public bool ShowSnapshot
     {
         get => _showSnapshot;
-        set => SetProperty(ref _showSnapshot, value);
+        set
+        {
+            if (SetProperty(ref _showSnapshot, value))
+                OnPropertyChanged(nameof(ShowCameraActionsSection));
+        }
     }
 
     // --- Scan result overlay ---
@@ -874,6 +934,23 @@ public class MainViewModel : ViewModelBase
     {
         ShowInlineCameraPreview = true;
 
+        if (_cameraManager.Active is { ProviderId: "phone" } phoneProvider)
+        {
+            try
+            {
+                await phoneProvider.StartAsync(CancellationToken.None);
+                if (phoneProvider is not PhoneCameraProvider phoneCameraProvider
+                    || phoneCameraProvider.IsStarted)
+                {
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Unable to start phone camera provider for inline preview");
+            }
+        }
+
         if (_cameraView is null)
             return;
 
@@ -1056,11 +1133,459 @@ public class MainViewModel : ViewModelBase
             or ButtonAction.ToggleConversation
             or ButtonAction.ToggleSleepActive;
 
+    internal async Task SelectCameraActionFromUiAsync(string actionId, Func<Task> fallbackAsync)
+    {
+        IsActionsDrawerExpanded = false;
+
+        var action = CameraActions.FirstOrDefault(item =>
+            string.Equals(item.ActionId, actionId, StringComparison.OrdinalIgnoreCase));
+        if (action is not null)
+        {
+            await ActivateCameraActionAsync(action);
+            return;
+        }
+
+        await fallbackAsync();
+    }
+
     private Task ExecuteLookCommandAsync(LookDetailLevel detail) =>
         ExecuteCameraCommandAsync(
             "look",
             CommandTriggerOrigin.ActionsDrawer,
             new LookCommandOptions(detail, Focus: null, Question: null));
+
+    private void InitializeCameraActions()
+    {
+        if (_cameraCommandRegistry is null)
+            return;
+
+        var actionDescriptors = GetCameraActionDescriptors();
+        foreach (var descriptor in OrderCameraActionDescriptors(actionDescriptors))
+        {
+            if (string.IsNullOrWhiteSpace(descriptor.CameraCommandId)
+                || !_cameraCommandRegistry.TryGet(descriptor.CameraCommandId, out var command)
+                || !command.Capabilities.RequiresStillFrame)
+            {
+                continue;
+            }
+
+            var variants = BuildCameraActionVariants(descriptor, command);
+            if (variants.Count == 0)
+                continue;
+
+            CameraActions.Add(new CameraActionItemViewModel(
+                descriptor.Id,
+                command.Id,
+                descriptor.DisplayName,
+                variants,
+                ActivateCameraActionAsync));
+        }
+
+        OnPropertyChanged(nameof(HasCameraActions));
+        OnPropertyChanged(nameof(ShowCameraActionRail));
+        OnPropertyChanged(nameof(ShowCameraActionsSection));
+    }
+
+    private IReadOnlyList<AssistiveActionDescriptor> GetCameraActionDescriptors()
+    {
+        if (_assistiveActionRegistry is not null)
+        {
+            return _assistiveActionRegistry.Actions
+                .Where(action =>
+                    action.RequiresCamera
+                    && !action.StartsOrStopsSession
+                    && !string.IsNullOrWhiteSpace(action.CameraCommandId))
+                .ToArray();
+        }
+
+        if (_cameraCommandRegistry is null)
+            return [];
+
+        return _cameraCommandRegistry.Commands
+            .Where(command => command.Capabilities.RequiresStillFrame)
+            .Select(command => new AssistiveActionDescriptor(
+                ToCameraActionId(command.Id),
+                command.DisplayName,
+                RequiresCamera: true,
+                StartsOrStopsSession: false,
+                CameraCommandId: command.Id))
+            .ToArray();
+    }
+
+    private IReadOnlyList<AssistiveActionDescriptor> OrderCameraActionDescriptors(
+        IReadOnlyList<AssistiveActionDescriptor> descriptors)
+    {
+        if (_cameraCommandRegistry is null || descriptors.Count == 0)
+            return descriptors;
+
+        var commandOrder = _cameraCommandRegistry.Commands
+            .Select((command, index) => new { command.Id, Index = index })
+            .ToDictionary(item => item.Id, item => item.Index, StringComparer.OrdinalIgnoreCase);
+
+        return descriptors
+            .OrderBy(descriptor =>
+                descriptor.CameraCommandId is not null
+                && commandOrder.TryGetValue(descriptor.CameraCommandId, out var index)
+                    ? index
+                    : int.MaxValue)
+            .ThenBy(descriptor => IsCanonicalCameraAction(descriptor) ? 0 : 1)
+            .ThenBy(descriptor => descriptor.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private IReadOnlyList<CameraActionVariantViewModel> BuildCameraActionVariants(
+        AssistiveActionDescriptor descriptor,
+        ICameraCommand command)
+    {
+        IReadOnlyList<CameraActionVariantDefinition> definitions;
+        if (command is ICameraActionVariantProvider variantProvider
+            && variantProvider.CameraActionVariants.Count > 0)
+        {
+            definitions = variantProvider.CameraActionVariants;
+        }
+        else if (command is ICommandPromptProvider promptProvider
+            && promptProvider.PromptDefinitions.Count > 0)
+        {
+            definitions = promptProvider.PromptDefinitions
+                .Select(prompt => ToActionVariantDefinition(command, prompt))
+                .ToArray();
+        }
+        else
+        {
+            definitions =
+            [
+                new(
+                    "Default",
+                    command.DisplayName,
+                    command.DisplayName,
+                    IsDefault: true)
+            ];
+        }
+
+        return definitions
+            .Select(definition => ApplyActionDefaults(definition, descriptor))
+            .Select(definition => new CameraActionVariantViewModel(
+                descriptor.Id,
+                command.Id,
+                definition,
+                variant => ExecuteCameraActionVariantAsync(variant)))
+            .ToArray();
+    }
+
+    private static CameraActionVariantDefinition ToActionVariantDefinition(
+        ICameraCommand command,
+        CommandPromptDefinition prompt)
+    {
+        object? options = null;
+        var enumOption = command.Options.FirstOrDefault(option =>
+            option.PersistLastSelectedValue && option.ValueType.IsEnum);
+
+        if (enumOption is not null
+            && Enum.TryParse(enumOption.ValueType, prompt.Key, ignoreCase: true, out var value))
+        {
+            options = new Dictionary<string, object?>
+            {
+                [enumOption.Name] = value?.ToString()
+            };
+        }
+
+        return new CameraActionVariantDefinition(
+            prompt.Key,
+            prompt.DisplayName,
+            prompt.Text,
+            options,
+            IsDefault: string.Equals(prompt.Key, enumOption?.DefaultValue?.ToString(), StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static CameraActionVariantDefinition ApplyActionDefaults(
+        CameraActionVariantDefinition definition,
+        AssistiveActionDescriptor descriptor)
+    {
+        if (descriptor.DefaultOptions is null && descriptor.DefaultQuery is null)
+            return definition;
+
+        return definition with
+        {
+            Options = MergeActionOptions(descriptor.DefaultOptions, definition.Options),
+            Query = definition.Query ?? descriptor.DefaultQuery
+        };
+    }
+
+    private static object? MergeActionOptions(object? actionDefaults, object? variantOptions)
+    {
+        if (actionDefaults is null)
+            return variantOptions;
+        if (variantOptions is null)
+            return actionDefaults;
+        if (actionDefaults.GetType() != variantOptions.GetType())
+            return variantOptions;
+
+        return TryMergeRecordOptions(actionDefaults, variantOptions) ?? variantOptions;
+    }
+
+    private static object? TryMergeRecordOptions(object actionDefaults, object variantOptions)
+    {
+        var type = actionDefaults.GetType();
+        var constructor = type.GetConstructors()
+            .OrderByDescending(ctor => ctor.GetParameters().Length)
+            .FirstOrDefault();
+        if (constructor is null)
+            return null;
+
+        var properties = type.GetProperties()
+            .Where(property => property.GetMethod is not null)
+            .ToDictionary(property => property.Name, StringComparer.OrdinalIgnoreCase);
+        var parameters = constructor.GetParameters();
+        var args = new object?[parameters.Length];
+
+        for (var i = 0; i < parameters.Length; i++)
+        {
+            if (!properties.TryGetValue(parameters[i].Name ?? string.Empty, out var property))
+                return null;
+
+            var variantValue = property.GetValue(variantOptions);
+            args[i] = variantValue ?? property.GetValue(actionDefaults);
+        }
+
+        return constructor.Invoke(args);
+    }
+
+    private static bool IsCanonicalCameraAction(AssistiveActionDescriptor descriptor) =>
+        descriptor.CameraCommandId is not null
+        && string.Equals(descriptor.Id, ToCameraActionId(descriptor.CameraCommandId), StringComparison.OrdinalIgnoreCase);
+
+    internal async Task ActivateCameraActionAsync(CameraActionItemViewModel action)
+    {
+        foreach (var cameraAction in CameraActions)
+            cameraAction.IsActive = ReferenceEquals(cameraAction, action);
+
+        ActiveCameraAction = action;
+        ActiveCameraActionVariants.Clear();
+        foreach (var variant in action.Variants)
+            ActiveCameraActionVariants.Add(variant);
+
+        OnPropertyChanged(nameof(HasActiveCameraActionVariants));
+        IsActionsDrawerExpanded = false;
+        await RevealInlineCameraPreviewAsync();
+    }
+
+    internal async Task ExecuteCameraActionVariantAsync(
+        CameraActionVariantViewModel variant,
+        CancellationToken ct = default)
+    {
+        if (_isExecutingCameraActionVariant)
+            return;
+
+        _isExecutingCameraActionVariant = true;
+        OnPropertyChanged(nameof(ShowCameraActionRail));
+        TranscriptEntry? aiEntry = null;
+
+        try
+        {
+            IsActionsDrawerExpanded = false;
+            await RevealInlineCameraPreviewAsync();
+            ShowTranscriptTab = true;
+
+            var action = CameraActions.FirstOrDefault(item =>
+                string.Equals(item.ActionId, variant.ActionId, StringComparison.OrdinalIgnoreCase));
+            var actionLabel = action?.Label ?? variant.Label;
+            var caption = variant.Caption(actionLabel);
+            var frame = await CaptureFrameAndCloseCameraActionSurfaceAsync(ct);
+
+            if (frame is null)
+            {
+                AddTranscriptEntry(
+                    new TranscriptEntry
+                    {
+                        Role = "AI",
+                        Text = "Camera not available or no frame captured."
+                    },
+                    variant.ActionId,
+                    ActionTriggerOrigin.ActionsDrawer);
+                return;
+            }
+
+            AddCapturedFrameTranscriptEntry(variant, frame, caption);
+
+            aiEntry = new TranscriptEntry { Role = "AI", IsThinking = true };
+            Entries.Add(aiEntry);
+            _activeCommandAiEntry = aiEntry;
+            StartAiBusyVisual(aiEntry);
+
+            if (_cameraCommandRegistry is null
+                || !_cameraCommandRegistry.TryGet(variant.CommandId, out var command))
+            {
+                CompleteAiBusyVisual(
+                    aiEntry,
+                    $"Camera action '{variant.Label}' is unavailable.",
+                    variant.ActionId,
+                    ActionTriggerOrigin.ActionsDrawer);
+                return;
+            }
+
+            var mode = command.Capabilities.SupportsManualAim
+                ? CameraCommandMode.ManualAim
+                : CameraCommandMode.FullAuto;
+
+            if (!SupportsCameraActionMode(command, mode))
+            {
+                CompleteAiBusyVisual(
+                    aiEntry,
+                    $"{command.DisplayName} does not support {mode}.",
+                    variant.ActionId,
+                    ActionTriggerOrigin.ActionsDrawer);
+                return;
+            }
+
+            var request = new CameraCommandRequest(
+                command.Id,
+                mode,
+                CommandTriggerOrigin.ActionsDrawer,
+                variant.Options,
+                variant.Query);
+
+            var context = new CameraCommandContext(
+                request,
+                mode,
+                _cameraManager,
+                _settingsService,
+                CaptureFrame: _ => Task.FromResult<byte[]?>(frame),
+                WaitForManualCapture: _ => Task.FromResult<byte[]?>(frame));
+
+            var result = await command.ExecuteAsync(context, ct);
+            ApplyCameraActionVariantResult(result, aiEntry, variant.ActionId);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            if (aiEntry is not null)
+                CompleteAiBusyVisual(aiEntry, "Command canceled.", variant.ActionId, ActionTriggerOrigin.ActionsDrawer);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Camera action variant {ActionId}/{VariantKey} failed", variant.ActionId, variant.Key);
+            if (aiEntry is not null)
+                CompleteAiBusyVisual(aiEntry, CameraActionCommandFailedMessage, variant.ActionId, ActionTriggerOrigin.ActionsDrawer);
+            else
+                AddTranscriptEntry(
+                    new TranscriptEntry { Role = "AI", Text = CameraActionCaptureFailedMessage },
+                    variant.ActionId,
+                    ActionTriggerOrigin.ActionsDrawer);
+        }
+        finally
+        {
+            if (ReferenceEquals(_activeCommandAiEntry, aiEntry))
+                _activeCommandAiEntry = null;
+
+            _isExecutingCameraActionVariant = false;
+            OnPropertyChanged(nameof(ShowCameraActionRail));
+        }
+    }
+
+    private async Task<byte[]?> CaptureFrameAndCloseCameraActionSurfaceAsync(CancellationToken ct)
+    {
+        ClearCameraActionSelection();
+
+        try
+        {
+            return await CaptureFrameForCameraActionAsync(ct);
+        }
+        finally
+        {
+            await HideInlineCameraPreviewAfterCameraActionCaptureAsync();
+        }
+    }
+
+    private async Task<byte[]?> CaptureFrameForCameraActionAsync(CancellationToken ct)
+    {
+        if (_cameraActionFrameCapture is not null)
+            return await _cameraActionFrameCapture(ct);
+
+        if (_cameraView is not null && ShowInlineCameraPreview)
+            return await CaptureFrameFromCameraViewAsync(ct);
+
+        return await _cameraManager.CaptureFrameAsync(ct);
+    }
+
+    private void CloseCameraActionSurface()
+    {
+        ClearCameraActionSelection();
+        HideInlineCameraPreview();
+    }
+
+    private async Task HideInlineCameraPreviewAfterCameraActionCaptureAsync()
+    {
+        var stoppedByProvider = false;
+        if (_cameraManager.Active is { ProviderId: "phone" } phoneProvider)
+        {
+            try
+            {
+                var providerWasStarted = phoneProvider is not PhoneCameraProvider phoneCameraProvider
+                    || phoneCameraProvider.IsStarted;
+                await phoneProvider.StopAsync();
+                stoppedByProvider = providerWasStarted;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Unable to stop phone camera provider after camera action capture");
+            }
+        }
+
+        HideInlineCameraPreview(stopPreview: !stoppedByProvider);
+    }
+
+    private void ClearCameraActionSelection()
+    {
+        foreach (var action in CameraActions)
+            action.IsActive = false;
+
+        ActiveCameraAction = null;
+        ActiveCameraActionVariants.Clear();
+        OnPropertyChanged(nameof(HasActiveCameraActionVariants));
+    }
+
+    private void AddCapturedFrameTranscriptEntry(
+        CameraActionVariantViewModel variant,
+        byte[] frame,
+        string caption)
+    {
+        AddTranscriptEntry(
+            new TranscriptEntry
+            {
+                Role = "You",
+                Text = variant.TranscriptText,
+                Image = CreateImageSource(frame),
+                ImageCaption = caption
+            },
+            variant.ActionId,
+            ActionTriggerOrigin.ActionsDrawer,
+            [new TranscriptMediaReference(
+                "image",
+                caption,
+                "image/jpeg",
+                ByteLength: frame.Length)]);
+    }
+
+    private void ApplyCameraActionVariantResult(
+        CameraCommandResult result,
+        TranscriptEntry aiEntry,
+        string actionId)
+    {
+        CompleteAiBusyVisual(
+            aiEntry,
+            result.TranscriptText,
+            actionId,
+            ActionTriggerOrigin.ActionsDrawer);
+
+        TryShowScanResult(result);
+    }
+
+    private static bool SupportsCameraActionMode(ICameraCommand command, CameraCommandMode mode) =>
+        mode switch
+        {
+            CameraCommandMode.FullAuto => command.Capabilities.SupportsFullAuto,
+            CameraCommandMode.ManualAim => command.Capabilities.SupportsManualAim,
+            _ => false,
+        };
 
     internal async Task LookupProductFromUiAsync(CancellationToken ct = default)
     {
@@ -1233,16 +1758,50 @@ public class MainViewModel : ViewModelBase
         finally
         {
             _isCompletingManualCapture = false;
+            OnPropertyChanged(nameof(ShowManualCaptureButton));
         }
     }
 
-    private void HideInlineCameraPreview()
+    private void HideInlineCameraPreview(bool stopPreview = true)
     {
+        if (stopPreview)
+            StopInlineCameraPreview();
+
         ShowInlineCameraPreview = false;
         ShowSnapshot = false;
         SnapshotImage = null;
         SnapshotCaption = null;
-        _cameraView?.StopCameraPreview();
+        if (!stopPreview)
+            OnPropertyChanged(nameof(ShowManualCaptureButton));
+    }
+
+    private void StopInlineCameraPreview()
+    {
+        var cameraView = _cameraView;
+        if (cameraView is null)
+            return;
+
+        void Stop()
+        {
+            try
+            {
+                if (cameraView.Handler?.PlatformView is null)
+                    return;
+
+                cameraView.StopCameraPreview();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Unable to stop inline camera preview");
+            }
+        }
+
+        if (Application.Current is null || MainThread.IsMainThread)
+            Stop();
+        else
+            MainThread.BeginInvokeOnMainThread(Stop);
+
+        OnPropertyChanged(nameof(ShowManualCaptureButton));
     }
 
     private void StartAiBusyVisualIfNeeded()
@@ -1394,10 +1953,20 @@ public class MainViewModel : ViewModelBase
             _ => $"camera.{commandId}",
         };
 
-    private static ImageSource? CreateImageSource(byte[]? imageBytes) =>
-        imageBytes is null
-            ? null
-            : ImageSource.FromStream(() => new MemoryStream(imageBytes));
+    private static ImageSource? CreateImageSource(byte[]? imageBytes)
+    {
+        if (imageBytes is null)
+            return null;
+
+        try
+        {
+            return ImageSource.FromStream(() => new MemoryStream(imageBytes));
+        }
+        catch
+        {
+            return null;
+        }
+    }
 
     private async Task ExecuteLegacyCameraCommandAsync(string commandId)
     {
@@ -1570,15 +2139,11 @@ public class MainViewModel : ViewModelBase
         // Option A: No session — capture frame directly, call VisionAgent, show in transcript (no voice)
         var frame = await _cameraManager.CaptureFrameAsync();
 
-        ImageSource? imageSource = null;
-        if (frame is not null)
-            imageSource = ImageSource.FromStream(() => new MemoryStream(frame));
-
         AddTranscriptEntry(new TranscriptEntry
         {
             Role = "You",
             Text = prompt,
-            Image = imageSource,
+            Image = CreateImageSource(frame),
             ImageCaption = "Captured frame"
         },
         media: frame is null
@@ -1719,11 +2284,16 @@ public class MainViewModel : ViewModelBase
     /// </summary>
     internal async Task<byte[]?> CaptureFrameFromCameraViewAsync(CancellationToken ct = default)
     {
-        if (_cameraView is null) return null;
+        var cameraView = _cameraView;
+        if (cameraView is null) return null;
 
         try
         {
-            var tcs = new TaskCompletionSource<byte[]?>();
+            if (!await EnsureCameraPreviewReadyForCaptureAsync(cameraView, ct))
+                return null;
+
+            var tcs = new TaskCompletionSource<byte[]?>(
+                TaskCreationOptions.RunContinuationsAsynchronously);
 
             void OnMediaCaptured(object? s, CommunityToolkit.Maui.Core.MediaCapturedEventArgs e)
             {
@@ -1745,26 +2315,79 @@ public class MainViewModel : ViewModelBase
                 }
             }
 
-            _cameraView.MediaCaptured += OnMediaCaptured;
+            await MainThread.InvokeOnMainThreadAsync(() =>
+                cameraView.MediaCaptured += OnMediaCaptured);
             try
             {
-                await _cameraView.CaptureImage(ct);
+                if (!await WaitForCameraPlatformViewAsync(cameraView, ct))
+                    return null;
+
+                await MainThread.InvokeOnMainThreadAsync(async () =>
+                    await cameraView.CaptureImage(ct));
 
                 using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
                 timeoutCts.CancelAfter(TimeSpan.FromSeconds(5));
-                timeoutCts.Token.Register(() => tcs.TrySetResult(null));
+                using var registration = timeoutCts.Token.Register(() => tcs.TrySetResult(null));
 
                 return await tcs.Task;
             }
             finally
             {
-                _cameraView.MediaCaptured -= OnMediaCaptured;
+                await MainThread.InvokeOnMainThreadAsync(() =>
+                    cameraView.MediaCaptured -= OnMediaCaptured);
             }
         }
-        catch
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Unable to capture frame from inline camera preview");
             return null;
         }
+    }
+
+    private async Task<bool> EnsureCameraPreviewReadyForCaptureAsync(
+        CameraView cameraView,
+        CancellationToken ct)
+    {
+        if (!await WaitForCameraPlatformViewAsync(cameraView, ct))
+            return false;
+
+        try
+        {
+            await MainThread.InvokeOnMainThreadAsync(async () =>
+                await cameraView.StartCameraPreview(ct));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Unable to ensure inline camera preview is started before capture");
+        }
+
+        return await WaitForCameraPlatformViewAsync(cameraView, ct);
+    }
+
+    private async Task<bool> WaitForCameraPlatformViewAsync(
+        CameraView cameraView,
+        CancellationToken ct)
+    {
+        const int attempts = 20;
+
+        for (var i = 0; i < attempts; i++)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            var isReady = await MainThread.InvokeOnMainThreadAsync(() =>
+                cameraView.Handler?.PlatformView is not null);
+            if (isReady)
+                return true;
+
+            await Task.Delay(50, ct);
+        }
+
+        _logger.LogDebug("Inline camera preview platform handler is not ready");
+        return false;
     }
 
     internal void ShowScanResultCard(IQrContentHandler handler, Dictionary<string, object> parsed, string rawContent)

@@ -4,7 +4,7 @@ namespace BodyCam.Services.Camera.Commands;
 
 public sealed record ScanCommandOptions(string? Query);
 
-public sealed class ScanCommand : CameraCommandBase<ScanCommandOptions>
+public sealed class ScanCommand : CameraCommandBase<ScanCommandOptions>, ICameraActionVariantProvider
 {
     private readonly IQrCodeScanner _scanner;
     private readonly QrCodeService _history;
@@ -34,6 +34,16 @@ public sealed class ScanCommand : CameraCommandBase<ScanCommandOptions>
     public override IReadOnlyList<CommandOptionDefinition> Options { get; } =
     [
         new(nameof(ScanCommandOptions.Query), typeof(string), null, false),
+    ];
+
+    public IReadOnlyList<CameraActionVariantDefinition> CameraActionVariants =>
+    [
+        new(
+            "Default",
+            DisplayName,
+            "Scan code.",
+            new ScanCommandOptions(Query: null),
+            IsDefault: true),
     ];
 
     public override async Task<CameraCommandResult> ExecuteAsync(

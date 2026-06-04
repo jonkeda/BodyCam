@@ -38,6 +38,14 @@ public sealed record CommandPromptDefinition(
     string Text,
     string Prompt);
 
+public sealed record CameraActionVariantDefinition(
+    string Key,
+    string DisplayName,
+    string Text,
+    object? Options = null,
+    string? Query = null,
+    bool IsDefault = false);
+
 public sealed record CameraCommandTranscriptInput(
     string Text,
     byte[]? ImageBytes,
@@ -81,6 +89,11 @@ public interface ICameraCommand
 public interface ICommandPromptProvider
 {
     IReadOnlyList<CommandPromptDefinition> PromptDefinitions { get; }
+}
+
+public interface ICameraActionVariantProvider
+{
+    IReadOnlyList<CameraActionVariantDefinition> CameraActionVariants { get; }
 }
 
 public interface ICameraCommandRegistry
