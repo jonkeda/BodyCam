@@ -27,6 +27,7 @@
   <ItemGroup>
     <None Include="uat.config.md" CopyToOutputDirectory="PreserveNewest" />
     <None Include="Scenarios\**\*.uat.md" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="TestSettings\**\*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

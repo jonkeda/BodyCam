@@ -14,8 +14,14 @@ public sealed class BodyCamUatFixture : BodyCamFixture
 
     [UatPhrase(UatEffectiveStepKeyword.Given, "the app is running in deterministic UAT mode")]
     [UatPhrase(UatEffectiveStepKeyword.Then, "BodyCam UAT environment should be deterministic")]
-    public string AssertDeterministicUatMode()
+    public string AssertDeterministicUatMode(BodyCamTestSettings settings)
     {
+        if (!string.Equals(settings.Uat.StartupMode, "deterministic", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                $"BodyCam UAT settings must use startup mode 'deterministic'. Actual value: '{settings.Uat.StartupMode}'.");
+        }
+
         var mode = Environment.GetEnvironmentVariable(BodyCamUatEnvironment.TestModeVariable);
         if (!string.Equals(mode, "uat", StringComparison.OrdinalIgnoreCase))
         {

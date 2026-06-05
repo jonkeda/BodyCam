@@ -28,6 +28,15 @@ Thumbs.db
 # Secrets — NEVER commit
 .env
 *.env.local
+**/TestSettings/testsettings.local.json
+**/TestSettings/**/*.local.json
+**/TestSettings/**/*.local.yaml
+**/TestSettings/**/*.local.yml
+**/TestSettings/**/*.secrets.json
+**/TestSettings/**/*.secrets.yaml
+**/TestSettings/**/*.secrets.yml
+**/TestSettings/secrets/*
+!**/TestSettings/secrets/*.example.json
 
 # Local camera/protocol investigation artifacts
 .my/plan/*/captures/

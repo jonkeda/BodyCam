@@ -38,6 +38,10 @@ public sealed class BodyCamUatSpecFormatTests
             Path.Combine("suites", "BodyCam.UAT", "uat"),
             config.Reporting.OutputDirectory);
         Assert.True(config.Reporting.ScreenshotOnFailure);
+        Assert.Equal("TestSettings", config.Settings.Root);
+        Assert.Equal("testsettings.json", config.Settings.DefaultFile);
+        Assert.Equal("testsettings.local.json", config.Settings.LocalFile);
+        Assert.Equal("scenarios/{ScenarioId}.json", config.Settings.ScenarioConvention);
         Assert.Contains(config.SkipRules, rule =>
             rule.Tag == UatTagConventions.Hardware &&
             rule.EnvironmentVariable == BodyCamUatEnvironment.HardwareVariable);

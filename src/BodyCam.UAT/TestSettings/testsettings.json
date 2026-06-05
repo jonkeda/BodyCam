@@ -1,0 +1,22 @@
+{
+  "$schema": "https://brinell.local/schemas/testsettings.schema.json",
+  "settings": {
+    "capabilities": {
+      "hardware": false,
+      "liveApi": false,
+      "manual": false,
+      "semiAutomated": false
+    },
+    "uat": {
+      "startupMode": "deterministic",
+      "resetAppSettingsBeforeScenario": true
+    },
+    "hardware": {
+      "a9Camera": {
+        "host": "",
+        "username": "",
+        "password": ""
+      }
+    }
+  }
+}

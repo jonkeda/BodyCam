@@ -31,6 +31,15 @@
 | ScreenshotOnFailure | true |
 | IncludeRuntimeTrace | true |
 
+## Settings
+
+| Field | Value |
+| --- | --- |
+| Root | TestSettings |
+| DefaultFile | testsettings.json |
+| LocalFile | testsettings.local.json |
+| ScenarioConvention | scenarios/{ScenarioId}.json |
+
 ## Skip Rules
 
 | Tag | EnvironmentVariable |
