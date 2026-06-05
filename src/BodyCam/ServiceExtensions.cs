@@ -17,6 +17,7 @@ using BodyCam.Services.QrCode;
 using BodyCam.Services.QrCode.Handlers;
 using BodyCam.Services.Session;
 using BodyCam.Services.Settings;
+using BodyCam.Services.Testing;
 using BodyCam.Services.Transcript;
 using BodyCam.Services.Vision;
 using BodyCam.Services.WakeWord;
@@ -45,6 +46,9 @@ public static class ServiceExtensions
 		services.AddSingleton<BodyCam.Platforms.iOS.PlatformMicProvider>();
 		services.AddSingleton<IAudioInputProvider>(sp => sp.GetRequiredService<BodyCam.Platforms.iOS.PlatformMicProvider>());
 #endif
+		if (UatTestMode.IsEnabled)
+			services.AddSingleton<IAudioInputProvider, UatSilentAudioInputProvider>();
+
 		services.AddSingleton<AudioInputManager>();
 		services.AddSingleton<IAudioInputService>(sp => sp.GetRequiredService<AudioInputManager>());
 
@@ -69,6 +73,9 @@ public static class ServiceExtensions
 #elif IOS
 		services.AddSingleton<IAudioOutputProvider, BodyCam.Platforms.iOS.PhoneSpeakerProvider>();
 #endif
+		if (UatTestMode.IsEnabled)
+			services.AddSingleton<IAudioOutputProvider, UatCapturingAudioOutputProvider>();
+
 		services.AddSingleton<AudioOutputManager>();
 		services.AddSingleton<IAudioOutputService>(sp => sp.GetRequiredService<AudioOutputManager>());
 
@@ -167,6 +174,8 @@ public static class ServiceExtensions
 		services.AddSingleton<UsbCameraProvider>();
 		services.AddSingleton<ICameraProvider>(sp => sp.GetRequiredService<UsbCameraProvider>());
 #endif
+		if (UatTestMode.IsEnabled)
+			services.AddSingleton<ICameraProvider, UatCameraProvider>();
 
 #if ANDROID
 		// Use HeyCyan-aware selector on Android; default selector elsewhere
@@ -328,6 +337,9 @@ public static class ServiceExtensions
 #if WINDOWS
 		services.AddSingleton<IButtonInputProvider, BodyCam.Platforms.Windows.Input.KeyboardShortcutProvider>();
 #endif
+		if (UatTestMode.IsEnabled)
+			services.AddSingleton<IButtonInputProvider, UatButtonInputProvider>();
+
 		services.AddSingleton<ActionMap>();
 		services.AddSingleton<IButtonMappingStore, ButtonMappingStore>();
 		services.AddSingleton<ButtonInputManager>();
@@ -348,7 +360,15 @@ public static class ServiceExtensions
 		services.AddSingleton<IGrokRealtimeVoiceProvider, GrokRealtimeVoiceProvider>();
 
 		// MAF Realtime client — builds provider-specific clients when a session starts.
-		services.AddSingleton<Microsoft.Extensions.AI.IRealtimeClient, AppRealtimeClient>();
+		if (UatTestMode.IsEnabled && !UatTestMode.IsLiveApiEnabled)
+		{
+			services.AddSingleton<Microsoft.Extensions.AI.IRealtimeClient>(
+				new UnsupportedRealtimeClient("Realtime voice is disabled in deterministic BodyCam UAT mode."));
+		}
+		else
+		{
+			services.AddSingleton<Microsoft.Extensions.AI.IRealtimeClient, AppRealtimeClient>();
+		}
 
 		services.AddSingleton<AgentOrchestrator>();
 		services.AddSingleton<ISessionRuntime>(sp => sp.GetRequiredService<AgentOrchestrator>());

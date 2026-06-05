@@ -2,6 +2,7 @@
 using BodyCam.Services.Input;
 using BodyCam.Services.AiProviders;
 using BodyCam.Services.Logging;
+using BodyCam.Services.Testing;
 using Azure.Monitor.OpenTelemetry.Exporter;
 using CommunityToolkit.Maui;
 using Microsoft.Extensions.AI;
@@ -73,6 +74,8 @@ public static class MauiProgram
 		settings.NoiseReduction = settingsService.NoiseReduction;
 		settings.SystemInstructions = settingsService.SystemInstructions;
 
+		UatTestMode.ApplySettings(settingsService, settings);
+
 		builder.Services.AddSingleton(settings);
 
 		// Services
@@ -98,8 +101,11 @@ public static class MauiProgram
 				sp.GetRequiredService<Services.Glasses.HeyCyan.Media.HeyCyanDictationHook>());
 		}
 
-// Chat Completions client (deep_analysis + vision tools)
-		builder.Services.AddSingleton<IChatClient, AppChatClient>();
+		// Chat Completions client (deep_analysis + vision tools)
+		if (UatTestMode.IsEnabled && !UatTestMode.IsLiveApiEnabled)
+			builder.Services.AddSingleton<IChatClient, UatChatClient>();
+		else
+			builder.Services.AddSingleton<IChatClient, AppChatClient>();
 
 		// Memory store
 		builder.Services.AddSingleton<MemoryStore>(sp =>

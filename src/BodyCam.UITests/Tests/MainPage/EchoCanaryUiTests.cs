@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
-using BodyCam.UITests.Pages;
+using BodyCam.UITestKit.Pages;
 
 namespace BodyCam.UITests.Tests.MainPage;
 

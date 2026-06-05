@@ -1,8 +1,8 @@
 using System;
 using Brinell.Maui.Testing;
-using BodyCam.UITests.Pages;
+using BodyCam.UITestKit.Pages;
 
-namespace BodyCam.UITests;
+namespace BodyCam.UITestKit;
 
 public class BodyCamFixture : MauiTestFixtureBase
 {
@@ -20,7 +20,13 @@ public class BodyCamFixture : MauiTestFixtureBase
     private readonly AdvancedSettingsPage _advancedSettingsPage;
 
     public BodyCamFixture()
+        : this(BodyCamFixtureLaunchOptions.Default)
     {
+    }
+
+    protected BodyCamFixture(BodyCamFixtureLaunchOptions launchOptions)
+    {
+        LaunchOptions = launchOptions;
         _mainPage = new MainPage(Context);
         _settingsPage = new SettingsPage(Context);
         _setupPage = new SetupPage(Context);
@@ -35,6 +41,8 @@ public class BodyCamFixture : MauiTestFixtureBase
         _advancedSettingsPage = new AdvancedSettingsPage(Context);
         DismissSetupIfShown();
     }
+
+    public BodyCamFixtureLaunchOptions LaunchOptions { get; }
 
     public MainPage MainPage => _mainPage;
     public SettingsPage SettingsPage => _settingsPage;
@@ -83,6 +91,13 @@ public class BodyCamFixture : MauiTestFixtureBase
         _settingsPage.WaitReady(5000);
     }
 
+    public void NavigateToConnectionSettings()
+    {
+        NavigateToSettingsSubPage(
+            () => _settingsPage.ConnectionSettingsCard.Click(),
+            _connectionSettingsPage);
+    }
+
     private bool IsHomeRootLoaded(int timeoutMs)
         => _mainPage.IsLoaded(timeoutMs) && _mainPage.NavIcon.WaitExists(true, timeoutMs);
 
@@ -100,11 +115,53 @@ public class BodyCamFixture : MauiTestFixtureBase
             _llmProvidersSettingsPage);
     }
 
+    public void NavigateToLlmProvidersSettings()
+    {
+        NavigateToLlmProviders();
+    }
+
+    public void NavigateToVoiceSettings()
+    {
+        NavigateToSettingsSubPage(
+            () => _settingsPage.VoiceSettingsCard.Click(),
+            _voiceSettingsPage);
+    }
+
+    public void NavigateToDeviceSettings()
+    {
+        NavigateToSettingsSubPage(
+            () => _settingsPage.DeviceSettingsCard.Click(),
+            _deviceSettingsPage);
+    }
+
+    public void NavigateToAdvancedSettings()
+    {
+        NavigateToSettingsSubPage(
+            () => _settingsPage.AdvancedSettingsCard.Click(),
+            _advancedSettingsPage);
+    }
+
     public void NavigateToLlmProviderDetail(Action clickProvider)
     {
         NavigateToLlmProviders();
         clickProvider();
         _llmProviderSettingsPage.WaitReady(10000);
+    }
+
+    public virtual void ResetScenarioState()
+    {
+        NavigateToHome();
+
+        if (_mainPage.DismissSnapshotButton.WaitExists(true, 500))
+            _mainPage.DismissSnapshotButton.Click();
+
+        if (_mainPage.MessageEntry.WaitExists(true, 500))
+            _mainPage.MessageEntry.Clear();
+
+        if (_mainPage.SleepButton.WaitExists(true, 500))
+            _mainPage.SleepButton.Click();
+
+        _mainPage.EnsureActionsExpanded();
     }
 
     /// <summary>

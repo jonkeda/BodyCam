@@ -1,4 +1,4 @@
-namespace BodyCam.UITests.Pages;
+namespace BodyCam.UITestKit.Pages;
 
 public class A9CameraSettingsPage : PageObjectBase<A9CameraSettingsPage>
 {

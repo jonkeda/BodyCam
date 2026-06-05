@@ -30,7 +30,8 @@
                                Aspect="AspectFit"
                                SemanticProperties.Description="{Binding ImageCaption}"
                                Margin="0,4" />
-                        <Label Text="{Binding ImageCaption}"
+                        <Label AutomationId="TranscriptImageCaptionLabel"
+                               Text="{Binding ImageCaption}"
                                IsVisible="{Binding HasImage}"
                                FontSize="12"
                                TextColor="Gray"

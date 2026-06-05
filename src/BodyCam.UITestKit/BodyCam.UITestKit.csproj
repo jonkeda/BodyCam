@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>BodyCam.UITestKit</RootNamespace>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Brinell\srcnew\Brinell.Core\Brinell.Core.csproj" />
+    <ProjectReference Include="..\..\Brinell\srcnew\Brinell.Maui\Brinell.Maui.csproj" />
+    <ProjectReference Include="..\..\Brinell\srcnew\Brinell.Maui.FlaUI\Brinell.Maui.FlaUI.csproj" />
+    <ProjectReference Include="..\..\Brinell\srcnew\Brinell.Uat\Brinell.Uat.csproj" />
+  </ItemGroup>
+
+</Project>

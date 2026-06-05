@@ -1,4 +1,4 @@
-namespace BodyCam.UITests;
+namespace BodyCam.UITestKit;
 
 public static class TestConstants
 {

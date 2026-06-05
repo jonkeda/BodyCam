@@ -1,4 +1,4 @@
-namespace BodyCam.UITests.Pages;
+namespace BodyCam.UITestKit.Pages;
 
 public class AdvancedSettingsPage : PageObjectBase<AdvancedSettingsPage>
 {

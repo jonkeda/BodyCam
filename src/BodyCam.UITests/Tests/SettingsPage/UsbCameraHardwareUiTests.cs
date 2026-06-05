@@ -1,5 +1,5 @@
 using System;
-using BodyCam.UITests.Pages;
+using BodyCam.UITestKit.Pages;
 
 namespace BodyCam.UITests.Tests.SettingsPage;
 

@@ -360,6 +360,20 @@ transcript after the user selects a sub-button.
 - [x] Phase 3 — [Capture And Snapshot Flow](m50-camera-buttons/phase-3-capture-and-snapshot-flow.md)
 - [x] Phase 4 — [Tests And Accessibility](m50-camera-buttons/phase-4-tests-and-accessibility.md)
 
+### M51 — BodyCam Brinell UAT Projects
+
+**Plan:** [m51-uat-brinell-projects/](m51-uat-brinell-projects/)
+
+**Goal:** Create UAT-focused Brinell test projects for BodyCam using the
+existing Brinell UAT format and runtime bridge pattern, so product-level
+acceptance scenarios can be written, reviewed, automated where possible, and
+reported separately from lower-level regression tests.
+
+- [x] Phase 1 — [Project Layout And Extraction](m51-uat-brinell-projects/phase-1-project-layout-and-extraction.md)
+- [x] Phase 2 — [UAT Spec Format And Fixtures](m51-uat-brinell-projects/phase-2-uat-spec-format-and-fixtures.md)
+- [ ] Phase 3 — [First UAT Suites](m51-uat-brinell-projects/phase-3-first-uat-suites.md)
+- [ ] Phase 4 — [Runtime Bridge, CI, And Reporting](m51-uat-brinell-projects/phase-4-runtime-bridge-ci-and-reporting.md)
+
 ---
 
 ## Superseded
