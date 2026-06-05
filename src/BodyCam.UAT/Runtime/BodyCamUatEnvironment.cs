@@ -7,11 +7,6 @@ internal static class BodyCamUatEnvironment
     public const string TestModeVariable = "BODYCAM_TEST_MODE";
     public const string AssetsVariable = "BODYCAM_UAT_ASSETS";
     public const string ReportsVariable = "BODYCAM_UAT_REPORTS";
-    public const string LiveApiVariable = "BODYCAM_UAT_LIVE_API";
-    public const string HardwareVariable = "BODYCAM_UAT_HARDWARE";
-    public const string ManualVariable = "BODYCAM_UAT_MANUAL";
-    public const string SemiAutomatedVariable = "BODYCAM_UAT_SEMI_AUTOMATED";
-    public const string ScenarioFilterVariable = "BODYCAM_UAT_SCENARIO_FILTER";
 
     public static BodyCamFixtureLaunchOptions Apply()
     {
@@ -26,13 +21,9 @@ internal static class BodyCamUatEnvironment
 
         Dictionary<string, string> values = new(StringComparer.OrdinalIgnoreCase)
         {
-            [TestModeVariable] = ReadOrDefault(TestModeVariable, "uat"),
+            [TestModeVariable] = "uat",
             [AssetsVariable] = assetsDirectory,
-            [ReportsVariable] = reportsDirectory,
-            [LiveApiVariable] = ReadOrDefault(LiveApiVariable, "0"),
-            [HardwareVariable] = ReadOrDefault(HardwareVariable, "0"),
-            [ManualVariable] = ReadOrDefault(ManualVariable, "0"),
-            [SemiAutomatedVariable] = ReadOrDefault(SemiAutomatedVariable, "0")
+            [ReportsVariable] = reportsDirectory
         };
 
         foreach (var value in values)
@@ -41,12 +32,6 @@ internal static class BodyCamUatEnvironment
         }
 
         return new BodyCamFixtureLaunchOptions("uat", assetsDirectory, reportsDirectory, values);
-    }
-
-    private static string ReadOrDefault(string name, string defaultValue)
-    {
-        var value = Environment.GetEnvironmentVariable(name);
-        return string.IsNullOrWhiteSpace(value) ? defaultValue : value;
     }
 
     private static string GetOrCreateDirectory(string environmentVariable, string defaultPath)

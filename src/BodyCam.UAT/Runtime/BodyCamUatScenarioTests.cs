@@ -12,7 +12,7 @@ public sealed class BodyCamUatScenarioTests
     }
 
     public static IEnumerable<object[]> ScenarioFiles =>
-        GetScenarioFiles(filterEnvironmentVariable: BodyCamUatEnvironment.ScenarioFilterVariable);
+        GetScenarioFiles(filterEnvironmentVariable: BodyCamUatRunnerVariables.ScenarioFilterVariable);
 
     [Theory(Timeout = 120000)]
     [MemberData(nameof(ScenarioFiles))]

@@ -6,7 +6,7 @@ public sealed class BodyCamUatSpecFormatTests
     : UatSpecFormatTestBase
 {
     public static IEnumerable<object[]> ScenarioFiles =>
-        GetScenarioFiles(filterEnvironmentVariable: BodyCamUatEnvironment.ScenarioFilterVariable);
+        GetScenarioFiles(filterEnvironmentVariable: BodyCamUatRunnerVariables.ScenarioFilterVariable);
 
     [Theory]
     [MemberData(nameof(ScenarioFiles))]
@@ -44,9 +44,9 @@ public sealed class BodyCamUatSpecFormatTests
         Assert.Equal("scenarios/{ScenarioId}.json", config.Settings.ScenarioConvention);
         Assert.Contains(config.SkipRules, rule =>
             rule.Tag == UatTagConventions.Hardware &&
-            rule.EnvironmentVariable == BodyCamUatEnvironment.HardwareVariable);
+            rule.EnvironmentVariable == BodyCamUatLegacySkipVariables.HardwareVariable);
         Assert.Contains(config.SkipRules, rule =>
             rule.Tag == UatTagConventions.LiveApi &&
-            rule.EnvironmentVariable == BodyCamUatEnvironment.LiveApiVariable);
+            rule.EnvironmentVariable == BodyCamUatLegacySkipVariables.LiveApiVariable);
     }
 }
