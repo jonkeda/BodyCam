@@ -1,7 +1,9 @@
 using BodyCam.Orchestration;
+using BodyCam.Models;
 using BodyCam.Services;
 using BodyCam.Services.Actions;
 using BodyCam.Services.Audio;
+using BodyCam.Services.Barcode;
 using BodyCam.Services.Camera;
 using BodyCam.Services.Camera.Commands;
 using BodyCam.Services.Glasses;
@@ -75,6 +77,118 @@ public sealed class MainViewModelCameraButtonsTests
             .Should()
             .Equal("Overview", "Summary", "Detail");
         vm.Entries.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task ActivateCameraActionAsync_StartsLiveScanWhenNoCameraProviderIsActiveYet()
+    {
+        var provider = new FixedFrameCameraProvider([0xFF, 0xD8, 0x11]);
+        var settings = new FakeSettingsService();
+        var cameraManager = new CameraManager(
+            [provider],
+            settings,
+            new DefaultCameraSelector(),
+            NullLogger<CameraManager>.Instance,
+            null);
+        var liveScanner = new RecordingLiveBarcodeScanner();
+        var vm = CreateVm(
+            [RecordingCommand.Single("scan", "Scan")],
+            actions: [CameraAction(AssistiveActionIds.Scan, "Scan", "scan")],
+            settings: settings,
+            cameraManager: cameraManager,
+            liveBarcodeScanner: liveScanner,
+            useCameraActionFrameCapture: false);
+
+        await vm.ActivateCameraActionAsync(vm.CameraActions.Single());
+
+        await liveScanner.WatchStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        liveScanner.WatchCalls.Should().Be(1);
+        provider.StartCount.Should().Be(1);
+        cameraManager.Active.Should().BeSameAs(provider);
+    }
+
+    [Fact]
+    public async Task ActivateCameraActionAsync_AutoProductScan_ClosesCameraActionSurface()
+    {
+        var provider = new FixedFrameCameraProvider([0xFF, 0xD8, 0x12]);
+        var settings = new FakeSettingsService();
+        var cameraManager = new CameraManager(
+            [provider],
+            settings,
+            new DefaultCameraSelector(),
+            NullLogger<CameraManager>.Instance,
+            null);
+        var liveScanner = new DetectionLiveBarcodeScanner(
+            new LiveBarcodeDetection("4006420012345", QrCodeFormat.Ean13, DateTimeOffset.UtcNow));
+        var product = new ProductInfo
+        {
+            Barcode = "4006420012345",
+            Source = "test",
+            Name = "Mineral Water"
+        };
+        var workflow = new FixedProductLookupWorkflow(new ProductBarcodeLookupResult(
+            ProductBarcodeLookupStatus.Found,
+            product.Barcode,
+            product,
+            product.Name,
+            QrCodeFormat.Ean13));
+        var vm = CreateVm(
+            [RecordingCommand.Single("scan", "Scan")],
+            actions: [CameraAction(AssistiveActionIds.Scan, "Scan", "scan")],
+            settings: settings,
+            cameraManager: cameraManager,
+            liveBarcodeScanner: liveScanner,
+            productLookupWorkflow: workflow,
+            useCameraActionFrameCapture: false);
+
+        await vm.ActivateCameraActionAsync(vm.CameraActions.Single());
+
+        await WaitUntilAsync(() => !vm.ShowInlineCameraPreview);
+
+        AssertCameraActionSelectionCleared(vm);
+        vm.ShowCameraActionsSection.Should().BeFalse();
+        vm.Entries.Should().ContainSingle(entry => entry.Role == "Product" && entry.Text == "Mineral Water");
+        workflow.Calls.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task ActivateCameraActionAsync_ReopensScanAfterAutoScanClosesSurface()
+    {
+        var provider = new FixedFrameCameraProvider([0xFF, 0xD8, 0x13]);
+        var settings = new FakeSettingsService();
+        var cameraManager = new CameraManager(
+            [provider],
+            settings,
+            new DefaultCameraSelector(),
+            NullLogger<CameraManager>.Instance,
+            null);
+        var liveScanner = new ReopenLiveBarcodeScanner(
+            new LiveBarcodeDetection("https://example.com", QrCodeFormat.QrCode, DateTimeOffset.UtcNow));
+        var vm = CreateVm(
+            [RecordingCommand.Single("scan", "Scan")],
+            actions: [CameraAction(AssistiveActionIds.Scan, "Scan", "scan")],
+            settings: settings,
+            cameraManager: cameraManager,
+            liveBarcodeScanner: liveScanner,
+            useCameraActionFrameCapture: false);
+        var scanAction = vm.CameraActions.Single();
+
+        await vm.ActivateCameraActionAsync(scanAction);
+
+        await WaitUntilAsync(() => !vm.ShowInlineCameraPreview);
+        AssertCameraActionSelectionCleared(vm);
+
+        await vm.ActivateCameraActionAsync(scanAction);
+        await liveScanner.SecondWatchStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        vm.ShowInlineCameraPreview.Should().BeTrue();
+        vm.ShowCameraActionsSection.Should().BeTrue();
+        vm.ShowCameraActionRail.Should().BeFalse();
+        vm.ActiveCameraAction.Should().Be(scanAction);
+        scanAction.IsActive.Should().BeTrue();
+        vm.ActiveCameraActionVariants.Should().ContainSingle(variant => variant.Label == "Scan");
+        vm.HasActiveCameraActionVariants.Should().BeTrue();
+        liveScanner.WatchCalls.Should().Be(2);
     }
 
     [Fact]
@@ -345,6 +459,8 @@ public sealed class MainViewModelCameraButtonsTests
         Func<CancellationToken, Task<byte[]?>>? captureFrame = null,
         ISettingsService? settings = null,
         CameraManager? cameraManager = null,
+        ILiveBarcodeScanner? liveBarcodeScanner = null,
+        IProductBarcodeLookupWorkflow? productLookupWorkflow = null,
         bool useCameraActionFrameCapture = true)
     {
         var capturedFrame = frame;
@@ -371,6 +487,8 @@ public sealed class MainViewModelCameraButtonsTests
             NullLogger<MainViewModel>.Instance,
             cameraCommandRegistry: new FakeCameraCommandRegistry(commands),
             assistiveActionRegistry: new FakeAssistiveActionRegistry(actions),
+            productLookupWorkflow: productLookupWorkflow,
+            liveBarcodeScanner: liveBarcodeScanner,
             cameraActionFrameCapture: useCameraActionFrameCapture
                 ? captureFrame ?? (_ => Task.FromResult<byte[]?>(capturedFrame))
                 : null);
@@ -560,9 +678,14 @@ public sealed class MainViewModelCameraButtonsTests
         public bool IsAvailable => true;
         public bool SupportsVideoRecording => false;
         public int CaptureCount { get; private set; }
+        public int StartCount { get; private set; }
         public event EventHandler? Disconnected;
 
-        public Task StartAsync(CancellationToken ct = default) => Task.CompletedTask;
+        public Task StartAsync(CancellationToken ct = default)
+        {
+            StartCount++;
+            return Task.CompletedTask;
+        }
 
         public Task StopAsync() => Task.CompletedTask;
 
@@ -582,6 +705,104 @@ public sealed class MainViewModelCameraButtonsTests
         }
 
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
+
+    private sealed class RecordingLiveBarcodeScanner : ILiveBarcodeScanner
+    {
+        public TaskCompletionSource WatchStarted { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public int WatchCalls { get; private set; }
+
+        public async IAsyncEnumerable<LiveBarcodeDetection> WatchAsync(
+            IAsyncEnumerable<byte[]> frames,
+            LiveBarcodeScannerOptions? options = null,
+            [EnumeratorCancellation] CancellationToken ct = default)
+        {
+            WatchCalls++;
+
+            await foreach (var _ in frames.WithCancellation(ct))
+            {
+                WatchStarted.TrySetResult();
+                yield break;
+            }
+        }
+    }
+
+    private sealed class DetectionLiveBarcodeScanner : ILiveBarcodeScanner
+    {
+        private readonly LiveBarcodeDetection _detection;
+
+        public DetectionLiveBarcodeScanner(LiveBarcodeDetection detection)
+        {
+            _detection = detection;
+        }
+
+        public async IAsyncEnumerable<LiveBarcodeDetection> WatchAsync(
+            IAsyncEnumerable<byte[]> frames,
+            LiveBarcodeScannerOptions? options = null,
+            [EnumeratorCancellation] CancellationToken ct = default)
+        {
+            await foreach (var _ in frames.WithCancellation(ct))
+            {
+                yield return _detection;
+                yield break;
+            }
+        }
+    }
+
+    private sealed class ReopenLiveBarcodeScanner : ILiveBarcodeScanner
+    {
+        private readonly LiveBarcodeDetection _firstDetection;
+
+        public ReopenLiveBarcodeScanner(LiveBarcodeDetection firstDetection)
+        {
+            _firstDetection = firstDetection;
+        }
+
+        public int WatchCalls { get; private set; }
+        public TaskCompletionSource SecondWatchStarted { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public async IAsyncEnumerable<LiveBarcodeDetection> WatchAsync(
+            IAsyncEnumerable<byte[]> frames,
+            LiveBarcodeScannerOptions? options = null,
+            [EnumeratorCancellation] CancellationToken ct = default)
+        {
+            WatchCalls++;
+            await foreach (var _ in frames.WithCancellation(ct))
+            {
+                if (WatchCalls == 1)
+                {
+                    yield return _firstDetection;
+                    yield break;
+                }
+
+                SecondWatchStarted.TrySetResult();
+                yield break;
+            }
+        }
+    }
+
+    private sealed class FixedProductLookupWorkflow : IProductBarcodeLookupWorkflow
+    {
+        private readonly ProductBarcodeLookupResult _result;
+
+        public FixedProductLookupWorkflow(ProductBarcodeLookupResult result)
+        {
+            _result = result;
+        }
+
+        public int Calls { get; private set; }
+
+        public Task<ProductBarcodeLookupResult> LookupAsync(
+            Func<CancellationToken, Task<byte[]?>> captureFrame,
+            string? barcode = null,
+            CancellationToken ct = default)
+        {
+            Calls++;
+            return Task.FromResult(_result);
+        }
     }
 
     private sealed class StubOrchestrator : AgentOrchestrator

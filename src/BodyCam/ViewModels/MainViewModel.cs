@@ -57,6 +57,7 @@ public class MainViewModel : ViewModelBase
     private readonly IAssistiveActionService? _assistiveActions;
     private readonly ITranscriptStore? _transcriptStore;
     private readonly IProductBarcodeLookupWorkflow? _productLookupWorkflow;
+    private readonly ILiveBarcodeScanner? _liveBarcodeScanner;
     private readonly Func<ProductInfo, Task> _openProductDetailsAsync;
     private readonly Func<CancellationToken, Task<byte[]?>>? _cameraActionFrameCapture;
     private readonly HeyCyanGlassesDeviceManager _glasses;
@@ -75,6 +76,10 @@ public class MainViewModel : ViewModelBase
     private CameraView? _cameraView;
     private bool _isTransitioning;
     private bool _isCompletingManualCapture;
+    private bool _isHandlingLiveBarcodeDetection;
+    private CancellationTokenSource? _liveBarcodeScanCts;
+    private Task? _liveBarcodeScanTask;
+    private readonly SemaphoreSlim _cameraActionLifecycleLock = new(1, 1);
     private TranscriptEntry? _activeCommandAiEntry;
     private CancellationTokenSource? _aiBusyAnimationCts;
     private string _uiSessionId = Guid.NewGuid().ToString("N");
@@ -102,7 +107,7 @@ public class MainViewModel : ViewModelBase
     private Dictionary<string, object>? _lastScanParsed;
     private string? _lastScanRawContent;
 
-    public MainViewModel(AgentOrchestrator orchestrator, IApiKeyService apiKeyService, ISettingsService settingsService, CameraManager cameraManager, IQrCodeScanner qrScanner, QrCodeService qrCodeService, QrContentResolver contentResolver, HeyCyanGlassesDeviceManager glasses, ILogger<MainViewModel> logger, IAecProcessor? aec = null, IAudioRoutePolicyService? audioPolicy = null, ICameraCommandService? cameraCommands = null, ICameraCommandRegistry? cameraCommandRegistry = null, IManualCameraCaptureCoordinator? manualCapture = null, ISessionCoordinator? sessionCoordinator = null, IAssistiveActionRegistry? assistiveActionRegistry = null, IAssistiveActionService? assistiveActions = null, ITranscriptStore? transcriptStore = null, IProductBarcodeLookupWorkflow? productLookupWorkflow = null, Func<ProductInfo, Task>? openProductDetailsAsync = null, Func<CancellationToken, Task<byte[]?>>? cameraActionFrameCapture = null)
+    public MainViewModel(AgentOrchestrator orchestrator, IApiKeyService apiKeyService, ISettingsService settingsService, CameraManager cameraManager, IQrCodeScanner qrScanner, QrCodeService qrCodeService, QrContentResolver contentResolver, HeyCyanGlassesDeviceManager glasses, ILogger<MainViewModel> logger, IAecProcessor? aec = null, IAudioRoutePolicyService? audioPolicy = null, ICameraCommandService? cameraCommands = null, ICameraCommandRegistry? cameraCommandRegistry = null, IManualCameraCaptureCoordinator? manualCapture = null, ISessionCoordinator? sessionCoordinator = null, IAssistiveActionRegistry? assistiveActionRegistry = null, IAssistiveActionService? assistiveActions = null, ITranscriptStore? transcriptStore = null, IProductBarcodeLookupWorkflow? productLookupWorkflow = null, ILiveBarcodeScanner? liveBarcodeScanner = null, Func<ProductInfo, Task>? openProductDetailsAsync = null, Func<CancellationToken, Task<byte[]?>>? cameraActionFrameCapture = null)
     {
         _orchestrator = orchestrator;
         _apiKeyService = apiKeyService;
@@ -120,6 +125,7 @@ public class MainViewModel : ViewModelBase
         _assistiveActions = assistiveActions;
         _transcriptStore = transcriptStore;
         _productLookupWorkflow = productLookupWorkflow;
+        _liveBarcodeScanner = liveBarcodeScanner;
         _openProductDetailsAsync = openProductDetailsAsync ?? OpenProductDetailPageAsync;
         _glasses = glasses;
         _logger = logger;
@@ -194,10 +200,7 @@ public class MainViewModel : ViewModelBase
         SwitchToCameraCommand = new AsyncRelayCommand(async () =>
         {
             ShowTranscriptTab = false;
-            ShowInlineCameraPreview = true;
-            // Start camera preview so the native control gets non-zero size
-            if (_cameraView is not null)
-                await _cameraView.StartCameraPreview(CancellationToken.None);
+            await RevealInlineCameraPreviewAsync();
         });
         ToggleActionsDrawerCommand = new RelayCommand(() =>
         {
@@ -527,6 +530,8 @@ public class MainViewModel : ViewModelBase
             {
                 OnPropertyChanged(nameof(ShowCameraActionRail));
                 OnPropertyChanged(nameof(ShowCameraActionsSection));
+                if (!value)
+                    _ = StopLiveBarcodeScanAsync(waitForCompletion: false);
             }
         }
     }
@@ -939,11 +944,6 @@ public class MainViewModel : ViewModelBase
             try
             {
                 await phoneProvider.StartAsync(CancellationToken.None);
-                if (phoneProvider is not PhoneCameraProvider phoneCameraProvider
-                    || phoneCameraProvider.IsStarted)
-                {
-                    return;
-                }
             }
             catch (Exception ex)
             {
@@ -952,7 +952,10 @@ public class MainViewModel : ViewModelBase
         }
 
         if (_cameraView is null)
+        {
+            StartLiveBarcodeScan();
             return;
+        }
 
         try
         {
@@ -962,6 +965,8 @@ public class MainViewModel : ViewModelBase
         {
             _logger.LogWarning(ex, "Unable to start inline camera preview");
         }
+
+        StartLiveBarcodeScan();
     }
 
     private void DispatchOnMainThreadAsync(Func<Task> action)
@@ -1356,17 +1361,27 @@ public class MainViewModel : ViewModelBase
 
     internal async Task ActivateCameraActionAsync(CameraActionItemViewModel action)
     {
-        foreach (var cameraAction in CameraActions)
-            cameraAction.IsActive = ReferenceEquals(cameraAction, action);
+        await StopLiveBarcodeScanAsync();
 
-        ActiveCameraAction = action;
-        ActiveCameraActionVariants.Clear();
-        foreach (var variant in action.Variants)
-            ActiveCameraActionVariants.Add(variant);
+        await _cameraActionLifecycleLock.WaitAsync();
+        try
+        {
+            foreach (var cameraAction in CameraActions)
+                cameraAction.IsActive = ReferenceEquals(cameraAction, action);
 
-        OnPropertyChanged(nameof(HasActiveCameraActionVariants));
-        IsActionsDrawerExpanded = false;
-        await RevealInlineCameraPreviewAsync();
+            ActiveCameraAction = action;
+            ActiveCameraActionVariants.Clear();
+            foreach (var variant in action.Variants)
+                ActiveCameraActionVariants.Add(variant);
+
+            OnPropertyChanged(nameof(HasActiveCameraActionVariants));
+            IsActionsDrawerExpanded = false;
+            await RevealInlineCameraPreviewAsync();
+        }
+        finally
+        {
+            _cameraActionLifecycleLock.Release();
+        }
     }
 
     internal async Task ExecuteCameraActionVariantAsync(
@@ -1483,7 +1498,7 @@ public class MainViewModel : ViewModelBase
 
     private async Task<byte[]?> CaptureFrameAndCloseCameraActionSurfaceAsync(CancellationToken ct)
     {
-        ClearCameraActionSelection();
+        await ClearCameraActionSelectionAsync();
 
         try
         {
@@ -1491,7 +1506,7 @@ public class MainViewModel : ViewModelBase
         }
         finally
         {
-            await HideInlineCameraPreviewAfterCameraActionCaptureAsync();
+            await CloseCameraActionSurfaceAsync(stopPhoneProvider: true);
         }
     }
 
@@ -1506,31 +1521,53 @@ public class MainViewModel : ViewModelBase
         return await _cameraManager.CaptureFrameAsync(ct);
     }
 
-    private void CloseCameraActionSurface()
+    private async Task CloseCameraActionSurfaceAsync(
+        bool waitForLiveScan = true,
+        bool stopPhoneProvider = false)
     {
-        ClearCameraActionSelection();
-        HideInlineCameraPreview();
+        await StopLiveBarcodeScanAsync(waitForLiveScan);
+
+        await _cameraActionLifecycleLock.WaitAsync();
+        try
+        {
+            if (stopPhoneProvider)
+                await StopPhoneCameraProviderAsync();
+
+            ClearCameraActionSelection();
+            HideInlineCameraPreview(stopPreview: true);
+        }
+        finally
+        {
+            _cameraActionLifecycleLock.Release();
+        }
     }
 
-    private async Task HideInlineCameraPreviewAfterCameraActionCaptureAsync()
+    private async Task ClearCameraActionSelectionAsync()
     {
-        var stoppedByProvider = false;
-        if (_cameraManager.Active is { ProviderId: "phone" } phoneProvider)
+        await _cameraActionLifecycleLock.WaitAsync();
+        try
         {
-            try
-            {
-                var providerWasStarted = phoneProvider is not PhoneCameraProvider phoneCameraProvider
-                    || phoneCameraProvider.IsStarted;
-                await phoneProvider.StopAsync();
-                stoppedByProvider = providerWasStarted;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogDebug(ex, "Unable to stop phone camera provider after camera action capture");
-            }
+            ClearCameraActionSelection();
         }
+        finally
+        {
+            _cameraActionLifecycleLock.Release();
+        }
+    }
 
-        HideInlineCameraPreview(stopPreview: !stoppedByProvider);
+    private async Task StopPhoneCameraProviderAsync()
+    {
+        if (_cameraManager.Active is not { ProviderId: "phone" } phoneProvider)
+            return;
+
+        try
+        {
+            await phoneProvider.StopAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Unable to stop phone camera provider after camera action capture");
+        }
     }
 
     private void ClearCameraActionSelection()
@@ -1609,7 +1646,7 @@ public class MainViewModel : ViewModelBase
         try
         {
             result = await _productLookupWorkflow.LookupAsync(
-                _cameraManager.CaptureFrameAsync,
+                CaptureFrameForProductLookupAsync,
                 barcode: null,
                 ct);
         }
@@ -1648,6 +1685,75 @@ public class MainViewModel : ViewModelBase
         TrackTranscriptEntry(entry, AssistiveActionIds.ProductLookup, ActionTriggerOrigin.ActionsDrawer);
     }
 
+    private async Task<byte[]?> CaptureFrameForProductLookupAsync(CancellationToken ct)
+    {
+        if (_cameraView is not null && ShowInlineCameraPreview)
+            return await CaptureFrameFromCameraViewAsync(ct);
+
+        return await _cameraManager.CaptureFrameAsync(ct);
+    }
+
+    private async Task LookupProductFromLiveDetectionAsync(LiveBarcodeDetection detection, CancellationToken ct)
+    {
+        ShowTranscriptTab = true;
+
+        var entry = new TranscriptEntry
+        {
+            Role = "Product",
+            Text = "Looking up product...",
+            IsThinking = true
+        };
+        Entries.Add(entry);
+
+        if (_productLookupWorkflow is null)
+        {
+            CompleteProductLookupEntry(entry, "Product lookup is unavailable.");
+            return;
+        }
+
+        ProductBarcodeLookupResult result;
+        try
+        {
+            result = await _productLookupWorkflow.LookupAsync(
+                CaptureFrameForProductLookupAsync,
+                detection.Value,
+                ct);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            CompleteProductLookupEntry(entry, "Product lookup canceled.");
+            return;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Product lookup auto-scan failed");
+            CompleteProductLookupEntry(entry, $"Product lookup error: {ex.Message}");
+            return;
+        }
+
+        if (!result.Found)
+        {
+            CompleteProductLookupEntry(entry, ProductLookupTranscriptMessage(result));
+            return;
+        }
+
+        var product = result.Product!;
+        var label = ProductBarcodeLookupWorkflow.ProductDisplayName(product);
+
+        entry.IsThinking = false;
+        entry.Text = label;
+        entry.IsActionsOnly = true;
+        entry.Actions.Clear();
+        entry.Actions.Add(new ContentAction
+        {
+            Label = label,
+            Icon = "",
+            Command = new AsyncRelayCommand(() => _openProductDetailsAsync(product))
+        });
+        entry.NotifyActionsChanged();
+        TrackTranscriptEntry(entry, AssistiveActionIds.ProductLookup, ActionTriggerOrigin.Automation);
+    }
+
     private void CompleteProductLookupEntry(TranscriptEntry entry, string text)
     {
         entry.Actions.Clear();
@@ -1674,6 +1780,115 @@ public class MainViewModel : ViewModelBase
                 : $"Product lookup error: {result.Error}",
             _ => result.Message,
         };
+
+    private void StartLiveBarcodeScan()
+    {
+        if (_liveBarcodeScanner is null || _liveBarcodeScanCts is not null)
+            return;
+
+        _liveBarcodeScanCts = new CancellationTokenSource();
+        _liveBarcodeScanTask = WatchLiveBarcodesAsync(_liveBarcodeScanCts);
+    }
+
+    private async Task StopLiveBarcodeScanAsync(bool waitForCompletion = true)
+    {
+        var cts = _liveBarcodeScanCts;
+        var task = _liveBarcodeScanTask;
+        _liveBarcodeScanCts = null;
+        _liveBarcodeScanTask = null;
+        if (cts is null)
+            return;
+
+        cts.Cancel();
+        if (waitForCompletion && task is not null)
+        {
+            try
+            {
+                await task;
+            }
+            catch (OperationCanceledException)
+            {
+            }
+        }
+
+        cts.Dispose();
+    }
+
+    private async Task WatchLiveBarcodesAsync(CancellationTokenSource cts)
+    {
+        var ct = cts.Token;
+        try
+        {
+            var frames = _cameraManager.StreamFramesAsync(ct);
+            await foreach (var detection in _liveBarcodeScanner!.WatchAsync(frames, ct: ct)
+                .WithCancellation(ct)
+                .ConfigureAwait(false))
+            {
+                if (Application.Current is null || MainThread.IsMainThread)
+                {
+                    await HandleLiveBarcodeDetectionAsync(detection, ct);
+                }
+                else
+                {
+                    await MainThread.InvokeOnMainThreadAsync(async () =>
+                        await HandleLiveBarcodeDetectionAsync(detection, ct));
+                }
+            }
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Live barcode scan stopped");
+        }
+        finally
+        {
+            if (ReferenceEquals(_liveBarcodeScanCts, cts))
+            {
+                _liveBarcodeScanCts = null;
+                _liveBarcodeScanTask = null;
+                cts.Dispose();
+            }
+        }
+    }
+
+    private async Task HandleLiveBarcodeDetectionAsync(
+        LiveBarcodeDetection detection,
+        CancellationToken ct)
+    {
+        if (_isHandlingLiveBarcodeDetection)
+            return;
+
+        _isHandlingLiveBarcodeDetection = true;
+        try
+        {
+            if (IsProductBarcodeFormat(detection.Format))
+            {
+                await LookupProductFromLiveDetectionAsync(detection, ct);
+                return;
+            }
+
+            AddDecodedScanResultToTranscript(detection.Value, detection.Format);
+        }
+        finally
+        {
+            await CloseCameraActionSurfaceAsync(waitForLiveScan: false);
+            _isHandlingLiveBarcodeDetection = false;
+        }
+    }
+
+    private void AddDecodedScanResultToTranscript(string content, QrCodeFormat format)
+    {
+        _qrCodeService.Add(new QrScanResult(content, format, DateTimeOffset.UtcNow));
+
+        var handler = _contentResolver.Resolve(content);
+        var parsed = handler.Parse(content);
+        ShowScanResultCard(handler, parsed, content);
+    }
+
+    private static bool IsProductBarcodeFormat(QrCodeFormat format) =>
+        format is QrCodeFormat.Ean13 or QrCodeFormat.UpcA or QrCodeFormat.Code128;
 
     private static Task OpenProductDetailPageAsync(ProductInfo product) =>
         MainThread.InvokeOnMainThreadAsync(() =>

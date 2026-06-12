@@ -13,6 +13,7 @@ Depends on M18 Phase 3 (barcode format decoding via ZXing.Net).
 - **Phase 3 — Unit Tests:** Mock-based tests for all clients, aggregator, and tool
 - **Phase 4 — Real API Integration Tests:** Network-backed checks against known stable barcodes and live APIs
 - **Phase 5 — Product Lookup UI:** Start product barcode lookup from a button/UI action, register the outcome in the transcript as a product-name button, and open a detailed product page when tapped
+- **Phase 6 — Live Auto Scan:** Camera preview continuously looks for QR/barcodes and automatically runs the scan/product workflow after a stable detection, without waiting for the scan button
 
 ---
 
@@ -266,6 +267,7 @@ Services/
     OpenGtinDbClient.cs           ← Open EAN/GTIN text parser
     ProductInfo.cs                ← Unified model
     BarcodeHistoryService.cs      ← Persist scanned products (Phase 3)
+    LiveBarcodeScanner.cs         ← Preview-frame QR/barcode auto-detection coordinator (Phase 6)
 
 Tools/
     LookupBarcodeTool.cs          ← ITool — scan + lookup + speak

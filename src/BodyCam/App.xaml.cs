@@ -22,6 +22,8 @@ public partial class App : Application
 		var window = new Window(shell);
 #if WINDOWS
 		window.Title = BuildWindowTitle();
+		window.Width = 430;
+		window.Height = 760;
 #endif
 		return window;
 	}

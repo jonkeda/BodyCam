@@ -282,6 +282,7 @@ public static class ServiceExtensions
 		services.AddSingleton<IBarcodeApiClient>(sp => sp.GetRequiredService<OpenGtinDbClient>());
 		services.AddSingleton<IBarcodeLookupService, BarcodeLookupService>();
 		services.AddSingleton<IProductBarcodeLookupWorkflow, ProductBarcodeLookupWorkflow>();
+		services.AddSingleton<ILiveBarcodeScanner, LiveBarcodeScanner>();
 
 		return services;
 	}

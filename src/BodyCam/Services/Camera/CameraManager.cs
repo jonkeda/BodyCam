@@ -1,4 +1,5 @@
 using BodyCam.Services.Glasses.HeyCyan;
+using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging;
 
 namespace BodyCam.Services.Camera;
@@ -116,6 +117,23 @@ public sealed class CameraManager
         {
             _currentCaptureCts?.Dispose();
             _currentCaptureCts = null;
+        }
+    }
+
+    public async IAsyncEnumerable<byte[]> StreamFramesAsync(
+        [EnumeratorCancellation] CancellationToken ct = default)
+    {
+        if (_active is null)
+        {
+            await FallbackToPhoneAsync(ct).ConfigureAwait(false);
+        }
+
+        if (_active is null)
+            yield break;
+
+        await foreach (var frame in _active.StreamFramesAsync(ct).WithCancellation(ct).ConfigureAwait(false))
+        {
+            yield return frame;
         }
     }
 

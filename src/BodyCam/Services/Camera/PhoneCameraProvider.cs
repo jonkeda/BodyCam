@@ -39,7 +39,7 @@ public sealed class PhoneCameraProvider : ICameraProvider
 
     public async Task StartAsync(CancellationToken ct = default)
     {
-        if (_started || _cameraView is null) return;
+        if (_cameraView is null) return;
 
         try
         {
